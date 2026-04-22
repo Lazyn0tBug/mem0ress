@@ -633,7 +633,68 @@ Option A: Flat           Option B: Hierarchical       Option D: Hybrid (REC)
 
 ---
 
-## 8. Non-Goals (Out of Scope)
+## 8. Picture Interaction Design (Heavy)
+
+See detailed design in: `docs/brainstorms/004-picture-interaction-design.md`
+
+### 8.1 The Heaviest Interaction
+
+Picture is the **completion standard** — if it's wrong, the entire goal-tracking system fails.
+
+| Interaction Type | Weight | Example | Trigger |
+|-----------------|--------|---------|---------|
+| **Heavy** | ~10-30 min | Picture construction | New task, skill invoke |
+| **Medium** | ~5 min | Achievement check | Evidence threshold |
+| **Light** | <1 min | Task confirmation | Uncertainty |
+| **Zero** | 0 | Silent capture | 99% of ops |
+
+### 8.2 Picture Construction Triggers
+
+```
+T1: New Task Detected    → /skill, new project mentioned
+T2: Task has no Picture  → First access
+T3: Picture obsolete     → Context shift
+T4: Progress stalled     → 7+ days no progress
+```
+
+### 8.3 Picture Scaffold (Phased Questions)
+
+```
+Phase 1 (必答): Outcome
+  Q: "Done是什么样？"
+  Q: "你怎么知道达成了？"
+
+Phase 2 (建议): Boundaries
+  Q: "什么明确不在范围？"
+
+Phase 3 (可选): Metrics
+  Q: "怎么衡量成功？"
+```
+
+### 8.4 Achievement vs. Completion
+
+```
+COMPLETION: All subtasks done (mechanical)
+ACHIEVEMENT: Picture criteria met (evidence-based)
+
+Example:
+  ✓ All subtasks done
+  ✓ Tests pass
+  ✗ But user says "still slow" → NOT achieved
+```
+
+### 8.5 Event/Skill Triggers
+
+```
+/ce:brainstorm → explore intent → trigger Picture scaffold
+/ce:plan      → build intent  → trigger Picture scaffold
+/debug        → fix intent    → usually subtask
+/research     → learn intent  → trigger Picture
+```
+
+---
+
+## 9. Non-Goals (Out of Scope)
 
 These are explicitly NOT part of this system:
 
@@ -645,7 +706,7 @@ These are explicitly NOT part of this system:
 
 ---
 
-## 9. Success Criteria
+## 10. Success Criteria
 
 A mem0ress session should answer:
 
@@ -671,7 +732,7 @@ A mem0ress session should answer:
 
 ---
 
-## 10. Open Questions Summary
+## 11. Open Questions Summary
 
 | # | Question | Recommended Approach |
 |---|----------|---------------------|
@@ -685,7 +746,7 @@ A mem0ress session should answer:
 
 ---
 
-## 11. Next Steps
+## 12. Next Steps
 
 1. **Validate core concepts** with user
 2. **Resolve open questions** marked above
