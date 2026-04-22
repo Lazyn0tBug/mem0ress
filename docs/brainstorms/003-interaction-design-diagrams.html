@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>交互设计分析 - Silent Operation vs Active Dialogue</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0f0f12;
+    color: #e8e6e3;
+    line-height: 1.6;
+  }
+  .slide {
+    width: 100%;
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  .slide-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .slide h1 {
+    font-size: 28px;
+    font-weight: 600;
+    color: #f5f5f5;
+    margin-bottom: 24px;
+  }
+  .slide-desc {
+    font-size: 14px;
+    color: #9ca3af;
+    margin-bottom: 32px;
+    max-width: 900px;
+  }
+  svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .node-title { font-size: 13px; fill: #1f2937; font-weight: 600; }
+  .node-subtitle { font-size: 10px; fill: #6b7280; }
+  .node-body { font-size: 11px; fill: #374151; }
+  .arrow { fill: none; stroke: #9ca3af; stroke-width: 1.5; stroke-linecap: round; }
+  .card-shadow { filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25)); }
+  .page-break { page-break-after: always; }
+  .highlight { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1.5; }
+  .silent { fill: #ecfdf5; stroke: #10b981; stroke-width: 1.5; }
+  .interaction { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1.5; }
+</style>
+</head>
+<body>
+
+<!-- Slide 1: Silent vs Dialogue Comparison -->
+<div class="slide">
+  <div class="slide-title">交互设计分析</div>
+  <h1>静默运行 vs 高交互</h1>
+  <p class="slide-desc">Memory系统的关键问题：系统应该静默运行还是主动对话？目标：99%静默，1%最小交互。</p>
+
+  <svg viewBox="0 0 1100 560" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bgGradA" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#1a1a2e"/>
+        <stop offset="100%" stop-color="#16213e"/>
+      </linearGradient>
+      <marker id="arrIn" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#6366f1"/>
+      </marker>
+      <marker id="arrGreen" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#10b981"/>
+      </marker>
+      <marker id="arrYellow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#f59e0b"/>
+      </marker>
+    </defs>
+
+    <rect x="20" y="20" width="1060" height="520" rx="16" fill="url(#bgGradA)"/>
+
+    <!-- Three columns comparison -->
+    <!-- Column 1: MemPalace -->
+    <g transform="translate(50, 60)">
+      <rect width="300" height="440" rx="12" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+      <text x="20" y="30" fill="#e2e8f0" font-size="15" font-weight="600">MemPalace</text>
+      <text x="20" y="50" fill="#94a3b8" font-size="11">手动命令模式</text>
+
+      <!-- Manual flow -->
+      <rect x="20" y="70" width="260" height="50" rx="8" fill="#1e293b" stroke="#475569"/>
+      <text x="35" y="100" fill="#e5e7eb" font-size="11">$ mempalace mine ~/projects</text>
+
+      <path d="M 150 120 L 150 145" class="arrow" stroke="#6366f1" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#arrIn)"/>
+      <text x="160" y="138" fill="#6366f1" font-size="10">手动触发</text>
+
+      <rect x="20" y="150" width="260" height="50" rx="8" fill="#1e293b" stroke="#475569"/>
+      <text x="35" y="180" fill="#e5e7eb" font-size="11">$ mempalace search "auth"</text>
+
+      <!-- Assessment -->
+      <rect x="20" y="230" width="260" height="180" rx="8" fill="#1e293b" stroke="#374151"/>
+      <text x="30" y="255" fill="#94a3b8" font-size="11">评估</text>
+      <text x="30" y="280" fill="#f87171" font-size="11">✗ 用户必须主动管理</text>
+      <text x="30" y="300" fill="#f87171" font-size="11">✗ 容易忘记运行</text>
+      <text x="30" y="320" fill="#f87171" font-size="11">✗ 依赖用户纪律性</text>
+      <text x="30" y="350" fill="#4ade80" font-size="11">✓ 完全静默（运行时）</text>
+      <text x="30" y="370" fill="#4ade80" font-size="11">✓ 无侵入性</text>
+
+      <rect x="20" y="400" width="260" height="30" rx="6" fill="#7f1d1d" stroke="#ef4444"/>
+      <text x="40" y="420" fill="#fca5a5" font-size="11">用户负担: 高</text>
+    </g>
+
+    <!-- Column 2: Claude-Mem -->
+    <g transform="translate(400, 60)">
+      <rect width="300" height="440" rx="12" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+      <text x="20" y="30" fill="#e2e8f0" font-size="15" font-weight="600">Claude-Mem</text>
+      <text x="20" y="50" fill="#94a3b8" font-size="11">Hook驱动 · 静默捕获</text>
+
+      <!-- Hooks flow -->
+      <rect x="20" y="70" width="260" height="36" rx="6" fill="#312e81"/>
+      <text x="35" y="92" fill="#c7d2fe" font-size="10">SessionStart hook</text>
+      <rect x="20" y="112" width="260" height="36" rx="6" fill="#3730a3"/>
+      <text x="35" y="134" fill="#c7d2fe" font-size="10">UserPromptSubmit hook</text>
+      <rect x="20" y="154" width="260" height="36" rx="6" fill="#4f46e5"/>
+      <text x="35" y="176" fill="#c7d2fe" font-size="10">PostToolUse hook</text>
+      <rect x="20" y="196" width="260" height="36" rx="6" fill="#6366f1"/>
+      <text x="35" y="218" fill="#c7d2fe" font-size="10">Stop hook → summarize</text>
+
+      <text x="30" y="260" fill="#10b981" font-size="10" font-weight="500">自动捕获，用户无感</text>
+
+      <!-- Assessment -->
+      <rect x="20" y="280" width="260" height="160" rx="8" fill="#1e293b" stroke="#374151"/>
+      <text x="30" y="305" fill="#94a3b8" font-size="11">评估</text>
+      <text x="30" y="330" fill="#4ade80" font-size="11">✓ 完全静默运行</text>
+      <text x="30" y="352" fill="#4ade80" font-size="11">✓ Hooks在边界自动触发</text>
+      <text x="30" y="374" fill="#4ade80" font-size="11">✓ SDK Agent异步处理</text>
+      <text x="30" y="396" fill="#4ade80" font-size="11">✓ 用户从不等待处理</text>
+
+      <rect x="20" y="420" width="260" height="30" rx="6" fill="#064e3b" stroke="#10b981"/>
+      <text x="40" y="440" fill="#6ee7b7" font-size="11">用户负担: 零</text>
+    </g>
+
+    <!-- Column 3: mem0ress (Target) -->
+    <g transform="translate(750, 60)">
+      <rect width="300" height="440" rx="12" fill="#0f172a" stroke="#10b981" stroke-width="2"/>
+      <text x="20" y="30" fill="#e2e8f0" font-size="15" font-weight="600">mem0ress (目标)</text>
+      <text x="20" y="50" fill="#94a3b8" font-size="11">上下文推理 · 不确定时触发</text>
+
+      <!-- Silent path -->
+      <rect x="20" y="70" width="260" height="50" rx="8" fill="#064e3b" stroke="#10b981"/>
+      <text x="35" y="90" fill="#6ee7b7" font-size="10">Task自动发现（推理）</text>
+      <text x="35" y="108" fill="#a7f3d0" font-size="9">无问题 → 静默</text>
+
+      <rect x="20" y="130" width="260" height="50" rx="8" fill="#064e3b" stroke="#10b981"/>
+      <text x="35" y="150" fill="#6ee7b7" font-size="10">Info自动打标签</text>
+      <text x="35" y="168" fill="#a7f3d0" font-size="9">无问题 → 静默</text>
+
+      <rect x="20" y="190" width="260" height="50" rx="8" fill="#064e3b" stroke="#10b981"/>
+      <text x="35" y="210" fill="#6ee7b7" font-size="10">Picture自动推断</text>
+      <text x="35" y="228" fill="#a7f3d0" font-size="9">无问题 → 静默</text>
+
+      <!-- Uncertainty triggers -->
+      <path d="M 270 215 L 270 260" class="arrow" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrYellow)"/>
+
+      <rect x="20" y="260" width="260" height="80" rx="8" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+      <text x="35" y="285" fill="#fcd34d" font-size="10" font-weight="600">不确定性触发 (1%)</text>
+      <text x="35" y="305" fill="#fde68a" font-size="9">• 多Task匹配 → "Working on X?"</text>
+      <text x="35" y="320" fill="#fde68a" font-size="9">• 无匹配 → "New task Y?"</text>
+      <text x="35" y="335" fill="#fde68a" font-size="9">• 完成迹象 → "Mark done?"</text>
+
+      <!-- Assessment -->
+      <rect x="20" y="360" width="260" height="70" rx="8" fill="#1e293b" stroke="#374151"/>
+      <text x="30" y="385" fill="#94a3b8" font-size="11">评估</text>
+      <text x="30" y="405" fill="#4ade80" font-size="11">✓ 99%静默运行</text>
+      <text x="30" y="423" fill="#4ade80" font-size="11">✓ 上下文感知推理</text>
+
+      <rect x="20" y="420" width="260" height="30" rx="6" fill="#065f46" stroke="#10b981"/>
+      <text x="40" y="440" fill="#6ee7b7" font-size="11">用户负担: 最小 (1%)</text>
+    </g>
+  </svg>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Slide 2: Silent Operation Flow -->
+<div class="slide">
+  <div class="slide-title">交互设计分析</div>
+  <h1>静默运行流程</h1>
+  <p class="slide-desc">正常情况下，系统完全静默运行。只有在不确定性达到阈值时才触发最小交互。</p>
+
+  <svg viewBox="0 0 1100 580" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bgGradB" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#1a1a2e"/>
+        <stop offset="100%" stop-color="#16213e"/>
+      </linearGradient>
+    </defs>
+
+    <rect x="20" y="20" width="1060" height="540" rx="16" fill="url(#bgGradB)"/>
+
+    <!-- Session Start Phase -->
+    <text x="50" y="55" fill="#6b7280" font-size="11" letter-spacing="1">PHASE 1: SESSION START</text>
+
+    <rect x="50" y="70" width="180" height="60" rx="10" class="card-shadow" fill="#10b981"/>
+    <text x="65" y="95" fill="white" font-size="12" font-weight="600">读取Tasks</text>
+    <text x="65" y="115" fill="#a7f3d0" font-size="10">从存储加载</text>
+
+    <path d="M 230 100 L 280 100" class="arrow" stroke="#10b981" stroke-width="2" marker-end="url(#arrGreen)"/>
+
+    <rect x="290" y="70" width="180" height="60" rx="10" class="card-shadow" fill="#10b981"/>
+    <text x="305" y="95" fill="white" font-size="12" font-weight="600">分析上下文</text>
+    <text x="305" y="115" fill="#a7f3d0" font-size="10">对话/文件/工具</text>
+
+    <path d="M 470 100 L 520 100" class="arrow" stroke="#10b981" stroke-width="2" marker-end="url(#arrGreen)"/>
+
+    <rect x="530" y="70" width="180" height="60" rx="10" class="card-shadow" fill="#10b981"/>
+    <text x="545" y="95" fill="white" font-size="12" font-weight="600">推理当前Task</text>
+    <text x="545" y="115" fill="#a7f3d0" font-size="10">置信度 > 80%</text>
+
+    <!-- Decision Diamond -->
+    <path d="M 710 100 L 760 100" class="arrow" stroke="#6366f1" stroke-width="2" marker-end="url(#arrIn)"/>
+
+    <polygon points="780,60 840,100 780,140 720,100" fill="#312e81" stroke="#6366f1" stroke-width="1.5"/>
+    <text x="780" y="95" fill="white" font-size="10" text-anchor="middle">单Task</text>
+    <text x="780" y="108" fill="white" font-size="10" text-anchor="middle">清晰?</text>
+
+    <!-- Yes path - Silent -->
+    <path d="M 840 100 L 890 100" stroke="#10b981" stroke-width="2" marker-end="url(#arrGreen)"/>
+    <text x="860" y="90" fill="#10b981" font-size="10">是</text>
+
+    <rect x="900" y="70" width="150" height="60" rx="10" class="card-shadow" fill="#064e3b" stroke="#10b981"/>
+    <text x="920" y="95" fill="#6ee7b7" font-size="11" font-weight="600">注入上下文</text>
+    <text x="920" y="115" fill="#a7f3d0" font-size="10">静默继续</text>
+
+    <!-- No path - Interaction -->
+    <path d="M 780 140 L 780 200" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrYellow)"/>
+    <text x="790" y="170" fill="#f59e0b" font-size="10">否</text>
+
+    <rect x="680" y="210" width="200" height="70" rx="10" class="card-shadow highlight">
+      <text x="700" y="235" fill="#92400e" font-size="11" font-weight="600">⚡ 触发交互</text>
+      <text x="700" y="255" fill="#78350f" font-size="10">单问题确认</text>
+      <text x="700" y="270" fill="#78350f" font-size="10">"Working on X? [Y/n]"</text>
+    </rect>
+
+    <path d="M 780 280 L 780 330" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <path d="M 880 100 L 920 100 L 920 210 L 880 210" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+    <!-- During Session -->
+    <text x="50" y="370" fill="#6b7280" font-size="11" letter-spacing="1">PHASE 2: DURING SESSION</text>
+
+    <rect x="50" y="385" width="150" height="50" rx="8" class="card-shadow" fill="#064e3b" stroke="#10b981"/>
+    <text x="65" y="408" fill="#6ee7b7" font-size="10">新Info产生</text>
+    <text x="65" y="422" fill="#a7f3d0" font-size="9">对话/工具使用</text>
+
+    <path d="M 200 410 L 250 410" class="arrow" stroke="#10b981" stroke-width="2" marker-end="url(#arrGreen)"/>
+
+    <rect x="260" y="385" width="150" height="50" rx="8" class="card-shadow" fill="#064e3b" stroke="#10b981"/>
+    <text x="275" y="408" fill="#6ee7b7" font-size="10">AI自动打标签</text>
+    <text x="275" y="422" fill="#a7f3d0" font-size="9">置信度>阈值</text>
+
+    <path d="M 410 410 L 460 410" class="arrow" stroke="#10b981" stroke-width="2" marker-end="url(#arrGreen)"/>
+
+    <rect x="470" y="385" width="150" height="50" rx="8" class="card-shadow" fill="#064e3b" stroke="#10b981"/>
+    <text x="485" y="408" fill="#6ee7b7" font-size="10">Tag匹配Task</text>
+    <text x="485" y="422" fill="#a7f3d0" font-size="9">软链接存储</text>
+
+    <path d="M 620 410 L 670 410" class="arrow" stroke="#10b981" stroke-width="2" marker-end="url(#arrGreen)"/>
+
+    <rect x="680" y="385" width="150" height="50" rx="8" class="card-shadow" fill="#064e3b" stroke="#10b981"/>
+    <text x="700" y="408" fill="#6ee7b7" font-size="10">更新cold/hot</text>
+    <text x="700" y="422" fill="#a7f3d0" font-size="9">全部静默</text>
+
+    <!-- Picture Achievement -->
+    <text x="870" y="370" fill="#6b7280" font-size="11" letter-spacing="1">PICTURE检测</text>
+
+    <rect x="870" y="385" width="180" height="50" rx="8" class="card-shadow" fill="#78350f" stroke="#f59e0b"/>
+    <text x="890" y="408" fill="#fcd34d" font-size="10">观察完成证据</text>
+    <text x="890" y="422" fill="#fde68a" font-size="9">置信度 > 阈值?</text>
+
+    <path d="M 960 385 L 960 360" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <path d="M 960 360 L 800 360 L 800 385" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3"/>
+
+    <!-- Session End -->
+    <text x="50" y="480" fill="#6b7280" font-size="11" letter-spacing="1">PHASE 3: SESSION END</text>
+
+    <rect x="50" y="495" width="180" height="40" rx="8" fill="#064e3b" stroke="#10b981"/>
+    <text x="65" y="518" fill="#6ee7b7" font-size="10">Task状态已持久化</text>
+
+    <path d="M 230 515 L 280 515" class="arrow" stroke="#10b981" stroke-width="2" marker-end="url(#arrGreen)"/>
+
+    <rect x="290" y="495" width="180" height="40" rx="8" fill="#064e3b" stroke="#10b981"/>
+    <text x="305" y="518" fill="#6ee7b7" font-size="10">Info已存储 + 标签</text>
+
+    <path d="M 470 515 L 520 515" class="arrow" stroke="#10b981" stroke-width="2" marker-end="url(#arrGreen)"/>
+
+    <rect x="530" y="495" width="200" height="40" rx="8" fill="#78350f" stroke="#f59e0b"/>
+    <text x="555" y="518" fill="#fcd34d" font-size="10">Plane下次重新发现</text>
+
+    <!-- Legend -->
+    <g transform="translate(800, 480)">
+      <rect width="240" height="60" rx="8" fill="#1f2937"/>
+      <circle cx="25" cy="20" r="8" fill="#10b981"/>
+      <text x="40" y="24" fill="#e5e7eb" font-size="10">静默自动</text>
+      <circle cx="25" cy="45" r="8" fill="#f59e0b"/>
+      <text x="40" y="49" fill="#e5e7eb" font-size="10">最小交互</text>
+    </g>
+  </svg>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Slide 3: Uncertainty Triggers -->
+<div class="slide">
+  <div class="slide-title">交互设计分析</div>
+  <h1>不确定性触发点</h1>
+  <p class="slide-desc">系统只在4种不确定性情况下触发交互，且都是单问题确认，用户一按即可。</p>
+
+  <svg viewBox="0 0 1100 500" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bgGradC" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#1a1a2e"/>
+        <stop offset="100%" stop-color="#16213e"/>
+      </linearGradient>
+    </defs>
+
+    <rect x="20" y="20" width="1060" height="460" rx="16" fill="url(#bgGradC)"/>
+
+    <!-- Four triggers in 2x2 grid -->
+
+    <!-- Trigger 1: Which Task -->
+    <g transform="translate(60, 60)">
+      <rect width="460" height="180" rx="12" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
+      <rect width="460" height="50" rx="12" fill="#78350f"/>
+      <rect y="38" width="460" height="12" fill="#78350f"/>
+      <text x="20" y="32" fill="#fcd34d" font-size="13" font-weight="600">触发 1: 哪个Task是当前的？</text>
+
+      <text x="20" y="80" fill="#e5e7eb" font-size="11">场景：上下文暗示多个可能的Task</text>
+      <text x="20" y="100" fill="#94a3b8" font-size="10">例如：用户同时在做A和B，当前在讨论C</text>
+
+      <rect x="20" y="115" width="420" height="50" rx="8" fill="#fef3c7" stroke="#f59e0b"/>
+      <text x="35" y="140" fill="#92400e" font-size="11" font-weight="500">💬 "我看到A和B都是active。Current在讨论C，</text>
+      <text x="35" y="155" fill="#92400e" font-size="11" font-weight="500">      是的，我们继续C？[Y] 或 [A/B]"</text>
+    </g>
+
+    <!-- Trigger 2: New Task -->
+    <g transform="translate(560, 60)">
+      <rect width="460" height="180" rx="12" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
+      <rect width="460" height="50" rx="12" fill="#78350f"/>
+      <rect y="38" width="460" height="12" fill="#78350f"/>
+      <text x="20" y="32" fill="#fcd34d" font-size="13" font-weight="600">触发 2: 发现新Task？</text>
+
+      <text x="20" y="80" fill="#e5e7eb" font-size="11">场景：新项目被提及，无现有Task匹配</text>
+      <text x="20" y="100" fill="#94a3b8" font-size="10">例如：用户说"我们来做支付模块吧"</text>
+
+      <rect x="20" y="115" width="420" height="50" rx="8" fill="#fef3c7" stroke="#f59e0b"/>
+      <text x="35" y="140" fill="#92400e" font-size="11" font-weight="500">💬 "检测到新目标'支付模块'。</text>
+      <text x="35" y="155" fill="#92400e" font-size="11" font-weight="500">      我来创建？[Y]"</text>
+    </g>
+
+    <!-- Trigger 3: Picture Achievement -->
+    <g transform="translate(60, 270)">
+      <rect width="460" height="180" rx="12" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
+      <rect width="460" height="50" rx="12" fill="#78350f"/>
+      <rect y="38" width="460" height="12" fill="#78350f"/>
+      <text x="20" y="32" fill="#fcd34d" font-size="13" font-weight="600">触发 3: Picture可能达成？</text>
+
+      <text x="20" y="80" fill="#e5e7eb" font-size="11">场景：AI观察到完成证据</text>
+      <text x="20" y="100" fill="#94a3b8" font-size="10">例如：所有测试通过，用户确认功能正常</text>
+
+      <rect x="20" y="115" width="420" height="50" rx="8" fill="#fef3c7" stroke="#f59e0b"/>
+      <text x="35" y="140" fill="#92400e" font-size="11" font-weight="500">💬 "'登录模块'的Picture似乎已达成。</text>
+      <text x="35" y="155" fill="#92400e" font-size="11" font-weight="500">      标记为完成？[Y] 或 [继续]"</text>
+    </g>
+
+    <!-- Trigger 4: Conflict -->
+    <g transform="translate(560, 270)">
+      <rect width="460" height="180" rx="12" fill="#0f172a" stroke="#f59e0b" stroke-width="2"/>
+      <rect width="460" height="50" rx="12" fill="#78350f"/>
+      <rect y="38" width="460" height="12" fill="#78350f"/>
+      <text x="20" y="32" fill="#fcd34d" font-size="13" font-weight="600">触发 4: 检测到冲突</text>
+
+      <text x="20" y="80" fill="#e5e7eb" font-size="11">场景：新信息与已有Info矛盾</text>
+      <text x="20" y="100" fill="#94a3b8" font-size="10">例如：之前说用Postgres，现在说用MySQL</text>
+
+      <rect x="20" y="115" width="420" height="50" rx="8" fill="#fef3c7" stroke="#f59e0b"/>
+      <text x="35" y="140" fill="#92400e" font-size="11" font-weight="500">💬 "'支付模块'之前决定用Postgres。</text>
+      <text x="35" y="155" fill="#92400e" font-size="11" font-weight="500">      但现在提到MySQL。更新Decision？[Y]"</text>
+    </g>
+
+    <!-- Bottom insight -->
+    <g transform="translate(60, 470)">
+      <rect width="960" height="40" rx="8" fill="#312e81"/>
+      <text x="30" y="26" fill="#c7d2fe" font-size="12">核心原则：每个触发只问一个问题，用户一按即可，系统不会强迫任何事</text>
+    </g>
+  </svg>
+</div>
+
+</body>
+</html>

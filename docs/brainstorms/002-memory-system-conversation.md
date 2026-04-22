@@ -199,7 +199,57 @@ See: `docs/brainstorms/002-memory-system-requirements.md` Section 7
 
 ---
 
-## 12. Files Created
+## 12. Additional Discussion: Interaction Design
+
+User raised an important concern: "memory系统的一个关键特征是静默运行，我的设计可能过多交互了"
+
+**The tension:**
+| Approach | Description | User Burden |
+|----------|-------------|-------------|
+| Fully Silent | System runs in background | Zero |
+| Hook-Driven | Automatic, silent unless anomaly | Minimal |
+| Dialogue-Heavy | AI asks questions | High |
+
+**Goal:** 99% silent, 1% minimal interaction when uncertain.
+
+### Claude-Mem's Hook-Driven Model
+
+Claude-Mem uses 6 lifecycle hooks that fire silently:
+- SessionStart → context injection
+- UserPromptSubmit → initialize SDK agent
+- PostToolUse → capture observations
+- Stop → queue summaries
+- SessionEnd → cleanup
+
+**Key insight:** User never waits for memory processing. Everything is async.
+
+### Proposed: Uncertainty Triggers
+
+Only 4 situations trigger interaction:
+1. **Which Task?** — ambiguous context
+2. **New Task?** — new project mentioned
+3. **Picture achieved?** — completion evidence found
+4. **Conflict?** — new info contradicts old
+
+Each trigger: one question, one-tap response, optional to ignore.
+
+### Comparison
+
+| System | Silent? | User Burden |
+|--------|---------|------------|
+| MemPalace | Yes (but manual) | High |
+| Claude-Mem | Yes | Zero |
+| Original mem0ress | No | High |
+| **Target mem0ress** | **Yes** | **Minimal** |
+
+### Core Principle
+
+> System should feel like a background service that "just knows."
+> Interaction: rare (<1%), light (one question), optional.
+
+---
+
+## 13. Files Created
 
 | File | Description |
 |------|-------------|
@@ -207,10 +257,12 @@ See: `docs/brainstorms/002-memory-system-requirements.md` Section 7
 | `docs/brainstorms/002-memory-system-requirements.md` | mem0ress requirements document |
 | `docs/brainstorms/002-memory-system-conversation.md` | This dialogue record |
 | `docs/brainstorms/002-memory-system-diagrams.html` | SVG architecture diagrams (4 slides) |
+| `docs/brainstorms/003-interaction-design-analysis.md` | Interaction design deep-dive |
+| `docs/brainstorms/003-interaction-design-diagrams.html` | Interaction design diagrams (3 slides) |
 
 ---
 
-## 13. Core Principles Summary
+## 14. Core Principles Summary
 
 1. **Memory has goal attributes** — same info, different goal = different relevance
 2. **Task is the primary anchor** — everything is organized around Tasks, not a flat pool
@@ -219,6 +271,7 @@ See: `docs/brainstorms/002-memory-system-requirements.md` Section 7
 5. **Plane is always current** — no freeze/archive, every Plane is discovered fresh
 6. **Recursive Task structure** — every subtask is also a Task with its own Picture
 7. **Soft links via tags** — Info-Task association is tag-based, not foreign key
+8. **Silent by default** — 99% silent, only uncertainty triggers interaction
 
 ---
 
