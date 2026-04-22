@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Picture 交互设计 - Heavy Interaction Flows</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0f0f12;
+    color: #e8e6e3;
+    line-height: 1.6;
+  }
+  .slide {
+    width: 100%;
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  .slide-title { font-size: 13px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+  .slide h1 { font-size: 26px; font-weight: 600; color: #f5f5f5; margin-bottom: 20px; }
+  .slide-desc { font-size: 14px; color: #9ca3af; margin-bottom: 28px; max-width: 900px; }
+  svg { width: 100%; height: auto; display: block; }
+  .page-break { page-break-after: always; }
+</style>
+</head>
+<body>
+
+<!-- Slide 1: Picture Construction Flow -->
+<div class="slide">
+  <div class="slide-title">Picture 交互设计</div>
+  <h1>Picture 构建流程</h1>
+  <p class="slide-desc">Picture构建是最重的交互环节。通过脚手架式对话结构化，减少用户负担。</p>
+
+  <svg viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#1a1a2e"/>
+        <stop offset="100%" stop-color="#16213e"/>
+      </linearGradient>
+      <marker id="arrP" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#6366f1"/>
+      </marker>
+      <marker id="arrY" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#f59e0b"/>
+      </marker>
+      <marker id="arrG" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#10b981"/>
+      </marker>
+      <marker id="arrPurple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L0,6 L8,3 z" fill="#a78bfa"/>
+      </marker>
+    </defs>
+
+    <rect x="20" y="20" width="1060" height="580" rx="16" fill="url(#bg1)"/>
+
+    <!-- Trigger Phase -->
+    <text x="50" y="55" fill="#6b7280" font-size="11" letter-spacing="1">PHASE 1: TRIGGER</text>
+
+    <rect x="50" y="65" width="200" height="50" rx="8" fill="#1e293b" stroke="#475569"/>
+    <text x="65" y="88" fill="#e5e7eb" font-size="11">T1: 新Task检测</text>
+    <text x="65" y="102" fill="#94a3b8" font-size="9">/skill调用, 新项目</text>
+
+    <rect x="260" y="65" width="200" height="50" rx="8" fill="#1e293b" stroke="#475569"/>
+    <text x="275" y="88" fill="#e5e7eb" font-size="11">T2: Task无Picture</text>
+    <text x="275" y="102" fill="#94a3b8" font-size="9">首次访问空Task</text>
+
+    <rect x="470" y="65" width="200" height="50" rx="8" fill="#1e293b" stroke="#475569"/>
+    <text x="485" y="88" fill="#e5e7eb" font-size="11">T3: Picture过时</text>
+    <text x="485" y="102" fill="#94a3b8" font-size="9">上下文变化</text>
+
+    <rect x="680" y="65" width="200" height="50" rx="8" fill="#1e293b" stroke="#475569"/>
+    <text x="695" y="88" fill="#e5e7eb" font-size="11">T4: 进度停滞</text>
+    <text x="695" y="102" fill="#94a3b8" font-size="9">7天无进展</text>
+
+    <!-- Arrows to construction -->
+    <path d="M 150 115 L 200 155" stroke="#6366f1" stroke-width="2" marker-end="url(#arrP)"/>
+    <path d="M 360 115 L 320 155" stroke="#6366f1" stroke-width="2" marker-end="url(#arrP)"/>
+    <path d="M 570 115 L 500 155" stroke="#6366f1" stroke-width="2" marker-end="url(#arrP)"/>
+    <path d="M 780 115 L 680 155" stroke="#6366f1" stroke-width="2" marker-end="url(#arrP)"/>
+
+    <!-- Picture Construction Mode -->
+    <rect x="200" y="160" width="500" height="380" rx="12" fill="#4c1d95" stroke="#a78bfa" stroke-width="2"/>
+
+    <text x="220" y="190" fill="#e9d5ff" font-size="14" font-weight="600">Picture Construction Mode</text>
+    <text x="220" y="208" fill="#c4b5fd" font-size="10">脚手架式对话 · AI准备 · 用户确认</text>
+
+    <!-- Phase 1: Outcome -->
+    <rect x="220" y="225" width="460" height="80" rx="8" fill="#5b21b6" stroke="#8b5cf6"/>
+    <text x="240" y="248" fill="#e0e7ff" font-size="11" font-weight="600">Phase 1: Outcome (必答)</text>
+    <text x="240" y="268" fill="#c7d2fe" font-size="10">Q1: "Done是什么样？"</text>
+    <text x="240" y="283" fill="#c7d2fe" font-size="10">Q2: "你怎么知道达成了？"</text>
+
+    <!-- Phase 2: Boundaries -->
+    <rect x="220" y="315" width="220" height="70" rx="8" fill="#6d28d9" stroke="#8b5cf6"/>
+    <text x="240" y="338" fill="#e0e7ff" font-size="11" font-weight="600">Phase 2: Boundaries</text>
+    <text x="240" y="356" fill="#c7d2fe" font-size="10">Q3: "什么明确不在范围？"</text>
+    <text x="240" y="371" fill="#c7d2fe" font-size="10">Q4: "什么算overkill？"</text>
+
+    <!-- Phase 3: Metrics -->
+    <rect x="450" y="315" width="230" height="70" rx="8" fill="#7c3aed" stroke="#8b5cf6"/>
+    <text x="470" y="338" fill="#e0e7ff" font-size="11" font-weight="600">Phase 3: Metrics (可选)</text>
+    <text x="470" y="356" fill="#c7d2fe" font-size="10">Q5: "怎么衡量成功？"</text>
+    <text x="470" y="371" fill="#c7d2fe" font-size="10">Q6: "可接受的阈值？"</text>
+
+    <!-- AI Proposes -->
+    <path d="M 460 385 L 460 410" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrY)"/>
+
+    <rect x="240" y="415" width="440" height="110" rx="10" fill="#78350f" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="260" y="438" fill="#fcd34d" font-size="11" font-weight="600">AI 提出 Picture 草稿</text>
+    <text x="260" y="458" fill="#fde68a" font-size="10">PICTURE: "登录系统生产可用"</text>
+    <text x="260" y="474" fill="#fde68a" font-size="10">REQUIREMENTS:</text>
+    <text x="270" y="488" fill="#fed7aa" font-size="9">✓ 用户可email/password登录</text>
+    <text x="270" y="502" fill="#fed7aa" font-size="9">✓ Google OAuth</text>
+    <text x="370" y="488" fill="#fed7aa" font-size="9">✓ 登录<1秒</text>
+    <text x="370" y="502" fill="#fed7aa" font-size="9">✓ Session持久化</text>
+
+    <!-- User confirms -->
+    <path d="M 460 525 L 460 545" stroke="#10b981" stroke-width="2" marker-end="url(#arrG)"/>
+    <text x="470" y="538" fill="#10b981" font-size="10">确认/调整</text>
+
+    <!-- Output -->
+    <rect x="200" y="545" width="500" height="35" rx="8" fill="#064e3b" stroke="#10b981"/>
+    <text x="450" y="567" fill="#6ee7b7" font-size="11" text-anchor="middle">Picture 已存储 → Subtasks 分解？</text>
+
+    <!-- Legend -->
+    <g transform="translate(760, 180)">
+      <rect width="280" height="300" rx="10" fill="#0f172a" stroke="#334155"/>
+      <text x="15" y="25" fill="#e5e7eb" font-size="12" font-weight="600">交互权重</text>
+
+      <rect y="40" width="40" height="12" rx="3" fill="#4c1d95"/>
+      <text x="50" y="51" fill="#c4b5fd" font-size="10">重交互 (10-30min)</text>
+
+      <rect y="65" width="40" height="12" rx="3" fill="#78350f"/>
+      <text x="50" y="76" fill="#fcd34d" font-size="10">中交互 (2-5min)</text>
+
+      <rect y="90" width="40" height="12" rx="3" fill="#064e3b"/>
+      <text x="50" y="101" fill="#6ee7b7" font-size="10">轻交互 (<1min)</text>
+
+      <line y1="120" x2="260" y2="120" stroke="#334155" stroke-width="1"/>
+
+      <text x="15" y="142" fill="#e5e7eb" font-size="11" font-weight="600">Picture vs Completion</text>
+      <text x="15" y="162" fill="#94a3b8" font-size="10">Completion: 所有subtask完成</text>
+      <text x="15" y="178" fill="#94a3b8" font-size="10">Achievement: Picture标准达到</text>
+      <text x="15" y="198" fill="#fde68a" font-size="10">✓ 需要证据判断</text>
+
+      <line y1="215" x2="260" y2="215" stroke="#334155" stroke-width="1"/>
+
+      <text x="15" y="240" fill="#e5e7eb" font-size="11" font-weight="600">脚手架原则</text>
+      <text x="15" y="260" fill="#94a3b8" font-size="10">• AI准备，用户确认</text>
+      <text x="15" y="276" fill="#94a3b8" font-size="10">• 渐进披露</text>
+      <text x="15" y="292" fill="#94a3b8" font-size="10">• 分阶段问题</text>
+    </g>
+  </svg>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Slide 2: Event/Skill Triggers + Achievement Flow -->
+<div class="slide">
+  <div class="slide-title">Picture 交互设计</div>
+  <h1>Skill触发 + Achievement检测</h1>
+  <p class="slide-desc">左侧：可观察的命令/Skill调用作为Picture构建触发。右侧：基于证据的Achievement检测。</p>
+
+  <svg viewBox="0 0 1100 580" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#1a1a2e"/>
+        <stop offset="100%" stop-color="#16213e"/>
+      </linearGradient>
+    </defs>
+
+    <rect x="20" y="20" width="1060" height="540" rx="16" fill="url(#bg2)"/>
+
+    <!-- LEFT: Event/Skill Triggers -->
+    <text x="50" y="55" fill="#6b7280" font-size="11" letter-spacing="1">LEFT: SKILL/COMMAND 触发</text>
+
+    <rect x="50" y="70" width="460" height="450" rx="12" fill="#0f172a" stroke="#334155"/>
+
+    <!-- Command observation -->
+    <rect x="70" y="90" width="420" height="60" rx="8" fill="#1e293b" stroke="#475569"/>
+    <text x="90" y="115" fill="#e5e7eb" font-size="12" font-weight="600">用户执行命令</text>
+    <text x="90" y="135" fill="#94a3b8" font-size="10">/ce:brainstorm "design memory system"</text>
+
+    <path d="M 280 150 L 280 180" stroke="#6366f1" stroke-width="2" marker-end="url(#arrP)"/>
+    <text x="290" y="168" fill="#6366f1" font-size="10">Hook拦截</text>
+
+    <!-- Intent extraction -->
+    <rect x="70" y="185" width="420" height="70" rx="8" fill="#312e81" stroke="#6366f1"/>
+    <text x="90" y="210" fill="#e0e7ff" font-size="12" font-weight="600">Intent 提取</text>
+    <text x="90" y="230" fill="#c7d2fe" font-size="10">skill: brainstorm</text>
+    <text x="90" y="245" fill="#c7d2fe" font-size="10">intent: explore, plan</text>
+    <text x="250" y="230" fill="#c7d2fe" font-size="10">topic: memory system</text>
+    <text x="250" y="245" fill="#c7d2fe" font-size="10">implied_task: design</text>
+
+    <!-- Decision diamond -->
+    <path d="M 280 255 L 280 285" stroke="#6366f1" stroke-width="2" marker-end="url(#arrP)"/>
+
+    <polygon points="280,290 340,330 280,370 220,330" fill="#4c1d95" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="280" y="325" fill="white" font-size="10" text-anchor="middle">需要新</text>
+    <text x="280" y="338" fill="white" font-size="10" text-anchor="middle">Picture?</text>
+
+    <!-- No path -->
+    <path d="M 340 330 L 400 330" stroke="#10b981" stroke-width="2" marker-end="url(#arrG)"/>
+    <text x="355" y="320" fill="#10b981" font-size="9">否</text>
+    <rect x="410" y="305" width="90" height="50" rx="8" fill="#064e3b"/>
+    <text x="425" y="330" fill="#6ee7b7" font-size="10" text-anchor="middle">链接现有</text>
+    <text x="425" y="344" fill="#6ee7b7" font-size="10" text-anchor="middle">Task</text>
+
+    <!-- Yes path -->
+    <path d="M 220 330 L 140 330" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrY)"/>
+    <text x="155" y="320" fill="#f59e0b" font-size="9">是</text>
+
+    <!-- Built-in patterns -->
+    <rect x="50" y="390" width="460" height="115" rx="8" fill="#1e293b" stroke="#374151"/>
+    <text x="70" y="415" fill="#e5e7eb" font-size="11" font-weight="600">内置 Skill Patterns</text>
+
+    <g transform="translate(70, 430)">
+      <rect width="80" height="28" rx="6" fill="#312e81"/>
+      <text x="40" y="18" fill="#e0e7ff" font-size="9" text-anchor="middle">/ce:brainstorm</text>
+      <text x="40" y="30" fill="#a5b4fc" font-size="7" text-anchor="middle">→ explore</text>
+
+      <rect width="60" height="28" rx="6" fill="#312e81"/>
+      <text x="100" y="18" fill="#e0e7ff" font-size="9" text-anchor="middle">/ce:plan</text>
+      <text x="100" y="30" fill="#a5b4fc" font-size="7" text-anchor="middle">→ build</text>
+
+      <rect width="70" height="28" rx="6" fill="#312e81"/>
+      <text x="180" y="18" fill="#e0e7ff" font-size="9" text-anchor="middle">/debug</text>
+      <text x="180" y="30" fill="#a5b4fc" font-size="7" text-anchor="middle">→ fix</text>
+
+      <rect width="80" height="28" rx="6" fill="#312e81"/>
+      <text x="270" y="18" fill="#e0e7ff" font-size="9" text-anchor="middle">/research</text>
+      <text x="270" y="30" fill="#a5b4fc" font-size="7" text-anchor="middle">→ learn</text>
+
+      <rect width="55" height="28" rx="6" fill="#312e81"/>
+      <text x="370" y="18" fill="#e0e7ff" font-size="9" text-anchor="middle">/test</text>
+      <text x="370" y="30" fill="#a5b4fc" font-size="7" text-anchor="middle">→ verify</text>
+    </g>
+
+    <!-- Picture scaffold trigger -->
+    <rect x="70" y="470" width="420" height="35" rx="8" fill="#78350f" stroke="#f59e0b"/>
+    <text x="280" y="492" fill="#fcd34d" font-size="11" text-anchor="middle">触发 Picture 脚手架对话</text>
+
+    <!-- RIGHT: Achievement Detection -->
+    <text x="540" y="55" fill="#6b7280" font-size="11" letter-spacing="1">RIGHT: ACHIEVEMENT 检测</text>
+
+    <rect x="540" y="70" width="500" height="450" rx="12" fill="#0f172a" stroke="#334155"/>
+
+    <!-- Monitor evidence -->
+    <rect x="560" y="90" width="460" height="70" rx="8" fill="#1e293b" stroke="#475569"/>
+    <text x="580" y="115" fill="#e5e7eb" font-size="12" font-weight="600">持续监控证据</text>
+    <text x="580" y="135" fill="#94a3b8" font-size="10">用户表述 | 工具结果 | 测试通过 | 时间</text>
+
+    <!-- Evidence types -->
+    <g transform="translate(560, 170)">
+      <rect width="100" height="50" rx="6" fill="#064e3b"/>
+      <text x="50" y="20" fill="#6ee7b7" font-size="9" text-anchor="middle">Positive</text>
+      <text x="50" y="35" fill="#a7f3d0" font-size="8" text-anchor="middle">+3 "works"</text>
+      <text x="50" y="46" fill="#a7f3d0" font-size="8" text-anchor="middle">+2 test pass</text>
+
+      <rect width="100" height="50" rx="6" fill="#7f1d1d"/>
+      <text x="150" y="20" fill="#fca5a5" font-size="9" text-anchor="middle">Negative</text>
+      <text x="150" y="35" fill="#fecaca" font-size="8" text-anchor="middle">-2 complained</text>
+      <text x="150" y="46" fill="#fecaca" font-size="8" text-anchor="middle">-3 error</text>
+
+      <rect width="100" height="50" rx="6" fill="#78350f"/>
+      <text x="250" y="20" fill="#fcd34d" font-size="9" text-anchor="middle">Neutral</text>
+      <text x="250" y="35" fill="#fde68a" font-size="8" text-anchor="middle">-1 stalled</text>
+      <text x="250" y="46" fill="#fde68a" font-size="8" text-anchor="middle">7 days</text>
+
+      <rect width="100" height="50" rx="6" fill="#312e81"/>
+      <text x="350" y="20" fill="#c7d2fe" font-size="9" text-anchor="middle">Threshold</text>
+      <text x="350" y="35" fill="#ddd6fe" font-size="8" text-anchor="middle">Score ></text>
+      <text x="350" y="46" fill="#ddd6fe" font-size="8" text-anchor="middle">X triggers</text>
+    </g>
+
+    <!-- Score calculation -->
+    <path d="M 790 225 L 790 255" stroke="#6366f1" stroke-width="2" marker-end="url(#arrP)"/>
+
+    <rect x="560" y="260" width="460" height="60" rx="8" fill="#312e81" stroke="#6366f1"/>
+    <text x="580" y="285" fill="#e0e7ff" font-size="12" font-weight="600">证据积分计算</text>
+    <text x="580" y="305" fill="#c7d2fe" font-size="10">score = Σ(evidence.weight) > threshold → trigger achievement check</text>
+
+    <!-- Suggest achievement -->
+    <path d="M 790 320 L 790 350" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrY)"/>
+
+    <rect x="560" y="355" width="460" height="65" rx="10" fill="#78350f" stroke="#f59e0b"/>
+    <text x="790" y="378" fill="#fcd34d" font-size="12" font-weight="600" text-anchor="middle">AI: "Picture似乎已达成"</text>
+    <text x="790" y="396" fill="#fde68a" font-size="10" text-anchor="middle">• 用户说"works" (+3)</text>
+    <text x="790" y="410" fill="#fde68a" font-size="10" text-anchor="middle">• 测试通过 (+2)</text>
+
+    <!-- User confirm -->
+    <path d="M 790 420 L 790 445" stroke="#10b981" stroke-width="2" marker-end="url(#arrG)"/>
+
+    <rect x="640" y="450" width="300" height="55" rx="8" fill="#064e3b"/>
+    <text x="790" y="475" fill="#6ee7b7" font-size="12" text-anchor="middle">"标记为完成？[Y] 或 [继续]"</text>
+    <text x="790" y="492" fill="#a7f3d0" font-size="10" text-anchor="middle">用户一按即可</text>
+
+    <!-- Not achieved path -->
+    <path d="M 560 320 L 480 320 L 480 450" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="490" y="340" fill="#f59e0b" font-size="9">否 → 继续监控</text>
+    <text x="490" y="355" fill="#f59e0b" font-size="9">或 → 增加subtask</text>
+  </svg>
+</div>
+
+<div class="page-break"></div>
+
+<!-- Slide 3: Data Model + Interaction Spectrum -->
+<div class="slide">
+  <div class="slide-title">Picture 交互设计</div>
+  <h1>数据结构 + 交互光谱</h1>
+  <p class="slide-desc">上方：Picture实体设计和版本历史。下方：从静默到重交互的光谱。</p>
+
+  <svg viewBox="0 0 1100 580" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#1a1a2e"/>
+        <stop offset="100%" stop-color="#16213e"/>
+      </linearGradient>
+    </defs>
+
+    <rect x="20" y="20" width="1060" height="540" rx="16" fill="url(#bg3)"/>
+
+    <!-- LEFT: Picture Data Model -->
+    <text x="50" y="55" fill="#6b7280" font-size="11" letter-spacing="1">DATA MODEL</text>
+
+    <rect x="50" y="65" width="480" height="240" rx="12" fill="#0f172a" stroke="#334155"/>
+
+    <!-- Picture entity -->
+    <text x="70" y="90" fill="#e5e7eb" font-size="12" font-weight="600">Picture Entity</text>
+
+    <rect x="70" y="100" width="440" height="35" rx="6" fill="#1e293b"/>
+    <text x="85" y="120" fill="#c4b5fd" font-size="10">id: UUID</text>
+
+    <rect x="70" y="140" width="440" height="50" rx="6" fill="#312e81"/>
+    <text x="85" y="160" fill="#e0e7ff" font-size="10">statement: "X delivered, working in production"</text>
+    <text x="85" y="175" fill="#c7d2fe" font-size="9">requirements: ["measurable", "criteria"]</text>
+
+    <rect x="70" y="195" width="440" height="40" rx="6" fill="#1e293b"/>
+    <text x="85" y="215" fill="#c4b5fd" font-size="10">achievement_score: number  |  confirmed_at: timestamp?</text>
+
+    <rect x="70" y="240" width="440" height="50" rx="6" fill="#1e293b"/>
+    <text x="85" y="262" fill="#c4b5fd" font-size="10">task_id: UUID  |  version: number  |  created_by: user|ai|collaborative</text>
+
+    <!-- Evidence sub-entity -->
+    <text x="70" y="320" fill="#e5e7eb" font-size="12" font-weight="600">Evidence Entity</text>
+
+    <rect x="70" y="335" width="200" height="70" rx="8" fill="#064e3b"/>
+    <text x="85" y="358" fill="#6ee7b7" font-size="10">Positive</text>
+    <text x="85" y="375" fill="#a7f3d0" font-size="9">user_statement +3</text>
+    <text x="85" y="390" fill="#a7f3d0" font-size="9">tool_result +2</text>
+
+    <rect x="280" y="335" width="200" height="70" rx="8" fill="#7f1d1d"/>
+    <text x="295" y="358" fill="#fca5a5" font-size="10">Negative</text>
+    <text x="295" y="375" fill="#fecaca" font-size="9">user_complained -2</text>
+    <text x="295" y="390" fill="#fecaca" font-size="9">error -3</text>
+
+    <!-- Version history -->
+    <text x="50" y="435" fill="#6b7280" font-size="11" letter-spacing="1">VERSION HISTORY</text>
+
+    <rect x="50" y="450" width="480" height="80" rx="10" fill="#0f172a" stroke="#334155"/>
+
+    <text x="70" y="472" fill="#e5e7eb" font-size="11">v1 (04-20): "Memory system works"</text>
+    <text x="70" y="490" fill="#94a3b8" font-size="9">→ AI from context</text>
+
+    <text x="280" y="472" fill="#e5e7eb" font-size="11">v2 (04-21): "...Task/Info/Plane"</text>
+    <text x="280" y="490" fill="#94a3b8" font-size="9">→ Refined</text>
+
+    <text x="70" y="510" fill="#10b981" font-size="11">v3 (04-22): "...Picture completion"</text>
+    <text x="280" y="510" fill="#10b981" font-size="9">→ User confirmed</text>
+
+    <!-- RIGHT: Interaction Spectrum -->
+    <text x="560" y="55" fill="#6b7280" font-size="11" letter-spacing="1">INTERACTION SPECTRUM</text>
+
+    <rect x="560" y="65" width="480" height="465" rx="12" fill="#0f172a" stroke="#334155"/>
+
+    <!-- SILENT zone -->
+    <rect x="580" y="85" width="440" height="80" rx="8" fill="#064e3b"/>
+    <text x="600" y="110" fill="#6ee7b7" font-size="13" font-weight="600">SILENT (99%)</text>
+    <text x="600" y="130" fill="#a7f3d0" font-size="10">• Task auto-created from context</text>
+    <text x="600" y="145" fill="#a7f3d0" font-size="10">• Info auto-tagged, linked</text>
+    <text x="600" y="160" fill="#a7f3d0" font-size="10">• Subtask status auto-updated</text>
+
+    <!-- LIGHT zone -->
+    <rect x="580" y="175" width="440" height="60" rx="8" fill="#78350f"/>
+    <text x="600" y="200" fill="#fcd34d" font-size="13" font-weight="600">LIGHT</text>
+    <text x="600" y="220" fill="#fde68a" font-size="10">• "Which task?" → one-tap confirm</text>
+    <text x="600" y="235" fill="#fde68a" font-size="10">• "Context switch?" → one-tap confirm</text>
+
+    <!-- Arrow down -->
+    <path d="M 800 235 L 800 260" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrY)"/>
+
+    <!-- HEAVY zone -->
+    <rect x="580" y="270" width="440" height="140" rx="10" fill="#7c3aed" stroke="#a78bfa" stroke-width="2"/>
+    <text x="600" y="295" fill="#e9d5ff" font-size="13" font-weight="600">HEAVY — Picture 交互</text>
+    <text x="600" y="318" fill="#ddd6fe" font-size="10">• New task with no Picture</text>
+    <text x="600" y="333" fill="#ddd6fe" font-size="10">• Picture obsolete</text>
+    <text x="600" y="348" fill="#ddd6fe" font-size="10">• Picture achievement check</text>
+    <text x="600" y="363" fill="#ddd6fe" font-size="10">• Skill/command invocation</text>
+    <text x="600" y="383" fill="#c4b5fd" font-size="9">脚手架式对话 · AI准备草稿 · 用户确认</text>
+    <text x="600" y="398" fill="#c4b5fd" font-size="9">10-30分钟初始 · 2-5分钟更新</text>
+
+    <!-- Design principles -->
+    <text x="580" y="440" fill="#e5e7eb" font-size="11" font-weight="600">设计原则</text>
+
+    <rect x="580" y="455" width="210" height="60" rx="6" fill="#1e293b"/>
+    <text x="595" y="477" fill="#94a3b8" font-size="10">分阶段</text>
+    <text x="595" y="492" fill="#c4b5fd" font-size="9">基本Picture优先</text>
+    <text x="595" y="507" fill="#c4b5fd" font-size="9">细节按需</text>
+
+    <rect x="800" y="455" width="220" height="60" rx="6" fill="#1e293b"/>
+    <text x="815" y="477" fill="#94a3b8" font-size="10">AI干活</text>
+    <text x="815" y="492" fill="#c4b5fd" font-size="9">AI提取、建议</text>
+    <text x="815" y="507" fill="#c4b5fd" font-size="9">用户只需确认/调整</text>
+  </svg>
+</div>
+
+</body>
+</html>
