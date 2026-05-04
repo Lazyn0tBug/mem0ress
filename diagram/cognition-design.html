@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mem0ress 认知态势感知系统设计图</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+      :root {
+        --bg-color: #0b1120;
+        --card-bg: #1e293b;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --accent-blue: #38bdf8;
+        --accent-purple: #a855f7;
+        --accent-green: #10b981;
+        --accent-orange: #f59e0b;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        line-height: 1.6;
+        margin: 0;
+        padding: 40px 20px;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 50px;
+      }
+      .header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        background: -webkit-linear-gradient(45deg, var(--accent-blue), var(--accent-purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .header p {
+        color: var(--text-muted);
+        font-size: 1.1rem;
+      }
+      .card {
+        background-color: var(--card-bg);
+        border-radius: 16px;
+        padding: 30px;
+        margin-bottom: 40px;
+        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+        border: 1px solid #334155;
+      }
+      .card h2 {
+        margin-top: 0;
+        font-size: 1.4rem;
+        color: var(--text-main);
+        border-bottom: 1px solid #334155;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .card p {
+        color: var(--text-muted);
+        margin-bottom: 25px;
+        font-size: 0.95rem;
+      }
+      .mermaid {
+        display: flex;
+        justify-content: center;
+        background-color: #0f172a;
+        padding: 30px;
+        border-radius: 12px;
+        overflow-x: auto;
+        border: 1px solid #1e293b;
+      }
+      /* 状态圆点 */
+      .dot {
+        height: 12px;
+        width: 12px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .dot-mind {
+        background-color: var(--accent-purple);
+      }
+      .dot-ram {
+        background-color: var(--accent-blue);
+      }
+      .dot-meta {
+        background-color: var(--accent-green);
+      }
+      .dot-distill {
+        background-color: var(--accent-orange);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>mem0ress Cognition Architecture</h1>
+        <p>不再是记忆检索，而是前瞻性的目标认知与态势感知</p>
+      </div>
+
+      <!-- 1. 认知解耦架构 -->
+      <div class="card">
+        <h2><span class="dot dot-mind"></span> 1. 认知解耦：三层架构 (The CPU-RAM-Disk Model)</h2>
+        <p>
+          系统彻底告别“数据汤”。Agent 作为思考枢纽 (CPU)，维持瞬态的前额叶工作区 (Plane)；纯文本的
+          mem0ress 作为高频工作内存 (RAM)；外部大容量检索库作为冰冷的客观事实硬盘 (Disk)。
+        </p>
+        <div class="mermaid">
+          graph TD subgraph L1 ["L1: 瞬态认知层 (The Mind / CPU)"] style L1
+          fill:#2E1065,stroke:#A855F7,stroke-width:2px Agent(("AI Agent\n(意图引擎)")) Plane[["🧠
+          .plane.yaml\n(前额叶/工作记忆)"]] Harness{{"⚖️ Harness\n(元认知/质检)"}} end subgraph L2
+          ["L2: 心智模型与经验层 (The RAM / mem0ress)"] style L2
+          fill:#0C4A6E,stroke:#38BDF8,stroke-width:2px Tasks["🎯 tasks/\n(意图锚点/目标牵引)"]
+          Infos["💡 info/\n(认知增量/决策记录)"] Inbox["📥 inbox.md\n(游离态认知缓冲)"] end subgraph
+          L3 ["L3: 全局知识库 (The Disk / External)"] style L3
+          fill:#451A03,stroke:#F59E0B,stroke-width:2px VDB[("Vector DB\n(RAG / 全网知识)")]
+          Docs["Web / API Docs\n(无状态客观事实)"] end %% Core CPU-RAM Loop Agent --
+          "组装当前态势感知" --> Plane Plane -. "目标牵引 (只加载Hot)" .-> Infos Plane -.
+          "锚定当前进度" .-> Tasks Agent -- "游离想法降级隔离" --> Inbox %% Metacognition Tasks --
+          "执行推进触发" --> Harness Harness -- "生成纠偏认知" --> Infos %% Knowledge Distillation
+          (Isolation) Plane -- "暴露出认知缺口 (Cognitive Gap)" --> Agent Agent -- "主动跨界调用
+          Tool" --> VDB VDB -- "返回海量降噪前的数据" --> Agent Agent -- "理解/内化/蒸馏" --> Infos
+        </div>
+      </div>
+
+      <!-- 2. 数据拓扑 -->
+      <div class="card">
+        <h2>
+          <span class="dot dot-ram"></span> 2. 扁平认知网络与注意力回收 (Flat Topology & Attention
+          GC)
+        </h2>
+        <p>
+          纯文本架构放弃树状目录，采用基于 Tag 的多维神经元式软链接。底层的注意力回收脚本 (GC) 代替
+          AI 管理记忆的遗忘过程（冷热衰减）。
+        </p>
+        <div class="mermaid">
+          graph LR subgraph AutoGC ["后台系统 (Attention GC)"] Cron(("Cron / 守护脚本")) end
+          subgraph Mem0ress ["mem0ress (扁平文本域)"] style Mem0ress
+          fill:#0F172A,stroke:#334155,stroke-width:2px T1["📄 task_auth.md\ntags: [auth,
+          api]\nstatus: in-progress"] T2["📄 task_pay.md\ntags: [pay, api]\nstatus: completed"]
+          I1["💡 info_jwt.md\ntags: [auth]\nlifecycle: hot\nweight: decision"] I2["💡
+          info_stripe.md\ntags: [pay]\nlifecycle: cold"] I3["💡 info_cors.md\ntags: [api,
+          auth]\nlifecycle: hot"] end %% Semantic Soft Links T1 -. "语义对齐: auth" .- I1 T1 -.
+          "语义对齐: api" .- I3 T2 -. "语义对齐: pay" .- I2 %% GC Logic Cron -- "扫描已终结的意图"
+          --> T2 Cron -- "自动释放注意力(降温冷藏)" --> I2 Cron -. "不降温带决策权重的节点" .-> I1
+        </div>
+      </div>
+
+      <!-- 3. 元认知短路验证 -->
+      <div class="card">
+        <h2><span class="dot dot-meta"></span> 3. 元认知监督与失败反哺 (Metacognitive Harness)</h2>
+        <p>
+          不盲目信赖 LLM。系统在任务执行中介入三级“短路求值”验证台。如果偏离目标，不会只报
+          Error，而是将失败转化为“认知补丁 (Failure Patch)”重新注入大脑。
+        </p>
+        <div class="mermaid">
+          stateDiagram-v2 direction TB [*] --> 触发检查: Agent 更新 Markdown Todo 状态 state
+          "Harness 元认知独立进程" as Metacognition { state "Tier 1: 机械动作验收" as T1 T1:
+          文本扫描 Sub-task `[x]` state "Tier 2: 客观规律验收" as T2 T2: 执行外部 Validator 脚本
+          (CI/CD) state "Tier 3: 目的论对齐 (Teleological)" as T3 T3: LLM 深度评估产出是否达成
+          Picture T1 --> T2: 全部子任务完成 T1 --> 失败反哺流: 存在遗漏 [-] T2 --> T3: 客观测试通过
+          T2 --> 失败反哺流: 脚本报错 / 超时 T3 --> 认知闭环: 产出契合目标 Picture T3 -->
+          失败反哺流: 逻辑正确但偏离核心意图 } state "失败反哺流 (Failure Patch)" as FailurePatch {
+          提炼偏差: 提取报错上下文与偏差分析 生成认知增量: 创建 info_fail_patch.md 强制热注入:
+          顶格注入下一轮的 Plane } FailurePatch --> [*]: 带着教训重试 认知闭环 --> [*]: Task
+          完结，触发后台 GC 降温
+        </div>
+      </div>
+
+      <!-- 4. 知识内化时序 -->
+      <div class="card">
+        <h2>
+          <span class="dot dot-distill"></span> 4. 认知缺口与内化时序 (Cognitive Distillation Flow)
+        </h2>
+        <p>
+          展示“不知道自己不知道”到“掌握专有经验”的动态流转。拒绝大段无用文本污染记忆，每一次外部调用都必须经过沙盒蒸馏。
+        </p>
+        <div class="mermaid">
+          sequenceDiagram participant CPU as AI Agent participant RAM as mem0ress (Plane)
+          participant Disk as 外部知识库 (KB) Note over CPU, RAM: Agent 开始执行 Task... CPU->>RAM:
+          遇到障碍，盘点现有经验 RAM-->>CPU: 现有 Hot Info 不足以解决问题 Note right of CPU:
+          暴露认知缺口 (Cognitive Gap) CPU->>RAM: 更新 .plane.yaml 加入未知问题 CPU->>Disk: Tool
+          Call: /search_kb("Stripe Webhook signature verify") activate Disk Disk-->>CPU: 返回 4000
+          Tokens 冗长的文档及示例 deactivate Disk Note over CPU: 在隔离沙盒中阅读与思考 (内化)
+          CPU->>CPU: 剔除无关信息，提炼出 3 行核心解法 CPU->>RAM: 创建 info_stripe_fix.md
+          (写入认知增量) Note right of RAM: tags: [stripe, webhook]<br />lifecycle: hot RAM-->>CPU:
+          刷新 Plane，态势感知更新 CPU->>CPU: 携带新认知，继续编写业务代码
+        </div>
+      </div>
+    </div>
+
+    <script>
+      mermaid.initialize({
+        theme: 'dark',
+        startOnLoad: true,
+        securityLevel: 'loose',
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+        sequence: { showSequenceNumbers: false, messageMargin: 40 },
+        state: { curve: 'basis' },
+      });
+    </script>
+  </body>
+</html>

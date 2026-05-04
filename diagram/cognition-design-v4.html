@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mem0ress 认知态势感知系统 (v4 + OKLCH)</title>
+    <!-- 引入 Tailwind CSS v4 (零配置，支持 CSS 变量和 OKLCH) -->
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      /* 使用 Tailwind v4 的 @theme 注入自定义 OKLCH 颜色 */
+      @theme {
+        --color-bg-base: oklch(0.16 0.01 260); /* 深邃暗色背景 */
+        --color-card-bg: oklch(0.22 0.02 260); /* 卡片背景 */
+        --color-card-border: oklch(0.28 0.03 260); /* 卡片边框 */
+
+        --color-text-main: oklch(0.96 0.01 260); /* 主文本 (白) */
+        --color-text-dim: oklch(0.75 0.02 260); /* 次文本 (灰) */
+
+        /* 语义化色盘 (OKLCH 保证了亮度和饱和度的绝对统一) */
+        --color-cpu: oklch(0.7 0.15 300); /* L1: 认知层 (紫) */
+        --color-ram: oklch(0.75 0.12 220); /* L2: 状态层 (蓝) */
+        --color-disk: oklch(0.75 0.15 50); /* L3: 知识层 (橙) */
+        --color-meta: oklch(0.75 0.14 150); /* 元认知 (绿) */
+        --color-fail: oklch(0.65 0.18 25); /* 失败/阻断 (红) */
+        --color-cold: oklch(0.4 0.02 260); /* 冷却状态 (暗灰) */
+      }
+
+      body {
+        background-color: var(--color-bg-base);
+        color: var(--color-text-main);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          Roboto,
+          'Helvetica Neue',
+          Arial,
+          sans-serif;
+      }
+
+      /* SVG 内联样式定义 */
+      .svg-title {
+        font-size: 14px;
+        font-weight: 600;
+        fill: var(--color-text-main);
+      }
+      .svg-text {
+        font-size: 12px;
+        fill: var(--color-text-main);
+      }
+      .svg-sub {
+        font-size: 10px;
+        fill: var(--color-text-dim);
+      }
+      .svg-path {
+        fill: none;
+        stroke: var(--color-text-dim);
+        stroke-width: 1.5;
+        stroke-dasharray: 4, 4;
+      }
+      .svg-path-solid {
+        fill: none;
+        stroke: var(--color-text-dim);
+        stroke-width: 1.5;
+      }
+
+      .box-cpu {
+        fill: oklch(0.25 0.05 300);
+        stroke: var(--color-cpu);
+        stroke-width: 1.5;
+        rx: 8px;
+      }
+      .box-ram {
+        fill: oklch(0.25 0.05 220);
+        stroke: var(--color-ram);
+        stroke-width: 1.5;
+        rx: 8px;
+      }
+      .box-disk {
+        fill: oklch(0.25 0.05 50);
+        stroke: var(--color-disk);
+        stroke-width: 1.5;
+        rx: 8px;
+      }
+      .box-meta {
+        fill: oklch(0.25 0.05 150);
+        stroke: var(--color-meta);
+        stroke-width: 1.5;
+        rx: 8px;
+      }
+      .box-fail {
+        fill: oklch(0.25 0.05 25);
+        stroke: var(--color-fail);
+        stroke-width: 1.5;
+        rx: 8px;
+      }
+      .box-cold {
+        fill: var(--color-bg-base);
+        stroke: var(--color-cold);
+        stroke-width: 1.5;
+        rx: 8px;
+      }
+
+      .badge {
+        font-size: 9px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body class="p-6 md:p-12 antialiased selection:bg-cpu selection:text-white">
+    <div class="max-w-6xl mx-auto">
+      <!-- Header -->
+      <header class="text-center mb-16">
+        <h1
+          class="text-4xl md:text-5xl font-extrabold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cpu via-ram to-meta"
+        >
+          mem0ress Cognition Architecture
+        </h1>
+        <p class="text-text-dim text-lg">基于 OKLCH 与内联 SVG 构建的纯净认知态势感知系统蓝图</p>
+      </header>
+
+      <div class="grid grid-cols-1 gap-12">
+        <!-- 1. 认知解耦：三层架构 -->
+        <section class="bg-card-bg border border-card-border rounded-2xl p-8 shadow-2xl">
+          <h2 class="text-2xl font-semibold mb-3 flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-cpu"></span>
+            1. 认知解耦三层架构 (The CPU-RAM-Disk Model)
+          </h2>
+          <p class="text-text-dim mb-8">
+            告别数据汤。Agent(CPU)维持瞬态前额叶；mem0ress(RAM)作为高频工作内存；外部检索库(Disk)作为冰冷的客观事实硬盘。硬盘数据绝不直接污染内存。
+          </p>
+
+          <div class="w-full overflow-x-auto bg-[#0A0F1A] rounded-xl border border-card-border p-4">
+            <!-- 内联 SVG 1 -->
+            <svg
+              viewBox="0 0 900 400"
+              class="w-full min-w-[800px] h-auto font-sans"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <defs>
+                <marker
+                  id="arrow"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-text-dim)" />
+                </marker>
+                <marker
+                  id="arrow-cpu"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-cpu)" />
+                </marker>
+              </defs>
+
+              <!-- L1: CPU -->
+              <rect x="20" y="40" width="260" height="320" class="box-cpu" fill-opacity="0.2" />
+              <text x="30" y="65" class="svg-title" fill="var(--color-cpu)">
+                L1: 瞬态认知层 (CPU/The Mind)
+              </text>
+
+              <rect x="40" y="90" width="220" height="60" class="box-cpu" />
+              <text x="150" y="115" class="svg-text" text-anchor="middle">
+                🧠 AI Agent (意图引擎)
+              </text>
+              <text x="150" y="135" class="svg-sub" text-anchor="middle">理解、推理与工具调用</text>
+
+              <rect x="40" y="180" width="220" height="60" class="box-cpu" />
+              <text x="150" y="205" class="svg-text" text-anchor="middle">
+                🔍 .plane.yaml (前额叶)
+              </text>
+              <text x="150" y="225" class="svg-sub" text-anchor="middle">
+                维持全局态势感知/暴露认知缺口
+              </text>
+
+              <rect x="40" y="270" width="220" height="60" class="box-meta" />
+              <text x="150" y="295" class="svg-text" text-anchor="middle">⚖️ Harness (元认知)</text>
+              <text x="150" y="315" class="svg-sub" text-anchor="middle">任务级三层短路质检台</text>
+
+              <!-- L2: RAM -->
+              <rect x="320" y="40" width="260" height="320" class="box-ram" fill-opacity="0.2" />
+              <text x="330" y="65" class="svg-title" fill="var(--color-ram)">
+                L2: 经验记忆层 (RAM/mem0ress)
+              </text>
+
+              <rect x="340" y="90" width="220" height="60" class="box-ram" />
+              <text x="450" y="115" class="svg-text" text-anchor="middle">
+                🎯 tasks/ (意图锚点)
+              </text>
+              <text x="450" y="135" class="svg-sub" text-anchor="middle">
+                Markdown Todo 与 Picture
+              </text>
+
+              <rect x="340" y="180" width="220" height="60" class="box-ram" />
+              <text x="450" y="205" class="svg-text" text-anchor="middle">💡 info/ (认知增量)</text>
+              <text x="450" y="225" class="svg-sub" text-anchor="middle">
+                决策记录、报错补丁 (Hot/Cold)
+              </text>
+
+              <rect x="340" y="270" width="220" height="60" class="box-cold" />
+              <text x="450" y="295" class="svg-text" text-anchor="middle">📥 inbox.md</text>
+              <text x="450" y="315" class="svg-sub" text-anchor="middle">游离态灵感中转站</text>
+
+              <!-- L3: Disk -->
+              <rect x="620" y="40" width="260" height="320" class="box-disk" fill-opacity="0.2" />
+              <text x="630" y="65" class="svg-title" fill="var(--color-disk)">
+                L3: 全局知识库 (Disk/External)
+              </text>
+
+              <rect x="640" y="130" width="220" height="140" class="box-disk" />
+              <text x="750" y="170" class="svg-text" text-anchor="middle">
+                📚 Vector DB / API Docs
+              </text>
+              <text x="750" y="195" class="svg-sub" text-anchor="middle">海量的无状态客观事实</text>
+              <text x="750" y="215" class="svg-sub" text-anchor="middle">
+                公司 Wiki / 全网 RAG 检索
+              </text>
+              <text x="750" y="245" class="svg-sub" fill="var(--color-fail)" text-anchor="middle">
+                【绝不直接污染 RAM】
+              </text>
+
+              <!-- Connections -->
+              <path d="M 260 120 L 330 120" class="svg-path-solid" marker-end="url(#arrow)" />
+              <text x="295" y="110" class="svg-sub" text-anchor="middle">状态推进</text>
+
+              <path d="M 260 210 L 330 210" class="svg-path-solid" marker-end="url(#arrow)" />
+              <text x="295" y="200" class="svg-sub" text-anchor="middle">热点挂载</text>
+
+              <path
+                d="M 340 280 L 260 280"
+                class="svg-path"
+                stroke="var(--color-fail)"
+                marker-end="url(#arrow)"
+              />
+              <text x="300" y="270" class="svg-sub" fill="var(--color-fail)" text-anchor="middle">
+                失败补丁
+              </text>
+
+              <path
+                d="M 260 140 C 450 140, 500 200, 630 200"
+                class="svg-path-solid"
+                stroke="var(--color-cpu)"
+                marker-end="url(#arrow-cpu)"
+              />
+              <rect x="420" y="155" width="100" height="20" fill="var(--color-bg-base)" rx="4" />
+              <text x="470" y="169" class="svg-sub" fill="var(--color-cpu)" text-anchor="middle">
+                主动查询知识
+              </text>
+
+              <path
+                d="M 630 180 C 500 180, 450 220, 260 220"
+                class="svg-path-solid"
+                stroke="var(--color-disk)"
+                marker-end="url(#arrow)"
+              />
+              <rect x="440" y="190" width="60" height="20" fill="var(--color-bg-base)" rx="4" />
+              <text x="470" y="204" class="svg-sub" fill="var(--color-disk)" text-anchor="middle">
+                返回原文档
+              </text>
+            </svg>
+          </div>
+        </section>
+
+        <!-- 2. 扁平认知网络与注意力回收 -->
+        <section class="bg-card-bg border border-card-border rounded-2xl p-8 shadow-2xl">
+          <h2 class="text-2xl font-semibold mb-3 flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-ram"></span>
+            2. 扁平拓扑与注意力回收 (Flat Topology & Attention GC)
+          </h2>
+          <p class="text-text-dim mb-8">
+            放弃树状目录，采用基于 Tag 的多维神经元式软链接。由底层的垃圾回收脚本 (GC)
+            接管注意力的冷却，释放 AI 算力。
+          </p>
+
+          <div class="w-full overflow-x-auto bg-[#0A0F1A] rounded-xl border border-card-border p-4">
+            <!-- 内联 SVG 2 -->
+            <svg
+              viewBox="0 0 900 350"
+              class="w-full min-w-[800px] h-auto font-sans"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <defs>
+                <marker
+                  id="arrow-gc"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-cold)" />
+                </marker>
+              </defs>
+
+              <!-- GC Engine -->
+              <rect x="350" y="20" width="200" height="50" class="box-cold" />
+              <text x="450" y="45" class="svg-title" text-anchor="middle">
+                ⚙️ 后台 Cron GC 脚本
+              </text>
+              <text x="450" y="60" class="svg-sub" text-anchor="middle">
+                定期扫描并释放过期的注意力
+              </text>
+
+              <!-- Task Nodes (Left) -->
+              <rect x="100" y="120" width="200" height="70" class="box-ram" />
+              <text x="110" y="145" class="svg-text">📄 task_auth.md</text>
+              <text x="110" y="165" class="svg-sub">tags: [auth, api]</text>
+              <text x="110" y="180" class="badge" fill="var(--color-ram)">STATUS: IN-PROGRESS</text>
+
+              <rect x="100" y="240" width="200" height="70" class="box-cold" />
+              <text x="110" y="265" class="svg-text">📄 task_pay.md</text>
+              <text x="110" y="285" class="svg-sub">tags: [pay, api]</text>
+              <text x="110" y="300" class="badge" fill="var(--color-text-dim)">
+                STATUS: COMPLETED
+              </text>
+
+              <!-- Info Nodes (Right) -->
+              <rect x="600" y="100" width="200" height="60" class="box-disk" />
+              <text x="610" y="125" class="svg-text">💡 info_jwt.md</text>
+              <text x="610" y="145" class="svg-sub">tags: [auth]</text>
+              <text x="750" y="145" class="badge" fill="var(--color-fail)">[DECISION]</text>
+
+              <rect x="600" y="180" width="200" height="60" class="box-disk" />
+              <text x="610" y="205" class="svg-text">💡 info_cors.md</text>
+              <text x="610" y="225" class="svg-sub">tags: [api, auth]</text>
+              <text x="750" y="225" class="badge" fill="var(--color-disk)">[HOT]</text>
+
+              <rect x="600" y="260" width="200" height="60" class="box-cold" />
+              <text x="610" y="285" class="svg-text" fill="var(--color-text-dim)">
+                💡 info_stripe.md
+              </text>
+              <text x="610" y="305" class="svg-sub">tags: [pay]</text>
+              <text x="750" y="305" class="badge" fill="var(--color-text-dim)">[COLD]</text>
+
+              <!-- Connections -->
+              <path d="M 300 155 L 600 130" class="svg-path" stroke="var(--color-ram)" />
+              <rect x="420" y="132" width="60" height="18" fill="var(--color-bg-base)" rx="4" />
+              <text x="450" y="145" class="svg-sub" fill="var(--color-ram)" text-anchor="middle">
+                Tag: auth
+              </text>
+
+              <path d="M 300 165 L 600 200" class="svg-path" stroke="var(--color-ram)" />
+              <rect x="420" y="172" width="60" height="18" fill="var(--color-bg-base)" rx="4" />
+              <text x="450" y="185" class="svg-sub" fill="var(--color-ram)" text-anchor="middle">
+                Tag: api
+              </text>
+
+              <path d="M 300 275 L 600 290" class="svg-path" />
+
+              <!-- GC Lines -->
+              <path
+                d="M 450 70 L 450 220 L 300 250"
+                class="svg-path-solid"
+                stroke="var(--color-cold)"
+                marker-end="url(#arrow-gc)"
+              />
+              <path
+                d="M 450 70 L 450 220 L 600 270"
+                class="svg-path-solid"
+                stroke="var(--color-cold)"
+                marker-end="url(#arrow-gc)"
+              />
+            </svg>
+          </div>
+        </section>
+
+        <!-- 3. 三级 Harness 短路验证 -->
+        <section class="bg-card-bg border border-card-border rounded-2xl p-8 shadow-2xl">
+          <h2 class="text-2xl font-semibold mb-3 flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-meta"></span>
+            3. 目的论对齐：元认知短路验证 (Metacognitive Harness)
+          </h2>
+          <p class="text-text-dim mb-8">
+            Agent
+            更新状态后触发独立质检。从文本正则、外部脚本到大模型语义验证，逐级短路。偏离目标即生成“失败补丁(Failure
+            Patch)”强制反哺下一轮。
+          </p>
+
+          <div class="w-full overflow-x-auto bg-[#0A0F1A] rounded-xl border border-card-border p-4">
+            <!-- 内联 SVG 3 -->
+            <svg
+              viewBox="0 0 900 450"
+              class="w-full min-w-[800px] h-auto font-sans"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <defs>
+                <marker
+                  id="arrow-down"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-meta)" />
+                </marker>
+                <marker
+                  id="arrow-fail"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-fail)" />
+                </marker>
+              </defs>
+
+              <rect x="250" y="20" width="300" height="40" class="box-cpu" />
+              <text x="400" y="45" class="svg-title" text-anchor="middle">
+                Agent 标记 Sub-task [x]
+              </text>
+
+              <path
+                d="M 400 60 L 400 90"
+                class="svg-path-solid"
+                stroke="var(--color-meta)"
+                marker-end="url(#arrow-down)"
+              />
+
+              <!-- Harness Box -->
+              <rect x="150" y="90" width="500" height="280" class="box-meta" fill-opacity="0.1" />
+              <text x="165" y="115" class="svg-title" fill="var(--color-meta)">
+                ⚖️ Harness 外置独立评估进程
+              </text>
+
+              <!-- Tier 1 -->
+              <rect x="250" y="130" width="300" height="50" class="box-meta" />
+              <text x="400" y="155" class="svg-text" text-anchor="middle">
+                Tier 1: 机械状态检查
+              </text>
+              <text x="400" y="170" class="svg-sub" text-anchor="middle">
+                解析 Markdown: 是否存在未勾选的 [-] Todo
+              </text>
+
+              <path
+                d="M 400 180 L 400 210"
+                class="svg-path-solid"
+                stroke="var(--color-meta)"
+                marker-end="url(#arrow-down)"
+              />
+              <rect x="410" y="185" width="40" height="15" fill="var(--color-bg-base)" rx="4" />
+              <text x="430" y="196" class="svg-sub" fill="var(--color-meta)" text-anchor="middle">
+                通过
+              </text>
+
+              <!-- Tier 2 -->
+              <rect x="250" y="210" width="300" height="50" class="box-meta" />
+              <text x="400" y="235" class="svg-text" text-anchor="middle">
+                Tier 2: 客观规律验收
+              </text>
+              <text x="400" y="250" class="svg-sub" text-anchor="middle">
+                执行 Validator 脚本 (如 npm test, lint)
+              </text>
+
+              <path
+                d="M 400 260 L 400 290"
+                class="svg-path-solid"
+                stroke="var(--color-meta)"
+                marker-end="url(#arrow-down)"
+              />
+              <rect x="410" y="265" width="40" height="15" fill="var(--color-bg-base)" rx="4" />
+              <text x="430" y="276" class="svg-sub" fill="var(--color-meta)" text-anchor="middle">
+                通过
+              </text>
+
+              <!-- Tier 3 -->
+              <rect x="250" y="290" width="300" height="50" class="box-cpu" />
+              <text x="400" y="315" class="svg-text" text-anchor="middle">
+                Tier 3: 目的论对齐 (Teleological)
+              </text>
+              <text x="400" y="330" class="svg-sub" text-anchor="middle">
+                唤醒 LLM：评估当前产出是否契合 Picture
+              </text>
+
+              <path
+                d="M 400 340 L 400 390"
+                class="svg-path-solid"
+                stroke="var(--color-meta)"
+                marker-end="url(#arrow-down)"
+              />
+
+              <rect x="250" y="390" width="300" height="40" class="box-ram" />
+              <text x="400" y="415" class="svg-text" text-anchor="middle">
+                🎉 认知闭环: 标记 Task Completed
+              </text>
+
+              <!-- Failure Flow -->
+              <rect x="700" y="210" width="180" height="80" class="box-fail" />
+              <text x="790" y="235" class="svg-title" fill="var(--color-fail)" text-anchor="middle">
+                Failure Patch
+              </text>
+              <text x="790" y="255" class="svg-sub" text-anchor="middle">
+                提取错误日志与偏差分析
+              </text>
+              <text x="790" y="275" class="svg-sub" text-anchor="middle">
+                强制热注入下一轮 Plane
+              </text>
+
+              <!-- Failure Paths -->
+              <path
+                d="M 550 155 L 700 230"
+                class="svg-path-solid"
+                stroke="var(--color-fail)"
+                marker-end="url(#arrow-fail)"
+              />
+              <path
+                d="M 550 235 L 700 250"
+                class="svg-path-solid"
+                stroke="var(--color-fail)"
+                marker-end="url(#arrow-fail)"
+              />
+              <path
+                d="M 550 315 L 700 270"
+                class="svg-path-solid"
+                stroke="var(--color-fail)"
+                marker-end="url(#arrow-fail)"
+              />
+
+              <path
+                d="M 790 210 C 790 40, 550 40, 550 40"
+                class="svg-path-solid"
+                stroke="var(--color-fail)"
+                marker-end="url(#arrow-fail)"
+              />
+              <text x="700" y="35" class="svg-sub" fill="var(--color-fail)">带着教训反哺重试</text>
+            </svg>
+          </div>
+        </section>
+
+        <!-- 4. 知识内化时序 -->
+        <section class="bg-card-bg border border-card-border rounded-2xl p-8 shadow-2xl">
+          <h2 class="text-2xl font-semibold mb-3 flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-disk"></span>
+            4. 认知缺口与知识蒸馏流 (Cognitive Distillation)
+          </h2>
+          <p class="text-text-dim mb-8">
+            展示从“暴露未知”到“内化专有经验”的动态流转。拒绝大段无用文本污染记忆，外部调用必须经由
+            Agent 隔离沙盒提炼。
+          </p>
+
+          <div class="w-full overflow-x-auto bg-[#0A0F1A] rounded-xl border border-card-border p-4">
+            <!-- 内联 SVG 4 -->
+            <svg
+              viewBox="0 0 900 400"
+              class="w-full min-w-[800px] h-auto font-sans"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <defs>
+                <marker
+                  id="arrow-seq"
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-text-main)" />
+                </marker>
+              </defs>
+
+              <!-- Lifelines -->
+              <line
+                x1="150"
+                y1="60"
+                x2="150"
+                y2="380"
+                stroke="var(--color-card-border)"
+                stroke-width="2"
+                stroke-dasharray="6,6"
+              />
+              <line
+                x1="450"
+                y1="60"
+                x2="450"
+                y2="380"
+                stroke="var(--color-card-border)"
+                stroke-width="2"
+                stroke-dasharray="6,6"
+              />
+              <line
+                x1="750"
+                y1="60"
+                x2="750"
+                y2="380"
+                stroke="var(--color-card-border)"
+                stroke-width="2"
+                stroke-dasharray="6,6"
+              />
+
+              <!-- Actors -->
+              <rect x="75" y="20" width="150" height="40" class="box-ram" />
+              <text x="150" y="45" class="svg-title" text-anchor="middle">Plane (工作台)</text>
+
+              <rect x="375" y="20" width="150" height="40" class="box-cpu" />
+              <text x="450" y="45" class="svg-title" text-anchor="middle">Agent (CPU)</text>
+
+              <rect x="675" y="20" width="150" height="40" class="box-disk" />
+              <text x="750" y="45" class="svg-title" text-anchor="middle">Vector DB (外部)</text>
+
+              <!-- Sequence Steps -->
+              <rect x="300" y="80" width="300" height="24" fill="var(--color-bg-base)" rx="4" />
+              <text x="450" y="96" class="svg-sub" text-anchor="middle">
+                Agent 执行 Task 遇到技术盲区
+              </text>
+
+              <path
+                d="M 450 120 L 150 120"
+                class="svg-path-solid"
+                stroke="var(--color-text-main)"
+                marker-end="url(#arrow-seq)"
+              />
+              <text x="300" y="110" class="svg-sub" text-anchor="middle">
+                更新 YAML: 暴露 Cognitive Gaps
+              </text>
+
+              <path
+                d="M 450 160 L 750 160"
+                class="svg-path-solid"
+                stroke="var(--color-text-main)"
+                marker-end="url(#arrow-seq)"
+              />
+              <text x="600" y="150" class="svg-sub" text-anchor="middle">
+                Tool Call: 检索 "Stripe Webhook 验签"
+              </text>
+
+              <path
+                d="M 750 200 L 450 200"
+                class="svg-path-solid"
+                stroke="var(--color-disk)"
+                marker-end="url(#arrow-seq)"
+              />
+              <text x="600" y="190" class="svg-sub" fill="var(--color-disk)" text-anchor="middle">
+                返回 4000 Tokens 冗长官方文档
+              </text>
+
+              <rect x="350" y="220" width="200" height="40" class="box-cpu" />
+              <text x="450" y="238" class="svg-text" text-anchor="middle">在沙盒中阅读与内化</text>
+              <text x="450" y="252" class="svg-sub" text-anchor="middle">
+                剔除废话，提炼核心代码
+              </text>
+
+              <path
+                d="M 450 290 L 150 290"
+                class="svg-path-solid"
+                stroke="var(--color-ram)"
+                marker-end="url(#arrow-seq)"
+              />
+              <text x="300" y="280" class="svg-sub" fill="var(--color-ram)" text-anchor="middle">
+                生成认知增量: info_stripe_fix.md (Hot)
+              </text>
+
+              <path
+                d="M 150 330 L 450 330"
+                class="svg-path-solid"
+                stroke="var(--color-text-main)"
+                marker-end="url(#arrow-seq)"
+              />
+              <text x="300" y="320" class="svg-sub" text-anchor="middle">刷新 Plane, 挂载新知</text>
+
+              <rect x="300" y="350" width="300" height="24" fill="var(--color-bg-base)" rx="4" />
+              <text x="450" y="366" class="svg-sub" fill="var(--color-cpu)" text-anchor="middle">
+                携带新认知，继续编写业务代码
+              </text>
+            </svg>
+          </div>
+        </section>
+      </div>
+    </div>
+  </body>
+</html>

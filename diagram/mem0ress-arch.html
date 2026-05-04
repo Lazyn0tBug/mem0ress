@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mem0ress 系统架构设计图</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+      :root {
+        --bg-color: #0f172a;
+        --card-bg: #1e293b;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --accent: #10b981;
+        --accent-purple: #8b5cf6;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        line-height: 1.6;
+        margin: 0;
+        padding: 40px 20px;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 50px;
+      }
+      .header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        background: -webkit-linear-gradient(45deg, var(--accent), var(--accent-purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .card {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        padding: 30px;
+        margin-bottom: 40px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        border: 1px solid #334155;
+      }
+      .card h2 {
+        margin-top: 0;
+        font-size: 1.5rem;
+        color: var(--text-main);
+        border-bottom: 2px solid #334155;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+      }
+      .card p {
+        color: var(--text-muted);
+        margin-bottom: 20px;
+      }
+      /* Mermaid Dark Theme Config */
+      .mermaid {
+        display: flex;
+        justify-content: center;
+        background-color: #0f172a;
+        padding: 20px;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>mem0ress Architecture</h1>
+        <p>基于文本的瞬态位面与任务级 Harness 架构设计</p>
+      </div>
+
+      <!-- 1. 宏观架构设计 -->
+      <div class="card">
+        <h2>1. 宏观架构设计 (Dual-Track Architecture)</h2>
+        <p>
+          展示“计算(Agent)”、“状态记忆(mem0ress)”与“客观知识(KB)”的物理隔离与交互桥接。Agent
+          作为唯一枢纽，将泛化知识蒸馏入私有记忆。
+        </p>
+        <div class="mermaid">
+          graph TD subgraph L3 ["L3: 全局知识层 (硬盘)"] style L3
+          fill:#1e1b4b,stroke:#4c1d95,stroke-width:2px KB[(向量数据库/RAG)] Docs[外部文档/API规约]
+          KB --- Docs end subgraph L1 ["L1: 瞬态执行层 (CPU)"] style L1
+          fill:#064e3b,stroke:#059669,stroke-width:2px Agent((AI Agent)) Plane[[当前位面
+          .plane.yaml]] Harness{{独立任务级 Harness}} end subgraph L2 ["L2: 经验记忆层 (内存)"]
+          style L2 fill:#0f172a,stroke:#334155,stroke-width:2px subgraph Tasks ["tasks/"] T1[Task:
+          auth_module] T2[Task: payment_module] end subgraph Infos ["info/"] I1>Hot Info:
+          决策与报错] I2>Cold Info: 归档片段] end Inbox[inbox.md - 全局中转站] end %% Core Execution
+          Flow Agent -- "1. 发现并组装上下文" --> Plane Plane -. "动态挂载" .-> T1 Plane -. "Tag
+          关联" .-> I1 %% Knowledge Distillation Flow Agent -- "2. 遇到盲区主动检索 (Tool Call)" -->
+          KB KB -- "返回长文本数据源" --> Agent Agent -- "3. 知识蒸馏 (提炼后写入)" --> I1 %%
+          Harness Flow Agent -- "4. 执行动作推进状态" --> T1 T1 -- "状态变更触发" --> Harness
+          Harness -- "5. 失败打回 (注入 Failure Patch)" --> I1 Harness -- "6. 成功通过" --> T1
+        </div>
+      </div>
+
+      <!-- 2. Harness 评估台 -->
+      <div class="card">
+        <h2>2. 任务级 Harness 流程 (3-Tier Validation)</h2>
+        <p>
+          展示 Harness 的短路评估机制。从低成本的 Todo
+          检查到严格脚本验证，最后进入高成本的大模型语义验证。
+        </p>
+        <div class="mermaid">
+          stateDiagram-v2 direction TB [*] --> 触发条件: Agent勾选 Sub-task 或超时停滞 state
+          "Harness 独立评估上下文" as Eval { state "Tier 1: 机械状态检查" as T1 state "Tier 2:
+          严格指标验证" as T2 state "Tier 3: 语义画面比对" as T3 T1: 解析 Markdown Todo List T2:
+          执行脚本 / 正则 / 单元测试 T3: LLM 对比 Picture 描述与实际产出 T1 --> T2: [x] 全部点亮 T1
+          --> 失败: 存在未完成的子任务 T2 --> T3: Requirements 校验 Pass T2 --> 失败:
+          测试报错或延时超标 T3 --> 成功: 完全契合 Picture T3 --> 失败: 偏离 Picture 预期 } 失败 -->
+          生成补丁: 提取 Error Log / 偏差分析 生成补丁 --> 强制热注入: 生成 Failure Patch (Hot Info)
+          强制热注入 --> Agent重试 成功 --> 标记Task完成 标记Task完成 --> 触发清理: 后台脚本剥离关联
+          Info 触发清理 --> [*]
+        </div>
+      </div>
+
+      <!-- 3. 时序交互流 -->
+      <div class="card">
+        <h2>3. 会话交互生命周期 (Session Lifecycle)</h2>
+        <p>完整呈现一次用户对话背后的系统静默运作流程，以及后台的“冷热垃圾回收”。</p>
+        <div class="mermaid">
+          sequenceDiagram participant U as User participant A as AI Agent participant M as mem0ress
+          (本地文件) participant H as Harness (质检) participant K as KB (外部知识库) participant C
+          as Cron Script U->>A: "帮我配置一下 Stripe Webhook" A->>M: 扫描 tasks/ 与 hot info/
+          M-->>A: 返回相关的上下文 A->>A: 自动推断并生成 .plane.yaml rect rgb(30, 41, 59) Note right
+          of A: 知识蒸馏阶段 A->>K: 搜索 "Stripe Webhook signature verification" K-->>A:
+          返回大段官方文档 A->>M: 提取核心代码，写入 info_stripe_sig.md (标记 hot) end A->>U:
+          "正在为您编写并测试代码..." A->>M: 勾选 Task 中的 Todo: - [x] 配置 Webhook M->>H:
+          检测到状态推进，触发校验 H->>H: 运行 Tier 1 -> Tier 2 -> Tier 3 alt 校验失败
+          (如签名验证不通过) H-->>M: 写入 info_harness_fail.md M-->>A: Plane 热更新失败补丁 A->>A:
+          分析补丁并调整代码 else 校验成功 (达成 Picture) H->>M: 变更 task.status = completed A->>U:
+          "配置完成，已通过所有校验。" end Note over M, C: 会话结束后 (异步执行) C->>M: 扫描
+          Completed Tasks M-->>C: 找出绑定的独占 Info C->>M: 修改 YAML 为 lifecycle: cold (降温)
+        </div>
+      </div>
+    </div>
+
+    <script>
+      mermaid.initialize({
+        theme: 'dark',
+        startOnLoad: true,
+        securityLevel: 'loose',
+        flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+        sequence: { showSequenceNumbers: false },
+      });
+    </script>
+  </body>
+</html>
