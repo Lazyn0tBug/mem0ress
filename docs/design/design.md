@@ -93,7 +93,7 @@ ignore = []
   * [ ] 封装基础的 Git 自动化操作（初始化仓库、自动 Commit 固化）。
   * [ ] 将读/写能力包装为标准的 JSON Tool 格式格式，供 LLM 调用。
 
-* [ ] Phase 4: LLM 循环与推理介入 (LLM Event Loop)
+* [ ] Phase 5: LLM 循环与推理介入 (LLM Event Loop)
 
   * [ ] 接入 LiteLLM，打通 API 通讯。
   * [ ] 编写核心 loop.py：投射平面 -> 发给 LLM -> 拦截并执行 Tool -> 更新状态。
