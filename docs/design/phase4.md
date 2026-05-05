@@ -66,4 +66,3 @@ class CognitiveLoop:
             # SubstrateIO.write_gotcha(task_id, failure_patch)
         else:
             print(f"✅ [约束检验通过] 任务 {task_id} 准许推进，触发 Git 固化。")
-```python
