@@ -2,35 +2,37 @@
 
 我们将严格按照第 7 章的架构（L1 控制台、L2 存储层、LLM 接口、Harness 引擎）来划分模块：
 
+
+
 ```plaintext
 mem0ress/
 ├── pyproject.toml         # 核心项目配置 (基于 uv)
 ├── .python-version        # uv 固定的 Python 版本 (如 3.12)
 ├── README.md
-├── .mem0ress/             # [测试沙箱] 系统吃自己的狗粮，用 mem0ress 管理 mem0ress
-│   ├── index.md
-│   └── gotchas/
+├── .mem0ress/             # [测试沙箱] 认知基座 (Cognitive Substrate)
+│   ├── inbox.md
+│   └── tasks/
 └── src/
     └── mem0ress/
         ├── __init__.py
-        ├── cli.py         # [入口] 基于 Typer 的命令行网关 (L1 Gateway)
-        ├── core/          # [核心心智循环]
+        ├── cli.py         # [入口] 终端交互，提供任务创建 (Task Creation) 等指令
+        ├── gateway/       # [认知网关 L1] 替代原 core，连接大脑与基座的中枢
         │   ├── __init__.py
-        │   ├── loop.py    # 事件驱动控制循环 (Event Loop)
-        │   └── plane.py   # Plane Assembler (状态平面与数据平面组装逻辑)
-        ├── storage/       # [L2 物理层与客体管理]
+        │   ├── loop.py    # 事件驱动控制循环 (对齐循环)
+        │   └── plane.py   # Plane Assembler (认知构建：组装状态/数据平面)
+        ├── substrate/     # [认知基座 L2] 替代原 storage，物理客体与状态管理
         │   ├── __init__.py
-        │   ├── parser.py  # Markdown/YAML Frontmatter 解析与 Schema 校验 (Pydantic)
-        │   ├── fs.py      # 乐观锁写入、引用水化、冲突检测
-        │   └── git_ops.py # 底层 Git 固化与回溯 (Revert)
+        │   ├── parser.py  # Manifest 解析与 Schema 校验 (Pydantic)
+        │   ├── fs.py      # 乐观锁写入、水化路由与冲突感知
+        │   └── git_ops.py # 底层 Git 固化与回溯机制
         ├── llm/           # [大脑接口]
         │   ├── __init__.py
-        │   ├── client.py  # LiteLLM 封装 (无状态推理)
-        │   └── tools.py   # L1 暴露给 Agent 的 JSON Tool Calls (如 read, write)
-        └── harness/       # [带外约束检验引擎]
+        │   ├── client.py  # LiteLLM 封装 (无状态推理算力)
+        │   └── tools.py   # 暴露给 Agent 的 Tool Calls (如水化、状态突变)
+        └── harness/       # [检验引擎] 任务检验 (Task Verification)
             ├── __init__.py
-            ├── runner.py  # Tier 2: 独立子进程沙箱执行器
-            └── judge.py   # Tier 3: LLM-as-a-Judge 语义对齐校验
+            ├── runner.py  # Tier 2: 客观规律验收 (沙箱脚本执行)
+            └── judge.py   # Tier 3: 跨平面语义对齐 (LLM-as-a-Judge)
 ```
 
 ## 2. 核心配置文件 (pyproject.toml)
@@ -41,20 +43,20 @@ mem0ress/
 [project]
 name = "mem0ress"
 version = "0.1.0"
-description = "A text-based cognitive OS kernel and situational awareness engine for LLM Agents."
+description = "A text-based Cognitive Alignment Plane (CAP) and situational awareness framework for LLM Agents."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "typer>=0.12.3",       # 优雅的 CLI 框架
-    "pydantic>=2.7.0",     # 强类型 Schema 与数据校验
+    "pydantic>=2.7.0",     # 强类型 Schema 与认知三要素校验
     "pyyaml>=6.0.1",       # Markdown Frontmatter 解析
-    "litellm>=1.35.0",     # LLM 网关，支持 OpenAI/Anthropic/Gemini
-    "gitpython>=3.1.43",   # 数据平面 Git 版本控制
-    "rich>=13.7.1",        # CLI 终端极其美观的态势展示
+    "litellm>=1.35.0",     # LLM 网关，支持多模型路由
+    "gitpython>=3.1.43",   # 认知基座的 Git 版本控制
+    "rich>=13.7.1",        # CLI 终端美观的态势投影展示
 ]
 
 [project.scripts]
-mem0 = "mem0ress.cli:app"  # 注册终端命令 `mem0`
+mem0 = "mem0ress.cli:app"  
 
 [build-system]
 requires = ["hatchling"]
@@ -65,7 +67,7 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP"] # 开启常用错误、格式化、import 排序和语法升级
+select = ["E", "F", "I", "UP"] 
 ignore = []
 ```
 
