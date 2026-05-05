@@ -30,7 +30,7 @@ mem0ress 是一个认知对齐平面 (Cognitive Alignment Plane)。它不是传�
 
 mem0ress并不试图去重现所有记忆，而是使AI始终能够保持明确地认知，即，我是什么，我在做什么，我的目标是什么，我还有什么要做。传统的记忆中，我拥有什么信息，被从这里抛开。
 
-我们认为，当前的AI已经足够智能，如果它清晰地知道自己要做什么。它不需要从会话中一遍又一遍地检索和过滤相似的信息。
+我们认为，当前的AI已经足够智能，它不需要从会话中一遍又一遍地检索和过滤相似的信息, 但它往往在多轮会话之后，对自己的目标认知产生了偏差。
 
 #### 1.3 核心解法：动态平面和数据基座
 
@@ -72,7 +72,7 @@ mem0ress 确立了“认知高于记忆”的原则。系统只记录推进目�
 
 在 mem0ress 中，认知的基本物理单元和逻辑单元是且仅是 Task。每一个 Task 之下可以包含多个 Subtask，但从系统哲学的角度来看，Task 与 Subtask 是完全同构的（Isomorphic）。
 
-这意味着它们在本质上共享同一套 DNA：一个当前的 Subtask，如果其复杂度膨胀，它可以随时被视作一个独立的 Task，拥有自己的 Picture、Requirements 和 Constraints。这种同构性赋予了系统“分形（Fractal）”的特征——无论向下拆解多少个层级，大模型面对的认知结构始终如一。这极大降低了系统 L1 执行层的解析复杂度，使得 Agent 能够以同一种心智模式应对从“修复一个按钮”到“重构整个微服务”的所有跨度。
+这意味着它们在本质上共享同一套 DNA：一个当前的 Subtask，如果其复杂度膨胀，它可以随时被视作一个独立的 Task，拥有自己的 Picture、Requirements 和 Constraints。这种同构性赋予了系统“分形（Fractal）”的特征——无论向下拆解多少个层级，大模型面对的认知结构始终如一。这极大降低了系统 认知网关的解析复杂度，使得 Agent 能够以同一种心智模式应对从“修复一个按钮”到“重构整个微服务”的所有跨度。
 
 任务被拆解为同构的单元（Task）。每个子任务都拥有独立的清单文件（Manifest），物理上通过目录深度表达依赖关系。父任务的完成必须以所有子任务的对齐为前提。
 
@@ -365,7 +365,7 @@ sequenceDiagram
     participant L1 as L1 Gateway (控制台)
     participant Harness as Harness (约束检验引擎)
     participant OS as 沙箱/执行环境
-    participant Judge as 独立 LLM-as-a-Judge
+    participant Judge as LLM-as-a-Judge
 
     LLM->>L1: 工具调用: update_todo(status=完成)
     L1->>L2 Data: 覆写 Status Plane (绝对覆写)
@@ -421,25 +421,25 @@ Agent 带着包含教训的全新状态切片，决定是修复代码（修改�
 
 ## 7. 技术方案 (Technical Implementation)
 
-系统采用“核外操作系统（Exokernel-like）”架构，认知网关作为连接 LLM (大脑) 与 L2 物理数据层的中枢总线。
+系统采用“核外操作系统（Exokernel-like）”架构，认知网关作为连接 LLM (大脑) 与 认知基座的中枢总线。
 
 ### 7.1 系统架构设计 (System Architecture)
 
-系统在物理实现上采用一种极轻量的“核外操作系统（Exokernel-like）”架构，L1 执行层作为连接大语言模型（LLM）与 L2 物理数据层的中枢总线。
+系统在物理实现上采用一种极轻量的“核外操作系统（Exokernel-like）”架构，认知网关作为连接大语言模型（LLM）与 认知基座的中枢总线。
 
 * LLM Interface (大脑接口):
 
   负责对接外部的大型语言模型。它不保留任何状态，纯粹作为推理计算引擎（Compute Unit）。
 
-* L1 Agent Gateway (认知网关):
+* L1 Cognitive Gateway (认知网关):
 
   系统的核心控制台。它承担类似于操作系统的内存管理器与文件描述符的角色。包含两个核心子模块：
 
-  * Plane Assembler (平面组装器): 负责扫描 L2 目录，解析 Manifest 与 Reference 指针，在发送给 LLM 之前动态编译出 Status Plane 和 Data Plane 的上下文。
+  * Plane Assembler (平面组装器): 负责扫描任务文档，解析 Manifest 与 Reference 指针，在发送给 LLM 之前动态编译出 Status Plane 和 Data Plane 的上下文。
   * Tool Execution Engine (工具执行引擎): 提供标准化的协议接口（如类似 Model Context Protocol 的规范），将系统能力封装为具象化的 Tool Calls（工具调用）供 LLM 触发。
   * Harness Engine (检验引擎): 独立于主流程之外的约束裁决器。 
 
-* L2 Storage Layer (物理存储层):
+* L2 Cognitive Substrate(认知基座):
 
   由操作系统的原生 File System（文件系统）与 Git 版本控制系统共同构成，提供静态的 Markdown/YAML 存储与历史版本固化能力。
 
@@ -489,12 +489,12 @@ Agent 带着包含教训的全新状态切片，决定是修复代码（修改�
   2. Reason & Action (推理决策): LLM 进行推理。如果需要更多信息，它发出读取指令（水化指针）；如果得出结论，它发出写入指令（覆写状态或客体）。
   3. Gateway Validation (网关校验): L1 拦截 LLM 的 Action。进行乐观锁冲突检测和路径权限验证，验证通过后执行物理读写操作。
   4. Harness Verification (约束检验): 若 Action 涉及改变任务的 [- ] 状态，主循环挂起。Harness 进程接管，基于外部脚本与语义层执行三级短路验证。
-  5. State Mutation (状态突变): 无论验证通过还是产生 Failure Patch，L2 文件系统均完成更新。这标志着旧的平面已失效，系统返回步骤 1，基于新的客观现实投射出全新的时间切片。
+  5. State Mutation (状态突变): 无论验证通过还是产生 Failure Patch，任务文档均完成更新。这标志着旧的平面已失效，系统返回步骤 1，基于新的客观现实投射出全新的时间切片。
   
   ```mermaid
   %% label：事件驱动控制循环 (Event-Driven Control Loop)
   graph TD
-      subgraph L1 Agent Gateway (核外认知网关)
+      subgraph L1 Cognitive Gateway (认知网关)
           direction TB
           Assembler[Plane Assembler <br> 平面组装器]
           Engine[Tool Execution Engine <br> 工具执行与乐观锁]
@@ -505,7 +505,7 @@ Agent 带着包含教训的全新状态切片，决定是修复代码（修改�
           Agent((推理与决策))
       end
   
-      subgraph L2 Storage Layer (物理存储层)
+      subgraph L2 Cognitive Substrate(认知基座)
           FS[(原生文件系统 <br> Markdown/YAML)]
           Git[(Git 版本控制 <br> 数据客体固化)]
       end
