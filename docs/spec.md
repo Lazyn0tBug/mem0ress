@@ -314,7 +314,7 @@ gotcha_refs:
 #### 6.1.1 投影状态平面：回答“做到哪了” (Where are we?)
 状态平面是时间的当下切片，它代表着系统此刻的绝对意志与注意力焦点。
 
-组装逻辑： 认知网关通过扫描目录树下的 Task.md 及其他相关联的 Task.md 文件构建。它提取当前所有的意图锚点、Todo 进度以及最高优先级的预警信息。
+组装逻辑： 认知网关通过扫描目录树下的 index.md 及其他相关联的 manifest 文件构建。它提取当前所有的意图锚点、Todo 进度以及最高优先级的预警信息。
 
 
 时间单向性： 状态平面不可回退。它不追求历史版本的同步，只追求并行或串行的当下执行态。一旦状态改变，这就是一个全新的状态切片，不存在“回到某个状态”的协调机制。Agent 只能不断向前推进认知。
@@ -335,7 +335,7 @@ gotcha_refs:
 
 #### 6.2.1 状态平面的无情覆写 (Status Mutation)
 
-Agent 修改了 Task.md 中的 - [x] 状态，或调整了当前的认知焦点。
+Agent 修改了 index.md 中的 - [x] 状态，或调整了当前的认知焦点。
 
 由于状态平面代表“当下”，这种记录是绝对覆写（Overwrite）的。没有合并，没有撤销。Agent 的认知必须像推土机一样向前，直接覆盖旧的进度认知。
 
@@ -349,7 +349,7 @@ Agent 编写了新的代码文件，或提炼了一份新的 Gotcha 架构决策
 
 检验的本质不是简单的流程检查，而是利用任务属性（Task Attributes）作为绝对规约，去验证状态平面与数据平面是否满足预期要求。
 
-1. 检验的依据： 存储在 Task.md（Manifest）中的认知三要素（图景、需求、约束）以及 Todo 列表状态。
+1. 检验的依据： 存储在 index.md（Manifest）中的认知三要素（图景、需求、约束）以及 Todo 列表状态。
 
 2. 检验的对象：
 
@@ -402,9 +402,9 @@ sequenceDiagram
 
 #### 6.3.1 触发与短路验证 (Trigger & Evaluation)
 
-当状态平面中的 Task.md 发生todo变更，触发 Harness 进程：
+当状态平面中的 index.md 发生todo变更，触发 Harness 进程：
 
-* Tier 1: 机械状态检查 (Status Plane Check)： 解析task.md, 扫描状态平面中的 Todo 列表。若存在未勾选的 - [ ]，直接阻断，要求Agent继续执行。
+* Tier 1: 机械状态检查 (Status Plane Check)： 解析 index.md, 扫描状态平面中的 Todo 列表。若存在未勾选的 - [ ]，直接阻断，要求Agent继续执行。
 * Tier 2: 客观规律验收 (Data Plane Check)： 运行Requirements对应的验证脚本。在数据平面（代码与环境）中执行测试，校验语义层的接口契约是否被打破。若测试报错，阻断执行。
 * Tier 3: 跨平面语义对齐 (Cross-Plane Alignment)： 调用高阶 LLM，提取状态平面中的 Picture（图景），对比数据平面中的最终产出（代码逻辑/日志/运行结果）, 评估两者是否在自然语义上真正对齐。
 
@@ -433,7 +433,7 @@ Agent 带着包含教训的全新状态切片，决定是修复代码（修改�
 
 * L1 Cognitive Gateway (认知网关):
 
-  系统的核心控制台。它承担类似于操作系统的内存管理器与文件描述符的角色。包含两个核心子模块：
+  系统的核心控制台。它承担类似于操作系统的内存管理器与文件描述符的角色。包含三个核心子模块：
 
   * Plane Assembler (平面组装器): 负责扫描任务文档，解析 Manifest 与 Reference 指针，在发送给 LLM 之前动态编译出 Status Plane 和 Data Plane 的上下文。
   * Tool Execution Engine (工具执行引擎): 提供标准化的协议接口（如类似 Model Context Protocol 的规范），将系统能力封装为具象化的 Tool Calls（工具调用）供 LLM 触发。
@@ -451,7 +451,7 @@ Agent 带着包含教训的全新状态切片，决定是修复代码（修改�
 
 为了实现 Status Plane 的极度轻量与 Data Plane 的按需加载，系统引入了“水化”机制。
 
-  * 机制描述： 当 Plane Assembler 解析 Task.md 时，遇到形如 ref:docs/prd.md 的指针，绝不默认加载全文。Status Plane 中仅保留该指针的路径描述。
+  * 机制描述： 当 Plane Assembler 解析 index.md 时，遇到形如 ref:docs/prd.md 的指针，绝不默认加载全文。Status Plane 中仅保留该指针的路径描述。
   * 按需路由： 只有当 LLM 在推理中明确决定需要获取更多细节，并主动调用 resolve_reference(ref_path) 工具时，引擎才会从文件系统中抓取目标内容，将其“水化”并追加挂载到当前的 Data Plane 中。
 
 #### 7.2.2 乐观锁冲突感知机制 (Optimistic Locking & Conflict Awareness)
@@ -474,7 +474,7 @@ Agent 带着包含教训的全新状态切片，决定是修复代码（修改�
 
   Harness 引擎不再仅仅是一个拦截器，它是一个“三元验证器”：
   
-  * 输入流： 任务属性 (Task.md) + 当前状态平面 (Status Plane) + 当前数据平面 (Data Plane)。
+  * 输入流： 任务属性 (index.md) + 当前状态平面 (Status Plane) + 当前数据平面 (Data Plane)。
   * 验证逻辑：
     
     * Status vs. Task： 扫描 Todo 状态，若状态平面宣称完成但 Todo 存在空项，触发中断。
@@ -485,7 +485,7 @@ Agent 带着包含教训的全新状态切片，决定是修复代码（修改�
 
 整个 mem0ress 的运行本质上是一个高频运转的事件循环（Event Loop），严格遵循以下流程：
 
-  1. Context Assembly (平面投影): 循环开启。L1 控制台抓取最新的 Task.md，构建轻量级的 Status Plane；根据上一轮的动作，决定是否挂载特定的 Data Plane，最终拼接为统一的 System Prompt 喂给 LLM。
+  1. Context Assembly (平面投影): 循环开启。L1 控制台抓取最新的 index.md，构建轻量级的 Status Plane；根据上一轮的动作，决定是否挂载特定的 Data Plane，最终拼接为统一的 System Prompt 喂给 LLM。
   2. Reason & Action (推理决策): LLM 进行推理。如果需要更多信息，它发出读取指令（水化指针）；如果得出结论，它发出写入指令（覆写状态或客体）。
   3. Gateway Validation (网关校验): L1 拦截 LLM 的 Action。进行乐观锁冲突检测和路径权限验证，验证通过后执行物理读写操作。
   4. Harness Verification (约束检验): 若 Action 涉及改变任务的 [- ] 状态，主循环挂起。Harness 进程接管，基于外部脚本与语义层执行三级短路验证。

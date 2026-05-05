@@ -81,7 +81,7 @@ ignore = []
 
 * [ ] Phase 2: 态势平面组装 (Plane Assembler)
 
-  * [ ] 实现目录树遍历逻辑，提取所有 Task.md 的核心字段。
+  * [ ] 实现目录树遍历逻辑，提取所有 index.md 的核心字段。
   * [ ] 实现 Status Plane 编译器：将其压缩为极简的 System Prompt 文本。
   * [ ] 实现引用水化 (ref: 解析)：通过正则或字符串匹配，按需读取外部文档至 Data Plane。
 

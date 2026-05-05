@@ -89,7 +89,7 @@ from mem0ress.core.schema import TaskManifest, TaskStatus, CognitiveTriad, TodoI
 
 class SubstrateParser:
     """
-    认知基座解析器：负责 Manifest (Task.md) 与内存模型的双向转换。
+    认知基座解析器：负责 Manifest (index.md) 与内存模型的双向转换。
     """
 
     @staticmethod
