@@ -131,9 +131,9 @@ mem0ress 只专注一件事：认知的生命周期管理，即任务的创建�
 约束 (Constraints)： 执行任务时绝对不可逾越的底线。
 
 ### 4.2 动态位面分离 (Dynamic Plane Separation)
-状态平面 (Status Plane)： 当前激活的 Task 进度、指针与预警。Agent 苏醒时强制挂载。
+状态平面 (Status Plane)： 当前认知系统状态的实时切片。纯展示，不做诊断。Agent 醒来时强制挂载，显示所有任务的结构和进度，但不包含偏差警告或诊断结论。
 
-数据平面 (Data Plane)： 长篇文档或日志载荷。顺着状态平面的指针按需路由挂载。
+数据平面 (Data Plane)： 长篇文档或日志载荷。顺着状态平面的指针按需路由水化挂载。
 
 ```mermaid
 %% label：动态位面分离
@@ -197,14 +197,24 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 - Judge 的输入是"被检验任务的摘要"（picture + constraints + data plane summary），而非原始全部文件
 - Judge 的输出是 aligned/deviation/reasoning，写入被检验任务的 gotcha_refs
 
-### 6.3 认知构建 (Cognition Building: 态势投影与纠偏)
+### 6.3 认知构建 (Cognition Building: 态势投影)
 这是贯穿生命周期始终的核心动作。在任何节点（刚启动时、执行中、或检验失败后），系统都需要为 Agent 构建当前任务的状态平面（Status Plane）。
 
-* 态势投影 (Situational Projection)： 扫描当前任务拓扑，组装出包含目标进度、依赖关系和外部脱水指针的全局视野，让 Agent 知道“我们在哪”。
-* 偏差修正与需求重塑： 若在“任务检验”阶段发现偏离任务目标，认知构建环节将触发修正机制：
+**状态平面 = 认知系统的实时切片**
 
-  * 生成 Gotcha： 将偏离原因沉淀为经验补丁，强制拉入最新的状态平面。
-  * 修正 Requirements： 如果发现是原有的图景或需求不合理（例如技术不可行），Agent 会在当前状态平面中重新修正 Requirements 或拆解新的 Todo，确保新的状态平面再次与现实和目标对齐。
+* 纯展示，无诊断：状态平面只呈现当前状态，不做偏差判断
+* 实时扫描：每次调用直接读文件系统，不缓存
+* 全面覆盖：显示所有任务，不隐藏任何节点
+* 非侵入：只读不写，不修改任何状态
+
+**状态平面显示内容：**
+- 任务树结构（父子关系）
+- 每个任务的 picture、requirements、constraints
+- todos 完成度（如 "2/3 Todos 完成"）
+- 任务状态（CREATED/IN_PROGRESS/COMPLETED/ABANDONED）
+- 系统法则（两条不可违背的法则）
+
+**偏差检测由 Harness 负责，不属于状态平面职责范围。**
 
 ```mermaid
 %% label：认知对齐生命周期
@@ -242,9 +252,9 @@ sequenceDiagram
 * LLM Interface (大脑接口): 无状态的推理计算引擎。
 * L1 Cognitive Gateway (认知网关):
 
-  * Plane Assembler (平面组装器): 负责“认知构建”。动态扫描并编译出 Status Plane。
+  * Plane Assembler (平面组装器): 负责"认知构建"。动态扫描并编译出 Status Plane（实时切片）。纯展示，不做诊断。
   * Tool Execution Engine (工具执行引擎): 提供标准化的 Tool Calls 供 LLM 修改基座。
-  * Harness Engine (检验引擎): 负责“任务检验”。独立于主流程之外的三元约束裁决器。
+  * Harness Engine (检验引擎): 负责"任务检验"。独立的三层验证，发现偏差并报告，不属于状态平面的职责。
 
 * L2 Cognitive Substrate(认知基座): File System 与 Git 共同构成，提供态势的物理承载。
 
