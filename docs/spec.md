@@ -133,6 +133,8 @@ mem0ress 只专注一件事：认知的生命周期管理，即任务的创建�
 ### 4.2 动态位面分离 (Dynamic Plane Separation)
 状态平面 (Status Plane)： 显示当前认知系统状态。纯展示，不做诊断。Agent 醒来时强制挂载，显示所有任务的结构和进度，但不包含偏差警告或诊断结论。
 
+会话 (Session)： 每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。可用于理解演进，暂不主动访问。Session 记录执行进度（代码写到哪、文档完成多少、TODO 状态），不记录目标（Picture/Requirements/Constraints，这些从 TaskManifest 获取）。
+
 数据平面 (Data Plane)： 长篇文档或日志载荷。顺着状态平面的指针按需路由水化挂载。
 
 ```mermaid
@@ -165,12 +167,13 @@ graph LR
 ```plaintext
 .mem0ress/
 └── tasks/
-    └── auth_module/         
+    └── auth_module/
         ├── index.md         # The Manifest (包含图景、需求与 Todo)
+        ├── session.md       # 每个轮次的状态快照（Session 历史）
         └── gotchas/         # 该任务独享的认知增量与偏差修正记录
 ```
 
-`index.md`扮演了声明式清单（Manifest）。为了保持 Status Plane 的轻量，引入了 Reference (ref:) 机制，对于长文本仅保存外部指针，避免阅读幻觉。
+`index.md`扮演了声明式清单（Manifest）。Session 记录每个轮次的执行进度，Picture/Requirements/Constraints 从 Manifest 获取，不重复记录。
 
 ## 6. 逻辑与流程设计 (Logic & Workflow Design)
 在 mem0ress 中，整个系统的运转不再是机械的文件读写，而是围绕任务目标的动态生命周期：任务创建、任务检验、认知构建。这是一个不断前向对齐的闭环。
@@ -209,12 +212,17 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 
 **状态平面显示内容：**
 - 任务树结构（父子关系）
-- 每个任务的 picture、requirements、constraints
-- todos 完成度（如 "2/3 Todos 完成"）
+- 每个任务的 todo 完成度（如 "2/3 Todos 完成"）
 - 任务状态（CREATED/IN_PROGRESS/COMPLETED/ABANDONED）
-- 系统法则（两条不可违背的法则）
+- 偏差记录（Gotchas）
+- Session 最近变化摘要
 
-**偏差检测由 Harness 负责，不属于状态平面职责范围。**
+**Session 记录内容：**
+- 每个轮次的状态快照（code_progress, docs_progress, todos, status）
+- 变化动作记录
+- 用于理解演进，暂不主动访问
+
+**Picture/Requirements/Constraints 从 TaskManifest 获取，不显示在 Status Plane。**
 
 ```mermaid
 %% label：认知对齐生命周期
@@ -245,16 +253,17 @@ sequenceDiagram
 ```
 
 ## 7. 技术方案 (Technical Implementation)
-系统在物理实现上采用极轻量的“核外操作系统”架构，认知网关 (Cognitive Gateway) 作为连接大语言模型与认知基座 (Cognitive Substrate) 的中枢总线。
+
+mem0ress 是认知对齐平面（而不是 Agent 框架）。它专注于认知状态管理，不执行工具或做决策。
 
 ### 7.1 系统架构设计 (System Architecture)
 
-* LLM Interface (大脑接口): 无状态的推理计算引擎。
+* Agent 环境：提供 LLM 推理能力（外部）
 * L1 Cognitive Gateway (认知网关):
 
-  * Plane Assembler (平面组装器): 负责"认知构建"。动态扫描并编译出 Status Plane（实时切片）。纯展示，不做诊断。
-  * Tool Execution Engine (工具执行引擎): 提供标准化的 Tool Calls 供 LLM 修改基座。
-  * Harness Engine (检验引擎): 负责"任务检验"。独立的三层验证，发现偏差并报告，不属于状态平面的职责。
+  * Plane Assembler (平面组装器): 负责"认知构建"。动态扫描并编译出 Status Plane。纯展示，不做诊断。
+  * Tool Interface (工具接口): 提供有限的任务操作工具，供 Agent 调用。**不是执行引擎**——Agent 执行工具，mem0ress 只管理认知状态。
+  * Harness Engine (检验引擎): 负责"任务检验"。独立的三层验证，发现偏差并报告。
 
 * L2 Cognitive Substrate(认知基座): File System 与 Git 共同构成，提供态势的物理承载。
 
@@ -265,12 +274,12 @@ sequenceDiagram
   * 原生 Git 数据回溯 (Git-Native Revert): 检验失败且路径报废时，LLM 调用工具回退数据平面，同时在状态平面生成 Gotcha 记录偏差经验，保持时间向前。
   * 带外约束检验 (Out-of-Band Verification): Harness 引擎执行沙箱隔离测试，并通过独立路由调用 LLM-as-a-Judge，杜绝与执行态 Agent 发生上下文污染。
 
-### 7.3 技术流程：事件驱动的控制循环 (Event-Driven Control Loop)
+### 7.3 技术流程：Agent 驱动的事件循环
 
-整个 mem0ress 的运行是一个高频的事件循环：
+mem0ress 本身不执行循环——它由 Agent 驱动。Agent 在需要对齐时调用 mem0ress：
 
-  1. 认知构建 (Context Assembly): 循环开启。组装器抓取最新清单，投影 Status Plane。
-  2. 任务执行 (Action): LLM 推理并发出动作指令（水化或更新状态）。
-  3. 网关安全拦截 (Validation): 验证乐观锁与操作合法性。
-  4. 任务检验 (Harness Verification): 进度突变挂起主循环，触发带外三级短路检验。
-  5. 态势突变 (State Mutation): 无论通过还是产生偏差补丁，均更新物理基座，进入下一轮认知构建。
+  1. 认知构建: Agent 调用 `get_status_plane()` 获取当前状态。
+  2. 工具调用: Agent 发出动作指令（创建任务、更新 Todo 等）。
+  3. 安全拦截: mem0ress 验证乐观锁与操作合法性，抛出 ConflictError 如有冲突。
+  4. 任务检验: Agent 调用 `verify_task()` 触发 Harness 三层验证。
+  5. 态势突变: 验证结果写入 Substrate（Gotcha 或完成），Agent 获取最新状态。
