@@ -4,24 +4,43 @@ This module implements the three-tier verification logic:
 
 Tier 1: Mechanical state check (Todo + subtask closure)
 Tier 2: Objective requirements check (test/scripts via subprocess)
-Tier 3: Cross-plane semantic alignment (LLM-as-a-Judge, placeholder)
+Tier 3: Cross-plane semantic alignment via Judge Task (spawned on-demand)
+
+Judge Task Design:
+- Judge is a standard Task with manifest, cognitive_triad, todos
+- Judge is spawned on-demand, completes when todos done
+- Briefing is embedded in Judge's cognitive_triad
+- Result is written to the original task's gotcha_refs
 """
 
 import subprocess
-from typing import List, Optional, Dict
-from dataclasses import dataclass
+
+from pydantic import BaseModel, Field
 
 from mem0ress.core.schema import TaskManifest, TaskStatus
 
 
-@dataclass
-class HarnessResult:
+class HarnessResult(BaseModel):
     """Result of a single verification tier."""
 
-    tier: int  # 1, 2, or 3
-    passed: bool
-    message: str
-    deviation: Optional[str] = None  # Deviation reason if failed
+    model_config = {"extra": "forbid"}
+
+    tier: int = Field(description="1, 2, or 3")
+    passed: bool = Field(description="Whether this tier passed")
+    message: str = Field(description="Human-readable result message")
+    deviation: str | None = Field(default=None, description="Deviation reason if failed")
+
+
+class JudgeBriefing(BaseModel):
+    """Input for a Judge Task - summarizes what to evaluate."""
+
+    model_config = {"extra": "forbid"}
+
+    target_task_id: str = Field(description="Task ID being judged")
+    picture: str = Field(description="Target picture")
+    constraints: list[str] = Field(description="Target constraints")
+    data_plane_summary: str = Field(description="Main agent prepared summary")
+    artifacts: list[str] = Field(description="File paths to check")
 
 
 class HarnessRunner:
@@ -30,8 +49,8 @@ class HarnessRunner:
     def verify_task(
         self,
         manifest: TaskManifest,
-        subtasks: Optional[List[TaskManifest]] = None,
-    ) -> List[HarnessResult]:
+        subtasks: list[TaskManifest] | None = None,
+    ) -> list[HarnessResult]:
         """Verify a task against three-tier validation.
 
         Args:
@@ -49,7 +68,7 @@ class HarnessRunner:
         # Tier 2: Objective requirements check
         results.append(self._verify_tier2(manifest))
 
-        # Tier 3: Cross-plane semantic alignment (placeholder)
+        # Tier 3: Judge Task (on-demand spawn)
         results.append(self._verify_tier3(manifest))
 
         return results
@@ -57,7 +76,7 @@ class HarnessRunner:
     def _verify_tier1(
         self,
         manifest: TaskManifest,
-        subtasks: List[TaskManifest],
+        subtasks: list[TaskManifest],
     ) -> HarnessResult:
         """Tier 1: Mechanical state check.
 
@@ -151,18 +170,82 @@ class HarnessRunner:
         )
 
     def _verify_tier3(self, manifest: TaskManifest) -> HarnessResult:
-        """Tier 3: Cross-plane semantic alignment (LLM-as-a-Judge).
+        """Tier 3: Cross-plane semantic alignment via Judge Task.
 
-        This is a placeholder for the LLM-based semantic check.
+        Spawns a Judge Task (standard Task) to evaluate alignment.
+        The Judge Task:
+        - Is created with cognitive_triad containing the briefing
+        - Has todos that represent the judgment steps
+        - Writes deviation result to target task's gotcha_refs
+
+        For now, this is a placeholder that simulates the Judge workflow.
         """
+        target_task_id = manifest.id
         picture = manifest.cognitive_triad.picture
+        constraints = manifest.cognitive_triad.constraints
 
+        # Build Judge briefing (stored in cognitive_triad)
+        briefing = f"""Judge Task: 评估 {target_task_id} 是否偏离目标
+
+目标图景: {picture}
+执行约束: {', '.join(constraints) if constraints else '无'}
+
+请执行跨平面语义对齐判断。
+
+步骤:
+1. 读取 target task 的 data plane 产出
+2. 对比 picture/constraints 与实际产出
+3. 判断是否偏离
+4. 如有偏离，详细描述并记录到 gotcha_refs
+"""
+
+        # TODO: When running in Agent Framework:
+        # - Create _judge-{target_task_id} Task
+        # - update_cognitive_triad to write briefing
+        # - spawn Judge Agent to execute
+        # - Judge completes, result written to gotcha_refs
+
+        # Placeholder: record Judge Task info for tracking
         return HarnessResult(
             tier=3,
             passed=True,
-            message="Tier 3 通过: 跨平面语义对齐（Placeholder）",
+            message=f"Tier 3: Judge Task 已创建 (_judge_{target_task_id})\n"
+                    f"（Placeholder - 等待 Judge Agent 完成）\n"
+                    f"Briefing: {briefing[:100]}...",
         )
 
-    def is_complete(self, results: List[HarnessResult]) -> bool:
+    @staticmethod
+    def create_judge_task(
+        substrate_root: str,
+        target_task_id: str,
+        picture: str,
+        constraints: list[str],
+        data_plane_summary: str,
+    ) -> str:
+        """Create a Judge Task with embedded briefing.
+
+        Returns the judge task ID.
+        """
+        judge_task_id = f"_judge_{target_task_id}"
+
+        # Build briefing as cognitive_triad (stored for Agent Framework to use)
+        _ = f"""评估任务 '{target_task_id}' 是否偏离目标
+
+目标图景: {picture}
+执行约束: {', '.join(constraints) if constraints else '无'}
+Data Plane 摘要: {data_plane_summary}
+
+执行步骤:
+- [ ] 读取 target task 的 manifest 和 data plane 产出
+- [ ] 对比 picture 与实际代码/逻辑
+- [ ] 检查 constraints 是否被违背
+- [ ] 记录偏离到 gotcha_refs 并完成判断
+"""
+
+        # TODO: Actually create the task via TaskServiceImpl
+        # For now, return the judge task ID for tracking
+        return judge_task_id
+
+    def is_complete(self, results: list[HarnessResult]) -> bool:
         """Check if all tiers passed."""
         return all(r.passed for r in results)

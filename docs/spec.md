@@ -187,9 +187,15 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 
 * Tier 1: 机械状态检查 (Status Check)： 检查底层依赖。若宣称任务完成，但存在未勾选的 Todo 或子任务未闭环，直接阻断。
 * Tier 2: 客观规律验收 (Requirements Check)： 在沙箱中执行 Requirements 对应的脚本或测试。校验接口与物理产出是否达标。
-* Tier 3: 跨平面语义对齐 (Cross-Plane Alignment)： 核心纠偏机制。调用独立 LLM，比对 Picture/Constraints（目标约束）与真实的数据平面产出（代码逻辑）。评估两者是否偏离。
+* Tier 3: 跨平面语义对齐 (Cross-Plane Alignment)： 核心纠偏机制。**Judge Task 是一个标准的、一次性的 Task**。当 Tier 3 触发时，主 Agent spawn 一个 Judge Agent，赋予判断任务。Judge Agent 读取被检验任务的 manifest、picture、constraints 和 data plane 产出，执行语义对齐判断。完成后 Judge Task 结束，Agent 销毁，结果写入被检验任务的 gotcha_refs。
 
-**偏差处置机制**： 若检验发现偏离，绝不回退状态。系统强制记录当前偏差，并进入下一步的“认知重新构建”。
+**偏差处置机制**： 若检验发现偏离，绝不回退状态。系统强制记录当前偏差，并进入下一步的"认知重新构建"。
+
+**Judge Task 设计原则：**
+- Judge 是一个标准 Task，遵循所有 Task 的规范（manifest、cognitive_triad、todos）
+- Judge 按需 spawn，完成即终止，不常驻
+- Judge 的输入是"被检验任务的摘要"（picture + constraints + data plane summary），而非原始全部文件
+- Judge 的输出是 aligned/deviation/reasoning，写入被检验任务的 gotcha_refs
 
 ### 6.3 认知构建 (Cognition Building: 态势投影与纠偏)
 这是贯穿生命周期始终的核心动作。在任何节点（刚启动时、执行中、或检验失败后），系统都需要为 Agent 构建当前任务的状态平面（Status Plane）。

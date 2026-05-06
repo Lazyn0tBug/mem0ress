@@ -1,12 +1,11 @@
 """Tests for core schema models."""
 
-import pytest
 from mem0ress.core.schema import (
-    TaskStatus,
     CognitiveTriad,
-    TodoItem,
-    TaskManifest,
     Gotcha,
+    TaskManifest,
+    TaskStatus,
+    TodoItem,
 )
 
 

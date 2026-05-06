@@ -8,8 +8,6 @@ from pathlib import Path
 class ConflictError(Exception):
     """Optimistic lock failure - file was modified since last read."""
 
-    pass
-
 
 def get_file_hash(file_path: Path) -> str:
     """Compute SHA-256 hash of file contents.

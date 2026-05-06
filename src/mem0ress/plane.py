@@ -1,9 +1,8 @@
 """Plane Assembler - compile_status_plane."""
 
 from pathlib import Path
-from typing import List
 
-from mem0ress.core.schema import TaskManifest, TaskStatus
+from mem0ress.core.schema import TaskManifest
 from mem0ress.storage.parser import SubstrateParser
 
 
@@ -56,7 +55,7 @@ class PlaneAssembler:
 
         return self._add_system_laws(lines)
 
-    def _scan_tasks(self, tasks_dir: Path) -> List[Path]:
+    def _scan_tasks(self, tasks_dir: Path) -> list[Path]:
         """Recursively find all task index.md files."""
         result = []
         for index_path in tasks_dir.rglob("index.md"):
@@ -70,7 +69,7 @@ class PlaneAssembler:
         self,
         manifest: TaskManifest,
         depth: int,
-        subtasks: List[Path],
+        subtasks: list[Path],
     ) -> str:
         """Render a single task and its subtasks.
 
@@ -83,8 +82,7 @@ class PlaneAssembler:
             Formatted task string with subtasks indented
         """
         indent = "  " * depth
-        task_id = manifest.id
-        status_display = manifest.status.value.upper().replace("-", "-")
+        status_display = manifest.status.value.upper()
 
         # Render picture - check for ref: prefix
         picture = manifest.cognitive_triad.picture
@@ -99,7 +97,7 @@ class PlaneAssembler:
         progress = f"{completed_todos}/{total_todos} Todos 完成" if total_todos > 0 else "无 Todos"
 
         lines = []
-        lines.append(f"{indent}■ Task ID: {task_id} [{status_display}]")
+        lines.append(f"{indent}■ Task ID: {manifest.id} [{status_display}]")
         lines.append(f"{indent}   目标图景: {picture_display}")
         lines.append(f"{indent}   进度: {progress}")
 
@@ -115,7 +113,7 @@ class PlaneAssembler:
 
         return "\n".join(lines)
 
-    def _add_system_laws(self, lines: List[str]) -> str:
+    def _add_system_laws(self, lines: list[str]) -> str:
         """Append system laws to the lines list and return joined string."""
         lines.append("\n---\n系统法则：")
         lines.append("1. 你不可撤销状态，只能覆写向前。")

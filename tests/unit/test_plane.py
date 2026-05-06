@@ -1,7 +1,5 @@
 """Tests for PlaneAssembler."""
 
-import pytest
-from pathlib import Path
 from mem0ress.plane import PlaneAssembler
 from mem0ress.service.impl.task_service import TaskServiceImpl
 

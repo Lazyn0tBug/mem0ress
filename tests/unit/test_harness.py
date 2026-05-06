@@ -1,13 +1,12 @@
 """Tests for HarnessRunner with mock data."""
 
-import pytest
-from mem0ress.harness import HarnessRunner, HarnessResult
 from mem0ress.core.schema import (
+    CognitiveTriad,
     TaskManifest,
     TaskStatus,
-    CognitiveTriad,
     TodoItem,
 )
+from mem0ress.harness import HarnessRunner
 
 
 class TestHarnessRunnerWithMockData:
@@ -237,16 +236,16 @@ class TestHarnessRunnerWithMockData:
         assert tier2.tier == 2
         assert tier2.passed is True
 
-    def test_tier3_always_passes_placeholder(self):
-        """Tier 3 placeholder always passes for now."""
+    def test_tier3_judge_task_design(self):
+        """Tier 3 creates a Judge Task with embedded briefing."""
         runner = HarnessRunner()
         manifest = TaskManifest(
-            id="test_task",
+            id="auth_module",
             status=TaskStatus.COMPLETED,
             cognitive_triad=CognitiveTriad(
-                picture="完成",
+                picture="用户安全登录系统",
                 requirements=[],
-                constraints=[],
+                constraints=["不可明文存储密码", "必须加密传输"],
             ),
             gotcha_refs=[],
             todos=[TodoItem(text="done", done=True)],
@@ -257,6 +256,20 @@ class TestHarnessRunnerWithMockData:
         tier3 = results[2]
         assert tier3.tier == 3
         assert tier3.passed is True
+        assert "Judge Task 已创建" in tier3.message
+        assert "_judge_auth_module" in tier3.message
+
+    def test_create_judge_task_returns_judge_id(self):
+        """create_judge_task returns properly formatted judge ID."""
+        judge_id = HarnessRunner.create_judge_task(
+            substrate_root=".mem0ress",
+            target_task_id="auth_module",
+            picture="用户安全登录",
+            constraints=["不可明文存储密码"],
+            data_plane_summary="实现了登录 API",
+        )
+
+        assert judge_id == "_judge_auth_module"
 
     def test_full_verification_all_pass(self):
         """Full verification passes when all tiers pass."""

@@ -1,9 +1,10 @@
 """Tests for SubstrateParser."""
 
+
 import pytest
-from pathlib import Path
-from mem0ress.storage.parser import SubstrateParser
+
 from mem0ress.core.schema import CognitiveTriad, TaskStatus, TodoItem
+from mem0ress.storage.parser import SubstrateParser
 
 
 class TestSubstrateParser:

@@ -1,10 +1,11 @@
 """Integration tests for full task lifecycle."""
 
+
 import pytest
-from pathlib import Path
-from mem0ress.service.impl.task_service import TaskServiceImpl, TaskExistsError
-from mem0ress.plane import PlaneAssembler
+
 from mem0ress.core.schema import TaskStatus
+from mem0ress.plane import PlaneAssembler
+from mem0ress.service.impl.task_service import TaskServiceImpl
 
 
 class TestTaskLifecycleIntegration:
@@ -72,17 +73,16 @@ class TestTaskLifecycleIntegration:
         assert retrieved.cognitive_triad.picture == "用户安全登录"
 
     def test_conflict_detection_on_concurrent_modification(self, tmp_path):
-        """Test optimistic lock prevents concurrent modification."""
-        service1 = TaskServiceImpl(substrate_root=tmp_path)
-        service2 = TaskServiceImpl(substrate_root=tmp_path)
+        """Test optimistic lock raises ConflictError when hash mismatch."""
+        from mem0ress.storage.fs import ConflictError, get_file_hash
 
-        service1.create_task("auth_module", "用户顺畅登录")
+        service = TaskServiceImpl(substrate_root=tmp_path)
+        service.create_task("auth_module", "用户顺畅登录")
 
-        # Get original hash
         index_path = tmp_path / "tasks" / "auth_module" / "index.md"
-        original_content = index_path.read_text(encoding="utf-8")
 
-        # Simulate external modification
+        # Simulate external modification by directly writing to file
+        # This changes the file hash
         index_path.write_text(
             "---\nid: auth_module\ntype: task\nstatus: completed\n"
             "cognitive_triad:\n  picture: 用户安全登录\n  requirements: []\n  constraints: []\n"
@@ -90,16 +90,30 @@ class TestTaskLifecycleIntegration:
             encoding="utf-8",
         )
 
-        # Now service1 tries to update with old hash - should fail
-        from mem0ress.storage.fs import ConflictError
+        # Get the current (modified) file hash
+        modified_hash = get_file_hash(index_path)
 
-        # Parse the current manifest
+        # Now try to write using the OLD hash - should raise ConflictError
+        from mem0ress.storage.fs import safe_write
         from mem0ress.storage.parser import SubstrateParser
-        manifest = SubstrateParser.parse_manifest(index_path)
 
-        # Try to update - the service should re-read the file hash before writing
-        # This test verifies the service properly checks hash before writing
-        service1.update_todo("auth_module", 0, True)
+        manifest = service.get_task("auth_module")
+        new_todos = [manifest.todos[0].__class__(text=manifest.todos[0].text, done=True)]
+        updated = manifest.__class__(
+            id=manifest.id,
+            type=manifest.type,
+            status=manifest.status,
+            cognitive_triad=manifest.cognitive_triad,
+            gotcha_refs=manifest.gotcha_refs,
+            todos=new_todos,
+        )
+        content = SubstrateParser.serialize_manifest(updated, index_path)
+
+        # Create a fake "old hash" - in real scenario this would come from earlier read
+        old_hash = "fake_old_hash_that_does_not_match"
+
+        with pytest.raises(ConflictError):
+            safe_write(index_path, content, old_hash)
 
     def test_delete_removes_entire_directory(self, tmp_path):
         """Test delete removes task directory completely."""

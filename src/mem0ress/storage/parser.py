@@ -2,7 +2,6 @@
 
 import re
 from pathlib import Path
-from typing import List, Tuple
 
 import yaml
 
@@ -93,7 +92,7 @@ class SubstrateParser:
         return f"---\n{yaml_str}---\n\n# Todos\n{body_str}\n"
 
     @staticmethod
-    def parse_todos_from_body(body: str) -> List[TodoItem]:
+    def parse_todos_from_body(body: str) -> list[TodoItem]:
         """从 markdown body 中解析 todo 列表."""
         todos = []
         for line in body.split("\n"):
