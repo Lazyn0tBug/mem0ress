@@ -144,17 +144,13 @@ class TestTaskCognitionPersistence:
 
         # === Phase 10: Status plane verification ===
         assembler = PlaneAssembler(substrate_root=tmp_path)
-        plane = assembler.compile_status_plane()
+        plane = assembler.compile_status_plane().render()
 
-        assert "■ Task ID: auth_module" in plane
-        assert "目标图景: 用户顺畅登录" in plane
-        assert "1/2 Todos 完成" in plane
-
-        # Verify interference tasks are listed
-        assert "■ Task ID: api_gateway" in plane
-
-        # Verify noise tasks are listed
-        assert "■ Task ID: task_000" in plane
+        # New format: ■ {id} [{todo_progress}] {STATUS}
+        # Picture/requirements/constraints are goals, not state - they don't appear
+        assert "■ auth_module [1/2] CREATED" in plane
+        assert "■ api_gateway [0/1] CREATED" in plane
+        assert "■ task_000 [0/1] CREATED" in plane
 
     def test_task_cognition_isolation_between_tasks(self, tmp_path):
         """Test that modifying one task doesn't affect another's cognition."""

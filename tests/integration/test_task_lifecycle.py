@@ -139,10 +139,11 @@ class TestTaskLifecycleIntegration:
         service.create_task("auth_module", "用户顺畅登录")
         service.create_task("api_gateway", "API网关")
 
-        plane = assembler.compile_status_plane()
+        plane = assembler.compile_status_plane().render()
 
-        assert "■ Task ID: auth_module" in plane
-        assert "■ Task ID: api_gateway" in plane
+        # New format: ■ {id} [{todo_progress}] {STATUS}
+        assert "■ auth_module [0/1] CREATED" in plane
+        assert "■ api_gateway [0/1] CREATED" in plane
 
     def test_status_plane_with_mixed_todo_states(self, tmp_path):
         """Test status plane shows correct progress for mixed todo states."""
@@ -155,9 +156,10 @@ class TestTaskLifecycleIntegration:
         service.update_todo("auth_module", 0, True)
         service.update_todo("auth_module", 1, True)
 
-        plane = assembler.compile_status_plane()
+        plane = assembler.compile_status_plane().render()
 
-        assert "2/3 Todos 完成" in plane
+        # New format: ■ auth_module [2/3] CREATED
+        assert "■ auth_module [2/3] CREATED" in plane
 
     def test_remove_todo_reduces_count(self, tmp_path):
         """Test removing a todo reduces total count."""
