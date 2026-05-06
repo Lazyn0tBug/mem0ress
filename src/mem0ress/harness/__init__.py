@@ -3,11 +3,12 @@
 This module implements the three-tier verification logic:
 
 Tier 1: Mechanical state check (Todo + subtask closure)
-Tier 2: Objective requirements check (test/scripts)
+Tier 2: Objective requirements check (test/scripts via subprocess)
 Tier 3: Cross-plane semantic alignment (LLM-as-a-Judge, placeholder)
 """
 
-from typing import List, Optional
+import subprocess
+from typing import List, Optional, Dict
 from dataclasses import dataclass
 
 from mem0ress.core.schema import TaskManifest, TaskStatus
@@ -95,8 +96,8 @@ class HarnessRunner:
     def _verify_tier2(self, manifest: TaskManifest) -> HarnessResult:
         """Tier 2: Objective requirements check.
 
-        For now, this is a placeholder that always passes.
-        In full implementation, this would run test scripts.
+        Runs validation scripts specified in requirements.
+        Requirements with "shell:" prefix are executed as shell commands.
         """
         requirements = manifest.cognitive_triad.requirements
 
@@ -107,11 +108,46 @@ class HarnessRunner:
                 message="Tier 2 通过: 无客观验收标准（跳过）",
             )
 
-        # TODO: Run actual test scripts for each requirement
+        failed = []
+        passed_cmds = []
+
+        for req in requirements:
+            # Requirements format: "shell:pytest tests/ --cov"
+            # or just descriptive text that can't be executed
+            if req.startswith("shell:"):
+                cmd = req[6:].strip()
+                try:
+                    result = subprocess.run(
+                        cmd,
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    if result.returncode == 0:
+                        passed_cmds.append(cmd)
+                    else:
+                        failed.append(f"命令失败: {cmd}\n输出: {result.stderr[:200]}")
+                except subprocess.TimeoutExpired:
+                    failed.append(f"命令超时: {cmd}")
+                except Exception as e:
+                    failed.append(f"命令执行异常: {cmd}\n{e}")
+            else:
+                # Non-executable requirement - pass with note
+                passed_cmds.append(f"（描述性）{req}")
+
+        if failed:
+            return HarnessResult(
+                tier=2,
+                passed=False,
+                message=f"Tier 2 失败: {len(failed)} 项需求未通过",
+                deviation="\n".join(failed),
+            )
+
         return HarnessResult(
             tier=2,
             passed=True,
-            message=f"Tier 2 通过: {len(requirements)} 项需求待验证（Placeholder）",
+            message=f"Tier 2 通过: {len(passed_cmds)} 项需求验证通过",
         )
 
     def _verify_tier3(self, manifest: TaskManifest) -> HarnessResult:

@@ -148,8 +148,8 @@ class TestHarnessRunnerWithMockData:
         assert tier2.passed is True
         assert "跳过" in tier2.message
 
-    def test_tier2_with_requirements_placeholder(self):
-        """Tier 2 placeholder when requirements exist."""
+    def test_tier2_descriptive_requirements_pass(self):
+        """Tier 2 passes for non-executable descriptive requirements."""
         runner = HarnessRunner()
         manifest = TaskManifest(
             id="test_task",
@@ -168,7 +168,74 @@ class TestHarnessRunnerWithMockData:
         tier2 = results[1]
         assert tier2.tier == 2
         assert tier2.passed is True
-        assert "Placeholder" in tier2.message
+        assert "2 项需求验证通过" in tier2.message
+
+    def test_tier2_shell_command_success(self):
+        """Tier 2 executes shell commands successfully."""
+        runner = HarnessRunner()
+        manifest = TaskManifest(
+            id="test_task",
+            status=TaskStatus.COMPLETED,
+            cognitive_triad=CognitiveTriad(
+                picture="测试任务",
+                requirements=["shell:echo 'hello'"],
+                constraints=[],
+            ),
+            gotcha_refs=[],
+            todos=[TodoItem(text="done", done=True)],
+        )
+
+        results = runner.verify_task(manifest)
+
+        tier2 = results[1]
+        assert tier2.tier == 2
+        assert tier2.passed is True
+
+    def test_tier2_shell_command_failure(self):
+        """Tier 2 fails when shell command returns non-zero."""
+        runner = HarnessRunner()
+        manifest = TaskManifest(
+            id="test_task",
+            status=TaskStatus.COMPLETED,
+            cognitive_triad=CognitiveTriad(
+                picture="测试任务",
+                requirements=["shell:exit 1"],
+                constraints=[],
+            ),
+            gotcha_refs=[],
+            todos=[TodoItem(text="done", done=True)],
+        )
+
+        results = runner.verify_task(manifest)
+
+        tier2 = results[1]
+        assert tier2.tier == 2
+        assert tier2.passed is False
+        assert "命令失败" in tier2.deviation
+
+    def test_tier2_mixed_requirements(self):
+        """Tier 2 handles mix of shell and descriptive requirements."""
+        runner = HarnessRunner()
+        manifest = TaskManifest(
+            id="test_task",
+            status=TaskStatus.COMPLETED,
+            cognitive_triad=CognitiveTriad(
+                picture="测试任务",
+                requirements=[
+                    "shell:echo 'test'",
+                    "描述性需求（无法执行）",
+                ],
+                constraints=[],
+            ),
+            gotcha_refs=[],
+            todos=[TodoItem(text="done", done=True)],
+        )
+
+        results = runner.verify_task(manifest)
+
+        tier2 = results[1]
+        assert tier2.tier == 2
+        assert tier2.passed is True
 
     def test_tier3_always_passes_placeholder(self):
         """Tier 3 placeholder always passes for now."""
