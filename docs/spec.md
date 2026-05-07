@@ -39,6 +39,49 @@ mem0ress 将所有认知单元统一为同构的任务节点（Task），每个�
 
 这一核心解法的认知科学基础和完整推导见第二章。
 
+```mermaid
+%% label：核心解法总览
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae', 'fontFamily': 'arial' } } }%%
+graph TB
+    subgraph PRC["认知三要素（洞察二）"]
+        PIC["Picture\n图景"]
+        REQ["Requirements\n需求"]
+        CST["Constraints\n约束"]
+    end
+
+    subgraph TASK["Task 认知单元（洞察三）"]
+        TR["三要素 + 执行进度\n= 可判断状态"]
+    end
+
+    subgraph DUAL["双平面正交（洞察四）"]
+        SP["状态平面\n（做什么 → 做到哪）"]
+        DP["数据平面\n（当前代码版本）"]
+    end
+
+    subgraph TIERS["四层检验（Harness）"]
+        T0["Tier 0\nConstraints 检查"]
+        T1["Tier 1\nTodo + 子任务"]
+        T2["Tier 2\nRequirements"]
+        T3["Tier 3\n语义对齐"]
+    end
+
+    PRC --> TASK
+    TASK --> SP
+    TASK --> DP
+    SP --> T0
+    T0 --> T1
+    T1 --> T2
+    T2 -.->|按需触发| T3
+
+    classDef prc fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef task fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef plane fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
+    classDef tier fill:#fce4ec,stroke:#c62828,stroke-width:2px;
+    class PRC,task,TR prc;
+    class SP,DP plane;
+    class T0,T1,T2,T3 tier;
+```
+
 ## 2. 核心洞察 (Core Insights)
 
 mem0ress 的设计基于四个洞察。这些洞察源自记忆研究、认知科学和任务管理领域的交叉经验。它们共同构成了整个规范的认知科学基础，也为其他认知架构（如 MetaDev）提供了可独立引用的理论锚点。
@@ -233,6 +276,48 @@ graph TB
 
 以上四大理念，共同构成了 mem0ress 的设计哲学。以下工程准则，是将上述理念落实为具体约束的实践规范——违反这些准则，即等同于违反第二章（核心洞察）的设计初衷。
 
+```mermaid
+%% label：工程准则与洞察的映射关系
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae' } } }%%
+graph TB
+    subgraph 洞察层["第二章：核心洞察"]
+        I1["洞察一\n目标属性"]
+        I2["洞察二\nPRC 框架"]
+        I3["洞察三\nTask 锚点"]
+        I4["洞察四\n双平面正交"]
+    end
+
+    subgraph 理念层["第三章：设计理念"]
+        G1["目标锚定"]
+        G2["认知而非记忆"]
+        G3["同构认知单元"]
+        G4["认知平面数据流"]
+    end
+
+    subgraph 准则层["第四章：工程准则"]
+        E1["SSOT + 绝对覆写"]
+        E2["系统级卸责"]
+        E3["反黑盒 + 绝对可观测性"]
+    end
+
+    I1 --> G1
+    I1 --> G2
+    I3 --> G3
+    I4 --> G4
+    G1 --> E1
+    G2 --> E1
+    G3 --> E2
+    G3 --> E3
+    G4 --> E3
+
+    classDef insight fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef principle fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    classDef rule fill:#fff9c4,stroke:#f9a825,stroke-width:2px;
+    class I1,I2,I3,I4 insight;
+    class G1,G2,G3,G4 principle;
+    class E1,E2,E3 rule;
+```
+
 ## 4. 工程准则
 
 ### 4.1 单一事实来源与绝对覆写 (SSOT & Absolute Overwrite)
@@ -276,6 +361,19 @@ mem0ress 的解法是**零中介**：系统完全建立在"目录树 + 纯文本
 三要素的填写时机有严格顺序。先定义 Requirements，再定义 Constraints，最后由前两者共同推导出 Picture。这个顺序不是随意的——它是冲突检测的关键：若 Requirements 与 Constraints 在定义阶段就相互矛盾，系统立即标记任务为"不可行"，而非等到执行阶段才发现。
 
 Picture 定义于最后，因为它是前两者约束下的语义综合，而非先入为主的愿景。
+
+```mermaid
+%% label：PRC 三要素构建顺序
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#2e7d32', 'lineColor': '#616161' } } }%%
+flowchart LR
+    A["1. 定义 Requirements\n（可验证条件）"] --> B["2. 定义 Constraints\n（不可逾越底线）"]
+    B --> C["3. 推导出 Picture\n（语义成功状态）"]
+    C -.->|冲突检测| D{"Req ∩ Cst\n相互矛盾？"}
+    D -->|是| E["标记「不可行」\n任务创建失败"]
+    D -->|否| F["任务进入执行阶段"]
+    style E fill:#ffcdd2,stroke:#c62828
+    style F fill:#c8e6c9,stroke:#2e7d32
+```
 
 **如何判断填写质量：**
 
@@ -343,6 +441,35 @@ graph LR
 
 ## 6. 物理文档模型 (Document Model)
 系统使用文件树表达认知的从属关系与上下文边界。
+
+```mermaid
+%% label：.mem0ress 文件树与概念映射
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#fff3e0' } }%%
+graph TD
+    ROOT[".mem0ress/"]
+    TASKS["tasks/"]
+    TMPL["index.md\nManifest\nPicture / Requirements\n/ Constraints / Todos"]
+    SESS["session.md\n轮次快照序列"]
+    DP["data-plane/\nrefs.md"]
+    GOT["gotchas/\n{timestamp}.md"]
+
+    ROOT --> TASKS
+    TASKS --> TMPL
+    TASKS --> SESS
+    TASKS --> DP
+    TASKS --> GOT
+
+    TMPL -.->|三要素来源| SESS
+    SESS -.->|进度数据| TMPL
+    GOT -.->|偏差记录| TMPL
+
+    classDef dir fill:#c8e6c9,stroke:#388e3c,stroke-width:2px;
+    classDef file fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef ref fill:#fff3e0,stroke:#ff8f00,stroke-width:1px,stroke-dasharray:5,5;
+    class ROOT,TASKS dir;
+    class TMPL,SESS,DP,GOT file;
+    class GOT ref;
+```
 
 ```plaintext
 .mem0ress/
@@ -427,6 +554,29 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 * **Tier 2: Requirements 满足检查 (Requirements Check)：** 在沙箱中执行 Requirements 对应的脚本或测试，验证每个 Requirement 是否达标。若存在未满足的 Requirement，直接阻断，不进入 Tier 3。
 * **Tier 3: 语义对齐检查 (Semantic Alignment Check)：** Judge Agent 读取任务的 Picture 与实际产出，执行语义对齐判断。只有当 Picture 中包含无法自动化验证的指标（如"用户感到满意"）时才需要触发。
 
+```mermaid
+%% label：四层检验递进关系
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#fce4ec', 'primaryTextColor': '#880e4f', 'primaryBorderColor': '#c62828', 'lineColor': '#616161', 'noteBkgColor': '#fce4ec', 'noteTextColor': '#880e4f' } } }%%
+flowchart TB
+    T0["Tier 0\nConstraints 检查\n（可修复 → 重跑 | 不可修复 → 让度）"] --> T1["Tier 1\nTodo 完成检查\n+ 子任务完成检查"]
+    T1 -->|阻断：不通过| BLOCK1["阻断 → 记录 Gotcha"]
+    T1 -->|通过| T2["Tier 2\nRequirements 满足检查"]
+    T2 -->|阻断：不满足| BLOCK2["阻断 → 记录 Gotcha"]
+    T2 -->|通过| T3["Tier 3\n语义对齐检查\n（按需触发）"]
+    T3 -->|通过| PASS["检验通过\nAgent 决策下一步"]
+    T3 -->|不通过| BLOCK3["记录 Gotcha\nAgent 决策下一步"]
+    T3 -.->|不触发时| SKIP["Tier 3 跳过"]
+    SKIP -.-> PASS
+    style T0 fill:#fff9c4,stroke:#f9a825
+    style T1 fill:#fff3e0,stroke:#ff6f00
+    style T2 fill:#e3f2fd,stroke:#1565c0
+    style T3 fill:#f3e5f5,stroke:#6a1b9a
+    style BLOCK1 fill:#ffcdd2,stroke:#c62828
+    style BLOCK2 fill:#ffcdd2,stroke:#c62828
+    style BLOCK3 fill:#ffcdd2,stroke:#c62828
+    style PASS fill:#c8e6c9,stroke:#2e7d32
+```
+
 **关卡通过关系：** Tier 1 失败不阻断 Tier 2（因为 Todo 完成与 Requirements 满足可能不同步），但 Tier 2 失败阻断 Tier 3。Tier 3 是最后一关，Tier 1 + Tier 2 全部通过才进入。
 
 **Tier 2 的验证模式：** Tier 2 根据 Tier 1 的状态决定验证范围：若 Tier 1 未完成，则只检查所有未通过的 Requirements（效率优先）；若 Tier 1 完成，则重新全部检查所有 Requirements（最终确认）。Tier 1 与 Tier 2 之间不存在 Todo 与 Requirements 的映射关系。
@@ -487,6 +637,36 @@ mem0ress 作为一个被动式的状态管理层，自身没有后台守护进�
 
 mem0ress 中，人和 Agent 不存在分工——本质上都以 Agent 形态存在。决策权统一归属 Agent，Agent 按权限设定和危险性判断，自主行使或主动让度给人。
 
+```mermaid
+%% label：Task 生命周期状态机
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae' } } }%%
+stateDiagram-v2
+    [*] --> CREATED : create_task()
+    CREATED --> IN_PROGRESS : update_task() / first todo
+    IN_PROGRESS --> COMPLETED : complete_task()\n(Tier 1+2+3 全部通过)
+    IN_PROGRESS --> ABANDONED : abandon_task()\n(Agent 主动触发)
+    IN_PROGRESS --> CREATED : update_task()\n(回退？不常见)
+    COMPLETED --> [*]
+    ABANDONED --> [*]
+
+    note right of CREATED
+        三要素已定义
+        等待开始执行
+    end note
+    note right of IN_PROGRESS
+        Tier 0 前置处理
+        执行中 / 检验中
+    end note
+    note right of COMPLETED
+        目标达成
+        认知生命周期结束
+    end note
+    note right of ABANDONED
+        目标放弃
+        记录 Gotcha 经验
+    end note
+```
+
 **Agent 负责的决策：**
 - 任务创建时三要素的定义与完善
 - 是否触发 Tier 1/2 检验，以及按需触发 Tier 3（Tier 0 为自动前置处理，不在决策范围内）
@@ -519,6 +699,43 @@ Agent 通过 spawn 人机协作任务实现让度——在任务 TODO 中标记"
 | **L3 检验后自主** | 一般开发任务 | Tier 1/2/3 通过后自主完成标记 | `complete_task` |
 | **L2 高危审批** | 生产环境变更 | `add_todo`、`update_todo` | `complete_task`、`abandon_task` |
 | **L1 完全让度** | 高风险操作 | 无 | 所有状态变更 |
+
+```mermaid
+%% label：权限让度决策矩阵
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#f3e5f5', 'primaryTextColor': '#4a148c', 'primaryBorderColor': '#6a1b9a', 'lineColor': '#616161' } } }%%
+graph LR
+    subgraph 危险维度["危险维度"]
+        D1["影响范围"]
+        D2["可逆性"]
+        D3["外部依赖"]
+        D4["决策后果"]
+    end
+
+    subgraph 让度决策["→ 让度给人"]
+        L4["L4: 无让度"]
+        L3["L3: 检验后自主"]
+        L2["L2: 高危审批"]
+        L1["L1: 完全让度"]
+    end
+
+    D1 --> L1
+    D2 --> L1
+    D3 --> L1
+    D4 --> L1
+    D1 -.-> L2
+    D2 -.-> L2
+    D3 -.-> L2
+    D4 -.-> L2
+    D1 -.-> L3
+    D2 -.-> L3
+    D1 -.-> L4
+    D2 -.-> L4
+
+    style L4 fill:#c8e6c9,stroke:#2e7d32
+    style L3 fill:#fff9c4,stroke:#f9a825
+    style L2 fill:#fff3e0,stroke:#ff6f00
+    style L1 fill:#ffcdd2,stroke:#c62828
+```
 
 权限等级在任务创建时由 Agent 判定，或由人工在任务 Manifest 中预设。
 
