@@ -409,7 +409,7 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 **四层关卡（Tiers）：**
 
 * **Tier 0: Constraints 约束检查：** 检查当前 Task 的所有 Constraints 是否满足。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。修复成功后重跑 Tier 0 确认，通过后进入 Tier 1。
-* **Tier 1: Todo 完成检查 (Todo Check)：** 检查所有 Todo 步是否已被标记为完成。若存在未勾选的 Todo，直接阻断，不进入 Tier 2。
+* **Tier 1: Todo 完成检查 + 直接子任务完成检查：** 检查两个独立的前置条件——(1) 所有 Todo 步是否已被标记为完成；(2) 所有直接子任务是否状态为 COMPLETED。若存在未完成的 Todo 或未关闭的子任务，直接阻断，不进入 Tier 2。
 * **Tier 2: Requirements 满足检查 (Requirements Check)：** 在沙箱中执行 Requirements 对应的脚本或测试，验证每个 Requirement 是否达标。若存在未满足的 Requirement，直接阻断，不进入 Tier 3。
 * **Tier 3: Picture 对齐检查 (Picture Alignment Check)：** Judge Agent 读取任务的 Picture 与实际产出，执行语义对齐判断。只有当 Picture 中包含无法自动化验证的指标（如"用户感到满意"）时才需要触发。
 

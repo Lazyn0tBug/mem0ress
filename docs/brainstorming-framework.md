@@ -153,7 +153,7 @@ Constraints  是否完成   Requirements  Picture
 || 层级 | 检查内容 | 通过标准 | 是否有数据变更 |
 ||------|---------|---------|--------------|
 | **Tier 0** | Constraints 是否满足 | 全部 Constraint 无违反 | 可能修复（自动或手动） |
-| **Tier 1** | Todo 是否全部完成 | 每个 Todo 步都被标记为完成 | 无 |
+| **Tier 1** | Todo 完成 + 直接子任务完成 | (1) 所有 Todo 步标记完成；(2) 所有直接子任务状态为 COMPLETED | 无 |
 | **Tier 2** | Requirements 是否满足 | 可自动化脚本/测试验证每个 Requirement | 无 |
 | **Tier 3** | Picture 是否对齐 | Judge Agent 语义判断（主观感知类 Picture 专用） | 无 |
 
