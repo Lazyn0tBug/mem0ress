@@ -74,71 +74,73 @@ mem0ress 的诞生，源于对当前 AI Agent 发展路径的底层反思。我�
 
 ```mermaid
 %% label：分形树状结构
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#2e7d32', 'lineColor': '#616161', 'secondaryColor': '#fafafa', 'tertiaryColor': '#f5f5f5' } } }%%
 graph TD
-    root["/tasks<br>root"]
-    taskA["auth_module/<br>index.md"]
-    taskA1["oauth_google/<br>index.md"]
-    taskA2["oauth_github/<br>index.md"]
-    taskA3["session_store/<br>index.md"]
-    taskA1a["oauth_google/provider/<br>index.md"]
-    taskA1b["oauth_google/callback/<br>index.md"]
+    root("/tasks")
+    A["auth_module/"]
+    A1["oauth_google/"]
+    A2["oauth_github/"]
+    A3["session_store/"]
+    A1a["provider/"]
+    A1b["callback/"]
 
-    root --> taskA
-    taskA --> taskA1
-    taskA --> taskA2
-    taskA --> taskA3
-    taskA1 --> taskA1a
-    taskA1 --> taskA1b
+    root --> A
+    A --> A1
+    A --> A2
+    A --> A3
+    A1 --> A1a
+    A1 --> A1b
 
     classDef task fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef root fill:#fafafa,stroke:#9e9e9e,stroke-width:1px,stroke-dasharray:5 5;
+    classDef root fill:#c8e6c9,stroke:#388e3c,stroke-width:3px;
+    classDef leaf fill:#f1f8e9,stroke:#689f38,stroke-width:1px;
     class root root;
-    class taskA,taskA1,taskA2,taskA3,taskA1a,taskA1b task;
+    class A,A1,A2,A3 task;
+    class A1a,A1b leaf;
 ```
 
-### 2.4 三层物理隔离 (The CPU-RAM-Disk Model)
+### 2.4 认知切片的数据流架构 (Cognitive Slice Data Flow)
 
-**三层物理隔离**是对 L1/L2/L3 的功能分类描述，不是另一套独立的分层体系：
+mem0ress 的认知数据来自会话本身，而非外部知识库。系统从会话流中 **hook** 出构建认知所需的信息，这是与外部数据完全独立的并行过程——外部知识（向量数据库、API 文档、全网搜索）属于 Agent 的背景知识，mem0ress 不感知、不管理，也不依赖它们。
 
-* **CPU = LLM (Agent)：** 处理枢纽，负责理解、推理、决策与执行。
-* **RAM = L1 + L2 (mem0ress)：** 工作内存，维持高频、强状态的认知切片（状态平面 + 数据平面）。
-* **Disk = L3 (外部知识库)：** 无状态的客观数据，外部向量数据库、API 文档、全网知识。
+**认知数据的来源与流向：**
 
-外部数据绝不直接流入工作内存。Agent 必须先检索、理解，再蒸馏内化为服务于目标的经验，才能写入 RAM。
+会话流承载了 Agent 的所有执行动作与中间产物。mem0ress 在会话中 hook 出与任务目标相关的数据，将其组织为两个时间切片：
 
-> **注：** 状态平面和数据平面都是时间切片，不是组件。图中的 Status Plane / Data Plane 指的是"某一时刻的切片内容"，而非独立的进程或服务。
+* **状态平面：** 从会话中提取任务执行状态（Todo 进度、代码产出、文档进度、组件状态），聚合为某一时刻的执行快照。
+* **数据平面：** 从会话中提取相关数据的 commit ID 快照，记录代码和文档在某一时刻的版本。
+
+两个切片都来源于会话，**按需水化**，不默认加载。Agent 获取切片后，在其 LLM 的认知工作区中完成目标推理与决策。
+
+> **注：** 状态平面和数据平面都是时间切片，不是组件。图中的状态平面 / 数据平面指的是"某一时刻的切片内容"，而非独立的进程或服务。mem0ress 的认知工作区与 Agent 的 LLM 处于同一层，两者共享会话上下文。
 
 ```mermaid
-%% label：三层物理隔离（L1/L2/L3 的功能映射）
-graph TD
-    subgraph L3 ["L3 / Disk (外部知识库)"]
-        direction TB
-        VectorDB[(向量数据库)]
-        API[API 文档]
-        Web[全网搜索]
+%% label：认知切片数据流
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#e3f2fd', 'tertiaryColor': '#fafafa', 'fontFamily': 'arial' } } }%%
+graph TB
+    subgraph 会话层["会话流 (Conversation)"]
+        CF["Agent 执行动作<br>中间产物产出"]
     end
 
-    subgraph L1 ["L1 / CPU (Agent 处理枢纽)"]
-        LLM((LLM))
+    subgraph 认知层["mem0ress 认知工作区 (与 LLM 同层)"]
+        SP["状态平面"]
+        DP["数据平面"]
     end
 
-    subgraph L2 ["L2 / RAM (mem0ress 本体)"]
-        direction TB
-        StatusSlice["状态平面<br>(任务执行快照)"]
-        DataSlice["数据平面<br>(commit ID 快照)"]
+    subgraph LLM层["LLM 认知工作区"]
+        LLM[("LLM")]
     end
 
-    L3 -- "检索与阅读" --> LLM
-    LLM -- "蒸馏内化" --> L2
-    L2 -- "挂载切片" --> L1
-    L1 <==> "高频交互" --> LLM
+    CF -->|hook 出认知数据| 认知层
+    认知层 -->|挂载切片| LLM层
+    LLM -->|决策与执行| CF
 
-    classDef l1 fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
-    classDef l2 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef l3 fill:#fafafa,stroke:#9e9e9e,stroke-width:1px,stroke-dasharray:5 5;
-    class LLM l1;
-    class StatusSlice,DataSlice l2;
-    class VectorDB,API,Web l3;
+    classDef conv fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
+    classDef cog fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    classDef llm fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    class CF conv;
+    class SP,DP cog;
+    class LLM llm;
 ```
 
 以上四大理念，共同构成了 mem0ress 的设计哲学。以下工程准则，是将上述理念落实为具体约束的实践规范——违反这些准则，即等同于违反第二章的设计初衷。
@@ -165,7 +167,7 @@ mem0ress 的解法是**零中介**：系统完全建立在"目录树 + 纯文本
 - **版本控制，原生可审计：** 所有认知产物（Manifest、Session、Gotchas）均在 Git 版本控制之下，任何变更均可追溯到具体的人和轮次。
 - **结构即语义，工具无绑定：** 目录深度表达依赖关系，文件名承载类型语义。Agent 不需要特殊工具就能理解和导航整个认知空间。
 
-这与传统的"向量数据库 + 检索"模式形成鲜明对比：后者将原始信息编码为高维向量，检索时再解码——这个过程本身就是信息损失。而 mem0ress 的文本永远保持人类可读和机器可解析的双重 fidelity。
+这与传统的"向量数据库 + 检索"模式形成鲜明对比：后者将原始信息编码为高维向量，检索时再解码——这个过程本身就是信息损失。而 mem0ress 的认知数据（Manifest、Session、Gotchas）永远保持人类可读和机器可解析的双重 fidelity。
 
 ## 4. 概念：认知与态势感知 (Cognitive Concepts)
 ### 4.1 认知三要素 (The Cognitive Triad)
@@ -211,24 +213,23 @@ Agent 唤醒时强制挂载，**纯展示，不做诊断**。
 
 ```mermaid
 %% label：认知切片分离
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#757575', 'secondaryColor': '#fff3e0', 'tertiaryColor': '#fafafa' } } }%%
 graph LR
-    subgraph 任一时刻的认知切片
-        direction LR
-        subgraph StatusSlice["状态平面（执行快照）"]
-            TaskID[Task ID]
-            TodoProg[TODO 进度]
-            TaskStatus[Task Status]
-            Gotchas[Gotchas]
-        end
-        subgraph DataSlice["数据平面（commit ID 快照）"]
-            RepoA[frontend: abc123]
-            RepoB[backend: def456]
-        end
+    subgraph SP_Group["状态平面（执行快照）"]
+        TID["Task ID"]
+        TODO["TODO 进度"]
+        STS["Task Status"]
+        GTA["Gotchas"]
     end
-    AgentContext["Agent Context Window"]
 
-    StatusSlice & DataSlice --> AgentContext
-    TaskID -. "Manifest 提供<br>Picture / Requirements<br>/ Constraints" .-> TaskID
+    subgraph DP_Group["数据平面（commit ID 快照）"]
+        REPOA["frontend: abc123"]
+        REPOB["backend: def456"]
+    end
+
+    SP_Group --> AC["Agent Context Window"]
+    DP_Group --> AC
+    TID -.->|Manifest 提供<br>Picture/Requirements<br>/Constraints| TID
 ```
 
 ## 5. 物理文档模型 (Document Model)
@@ -381,18 +382,25 @@ Harness Engine 本身**不是自主进程**——它没有主动触发能力，�
 
 ```mermaid
 %% label：三模块边界
-graph LR
-    Agent["Agent Context"]
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae', 'fontFamily': 'arial' } } }%%
+graph TB
+    Agent(["Agent Context"])
 
     PA["Plane Assembler<br>只读出口"]
-    HE["Harness Engine<br>验证出口"]
     TI["Tool Interface<br>写操作入口"]
+    HE["Harness Engine<br>验证出口"]
 
-    Agent <--> PA
-    Agent <--> HE
+    Agent --> PA
+    Agent --> TI
+    Agent --> HE
+
     PA --> TI
-    HE --> TI
-    PA -.-> HE: 验证触发
+    PA -. "verify_task() 触发" .-> HE
+
+    classDef mod fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef agent fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
+    class PA,TI,HE mod;
+    class Agent agent;
 ```
 
 ### 7.2 核心机制设计
@@ -416,6 +424,7 @@ mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
 ```mermaid
 %% label：Agent 驱动的业务闭环
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'noteBkgColor': '#f1f8e9', 'noteTextColor': '#1b5e20' } } }%%
 sequenceDiagram
     autonumber
     participant Agent
@@ -424,7 +433,7 @@ sequenceDiagram
     participant HE as Harness Engine
     participant System
 
-    rect rgb(232, 245, 233)
+    rect rgba(46, 125, 50, 0.1)
         Note over Agent,System: Agent 主动决策（业务流）
         Agent->>PA: get_status_plane()
         PA-->>Agent: 状态平面快照
@@ -434,7 +443,7 @@ sequenceDiagram
         TI-->>Agent: 状态更新确认
     end
 
-    rect rgb(245, 245, 245)
+    rect rgba(100, 100, 100, 0.1)
         Note over Agent,System: 系统自动机制
         System->>System: 每轮次结束
         System->>System: Session 快照（自动）
