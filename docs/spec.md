@@ -295,7 +295,8 @@ mem0ress 的认知系统由两个核心平面构成，它们都是**时间切片
 - 任务树结构（父子关系）
 - 每个任务的 todo 完成度（如 "2/3 Todos 完成"）
 - 任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）
-- 偏差记录（Gotchas）
+- 偏差记录（Gotchas，指针）
+- Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）
 
 Agent 唤醒时强制挂载，**纯展示，不做诊断**。
 
@@ -317,7 +318,7 @@ graph LR
         TID["Task ID"]
         TODO["TODO 进度"]
         STS["Task Status"]
-        GTA["Gotchas"]
+        GTA["Gotchas<br/><指针>"]
     end
 
     subgraph DP_Group["数据平面（commit ID 快照）"]
@@ -333,6 +334,11 @@ graph LR
     DP_Group --> AC
     HIST -.->|提供数据| SP_Group
     TID -.->|Manifest 提供<br>Picture/Requirements<br>/Constraints| TID
+    GTA -.->|指针引用| GREC
+
+    subgraph GOTCHA_Group["gotchas/（实际存储）"]
+        GREC["Gotcha 记录文件"]
+    end
 ```
 
 ## 6. 物理文档模型 (Document Model)
@@ -483,7 +489,7 @@ mem0ress 中，人和 Agent 不存在分工——本质上都以 Agent 形态存
 
 **Agent 负责的决策：**
 - 任务创建时三要素的定义与完善
-- 是否触发 Tier 1/2/3 检验
+- 是否触发 Tier 1/2 检验，以及按需触发 Tier 3（Tier 0 为自动前置处理，不在决策范围内）
 - 检验通过后是否调用 `complete_task()`
 - 是否标记任务为 ABANDONED
 - 下一步行动（修正、重试、或推进其他任务）
