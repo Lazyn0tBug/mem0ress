@@ -395,15 +395,14 @@ mem0ress 本身不执行循环——它由 Agent 驱动。Agent 在需要对齐�
 
 #### 状态表 (State Table)
 
-| State | 范围 | 说明 |
-|-------|------|------|
-| `CREATED` | Task | 任务已创建 |
-| `IN_PROGRESS` | Task | 任务进行中 |
-| `COMPLETED` | Task | 任务完成 |
-| `ABANDONED` | Task | 任务废弃 |
-| `IDLE` | Framework | 空闲（无活跃任务） |
-| `ACTIVE` | Framework | 有任务在进行 |
-| `VERIFYING` | Framework | 验证中 |
+| State | 说明 |
+|-------|------|
+| `CREATED` | 任务已创建 |
+| `IN_PROGRESS` | 任务进行中 |
+| `COMPLETED` | 任务完成 |
+| `ABANDONED` | 任务废弃 |
+
+> 注：Framework 状态（IDLE/ACTIVE/VERIFYING）为派生信息，可通过 Status Plane 计算得出，不需要显式维护。
 
 #### 节点表 (Node Table)
 
