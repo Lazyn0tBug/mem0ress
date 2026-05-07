@@ -62,7 +62,15 @@ mem0ress 的诞生，源于对当前 AI Agent 发展路径的底层反思。我�
 
 **用最极简的实体，构建无限复杂的意图宇宙。**
 
-任务被拆解为同构的单元（Task）。每个子任务都拥有独立的清单文件（Manifest），物理上通过目录深度表达依赖关系。父任务的完成必须以所有子任务的对齐为前提。这极大降低了系统认知网关的解析复杂度。
+任务被拆解为同构的单元（Task）。每个子任务都拥有独立的清单文件（Manifest），物理上通过目录深度表达依赖关系。父任务的完成必须以所有子任务的对齐为前提。
+
+这种同构设计解决了复杂意图管理中的三个核心问题：
+
+**解析一致性：** 认知网关只需处理一种类型的节点（Task）。无论任务是"实现登录模块"还是"修复安全漏洞"，系统使用完全相同的解析逻辑。这比异构结构（不同节点类型需要不同处理逻辑）大大降低了复杂度。
+
+**分形扩展：** 分形意味着自相似——树的每一层节点拥有与顶层相同的结构，只是粒度不同。"用户认证"任务的 Manifest 与"实现 OAuth 提供商"子任务的 Manifest 结构完全一致。这使得任务分解不需要额外的结构设计工作，分解过程本身是机械的。
+
+**依赖表达的物理化：** 父任务目录下嵌套子任务目录，通过目录深度而非数据库外键表达依赖关系。这使得依赖的可见性不需要查询——`ls` 即是最直接的展示。"父任务是否完成"等价于"子任务目录是否全部关闭"，无需额外的状态聚合查询。
 
 ### 2.4 三层物理隔离 (The CPU-RAM-Disk Model)
 
@@ -109,6 +117,8 @@ graph TD
     class VectorDB,API,Web l3;
 ```
 
+以上四大理念，共同构成了 mem0ress 的设计哲学。以下工程准则，是将上述理念落实为具体约束的实践规范——违反这些准则，即等同于违反第二章的设计初衷。
+
 ## 3. 工程准则
 
 ### 3.1 单一事实来源与绝对覆写 (SSOT & Absolute Overwrite)
@@ -120,15 +130,39 @@ graph TD
 mem0ress 只专注一件事：认知的生命周期管理，即任务的创建、检验与认知态势的构建。大模型沙箱隔离、并发控制等底层复杂性，均交由宿主操作系统解决。
 
 ### 3.3 反黑盒与绝对可观测性 (Anti-Blackbox & Absolute Observability)
-完全建立在“目录树 + 纯文本（Markdown/YAML）”之上，赋予系统绝对的可观测性。
+
+可观测性（Observability）不仅仅是"能看到日志"，而是"从输出推断内部状态"的能力。传统记忆系统是黑盒：Agent 无法直接知道系统内部的认知状态，只能通过 API 返回的结果猜测——而这些结果往往已经过蒸馏和裁剪，失去了原始上下文。
+
+mem0ress 的解法是**零中介**：系统完全建立在"目录树 + 纯文本（Markdown/YAML）"之上，没有任何私有格式或隐藏状态。
+
+这带来三个具体优势：
+
+- **直接读取，无损透明：** Agent 可以直接 `cat` 任意清单文件，看到的与系统存储的完全一致。没有任何 API 层对内容做截断或改写。
+- **版本控制，原生可审计：** 所有认知产物（Manifest、Session、Gotchas）均在 Git 版本控制之下，任何变更均可追溯到具体的人和轮次。
+- **结构即语义，工具无绑定：** 目录深度表达依赖关系，文件名承载类型语义。Agent 不需要特殊工具就能理解和导航整个认知空间。
+
+这与传统的"向量数据库 + 检索"模式形成鲜明对比：后者将原始信息编码为高维向量，检索时再解码——这个过程本身就是信息损失。而 mem0ress 的文本永远保持人类可读和机器可解析的双重 fidelity。
 
 ## 4. 概念：认知与态势感知 (Cognitive Concepts)
 ### 4.1 认知三要素 (The Cognitive Triad)
-图景 (Picture)： 任务完成后的终极成功状态。
 
-需求 (Requirements)： 抵达图景的可验证硬性指标。
+认知三要素是 mem0ress 的语义核心。任何任务若缺失其一，都无法构成完整的判断标准——系统将无法回答"成功是什么"、"如何验证"、"什么不可为"这三个根本问题。
 
-约束 (Constraints)： 执行任务时绝对不可逾越的底线。
+**图景 (Picture)：任务完成后的终极成功状态。**
+
+Picture 是语义层面的定性描述，回答"做成什么样"。它不是功能清单，不是实现路径，而是利益相关者（用户、业务负责人、评审者）眼中那个可感知的成功画面。Example：一个 OAuth 模块的 Picture 可能是"用户可以以其公司邮箱登录系统，且管理员可在后台查看所有登录记录"。即使所有代码写完、测试全绿，只要利益相关者感知到"还是不能登录"或"记录查不到"，Picture 即未达成。
+
+**需求 (Requirements)：抵达图景的可验证硬性指标。**
+
+Requirements 是 Picture 的客观可达条件，回答"怎么证明成功了"。每一个 Requirement 都必须可独立验证（有明确的通过/失败判定）。Example：继续上面的 OAuth 模块——"支持 Google Workspace SSO"、"登录失败错误提示不超过 3 秒"、"后台登录日志保留 90 天"这些都是可自动化检验的指标。Requirements 与 Picture 的关系是：Requirements 是 Picture 的必要条件，达成 Picture 必须首先满足所有 Requirements。
+
+**约束 (Constraints)：执行任务时绝对不可逾越的底线。**
+
+Constraints 定义的是红线，回答"什么绝对不能做"。与 Requirements（推动进度向前）不同，Constraints 的作用是"刹车"——一旦违反，系统必须阻断。Example："不许存储明文密码"、"Access Token 有效期不得超过 1 小时"、"用户数据不得跨区域同步"。Constraints 与 Requirements 可能冲突（例如"需支持离线使用"与"数据不得离开设备"），冲突在任务构建阶段即被发现并标记，而非等到执行阶段才暴露。
+
+**三者的动态关系：**
+
+三要素在任务生命周期中承担不同角色。构建任务时，**先定义 Requirements，再定义 Constraints**——因为 Constraints 是冲突检测的锚点，若 Requirements 与 Constraints 相互矛盾，任务在创建时即被标记为不可行。Picture 位于最高层，指导 Requirements 的制定，而 Requirements 反过来校验 Picture 的可达性。整个过程中，三者互相约束，任何一方的变化都可能影响其他两者。
 
 ### 4.2 认知切片 (Cognitive Slices)
 
@@ -258,6 +292,28 @@ status: IN_PROGRESS
 
 每个 Turn 的 Session 快照中包含当时的数据平面快照（commit ID 映射），用于追踪多仓库开发环境的状态演进。
 
+**Gotcha 模板 (gotchas/{timestamp}.md)：**
+
+Gotcha 是带外偏差记录，记录检验中发现的偏离与经验，不参与主流程，不影响任务状态，不阻断 Agent 继续执行。
+
+```markdown
+# Gotcha: {task_id}
+
+## 偏离描述
+{具体偏离了什么（Picture / Requirements / Constraints）}
+
+## 原因分析
+{为什么偏离}
+
+## 经验总结
+{下次如何避免}
+
+## 关联检验
+- 任务: {task_id}
+- 时间: {timestamp}
+- 检验 Tier: {Tier 1/2/3}
+```
+
 **Data Plane 模板 (data-plane/refs.md)：**
 
 ```markdown
@@ -291,15 +347,16 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 
 * Tier 1: 机械状态检查 (Status Check)： 检查底层依赖。若宣称任务完成，但存在未勾选的 Todo 或子任务未闭环，直接阻断。
 * Tier 2: 客观规律验收 (Requirements Check)： 在沙箱中执行 Requirements 对应的脚本或测试。校验接口与物理产出是否达标。
-* Tier 3: 跨平面语义对齐 (Cross-Plane Alignment)： 核心纠偏机制。**Judge Task 是一个标准的、一次性的 Task**。当 Tier 3 触发时，主 Agent spawn 一个 Judge Agent，赋予判断任务。Judge Agent 读取被检验任务的 manifest、picture、constraints 和 data plane 产出，执行语义对齐判断。完成后 Judge Task 结束，Agent 销毁，结果写入被检验任务的 gotcha_refs。
+* Tier 3: 跨平面语义对齐 (Cross-Plane Alignment)： 核心纠偏机制。当 Tier 3 触发时，独立 Judge Agent 读取被检验任务的 manifest、picture、constraints 和 data plane 产出，执行语义对齐判断，结果写入被检验任务的 gotcha_refs。
 
-**偏差处置机制**： 若检验发现偏离，绝不回退状态。系统强制记录当前偏差，并进入下一步的"认知重新构建"。
+**决策执行规则：**
 
-**Judge Task 设计原则：**
-- Judge 是一个标准 Task，遵循所有 Task 的规范（manifest、cognitive_triad、todos）
-- Judge 按需 spawn，完成即终止，不常驻
-- Judge 的输入是"被检验任务的摘要"（picture + constraints + data plane summary），而非原始全部文件
-- Judge 的输出是 aligned/deviation/reasoning，写入被检验任务的 gotcha_refs
+检验结果（aligned / deviation）由 Agent 接收。任务完成后是否调用 `complete_task()`，由 Agent 基于危险性判断自主决定，或按权限设定让度给人。ABANDONED 由 Agent 主动触发，与检验结果无关。
+
+**任务状态与检验的关系：**
+- Tier 1/2/3 全部通过 → 检验通过，任务状态保持不变，Agent 自行决定是否调用 `complete_task()`
+- 检验未通过 → 偏差记录写入 gotcha_refs，Agent 决定下一步（修正、重试或标记 ABANDONED）
+- `complete_task()` 的调用权属于决策权，可由 AI Agent 自主行使，或按权限分级让度给人
 
 ### 6.3 认知构建 (Cognition Building)
 
@@ -324,6 +381,9 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 - 变化动作记录
 - 用于理解演进，暂不主动访问
 
+**Session 触发规则：**
+每交互轮次结束时，系统自动触发 Session 快照，自动填写时间戳和当前状态。Agent 无需显式调用 `snapshot_session()`。
+
 **Picture / Requirements / Constraints 从 TaskManifest 获取，不显示在状态切片中。**
 
 ## 7. 技术方案 (Technical Implementation)
@@ -332,14 +392,29 @@ mem0ress 是认知对齐平面（而不是 Agent 框架）。它专注于认知�
 
 ### 7.1 系统架构设计 (System Architecture)
 
-* Agent 环境：提供 LLM 推理能力（外部）
-* L1 Cognitive Gateway (认知网关):
+mem0ress 是认知对齐平面（而不是 Agent 框架）。它专注于认知状态管理，不执行工具或做决策。其内部划分为三个职责分明的模块：
 
-  * Plane Assembler (平面组装器): 负责"认知构建"。动态扫描并编译出 Status Plane。纯展示，不做诊断。
-  * Tool Interface (工具接口): 提供有限的任务操作工具，供 Agent 调用。**不是执行引擎**——Agent 执行工具，mem0ress 只管理认知状态。
-  * Harness Engine (检验引擎): 负责执行**任务检验**。当 Agent 调用 `verify_task()` 时，Harness Engine 驱动三层验证流程——Tier 1/2 为系统自动检查，Tier 3 为语义对齐，由 Judge Task 落地。Harness Engine 本身不是自主进程，只是检验逻辑的承载。
+**Plane Assembler（平面组装器）：认知构建的执行单元。**
 
-* L2 Cognitive Substrate(认知基座): File System 与 Git 共同构成，提供态势的物理承载。
+职责是**实时编译**当前任务的认知切片（状态平面）。每次 Agent 调用 `get_status_plane()` 时，Plane Assembler 直接扫描文件系统，聚合所有 Task 节点的 Manifest 和 Session，写入状态平面输出。设计上它是纯展示层——不缓存、不诊断、不决策，只做文件系统扫描和文本聚合。
+
+**Tool Interface（工具接口）：认知操作的有限工具集。**
+
+mem0ress 暴露给 Agent 的不是一套通用编程接口，而是一组有限的任务操作工具（`create_task`、`update_todo`、`complete_task` 等）。这与"执行引擎"的本质区别在于：Tool Interface **只管理认知状态的写入**，不执行任何业务逻辑。Agent 需要自己理解任务语义，Tool Interface 只确保操作符合规范（例如检查状态转换是否合法）。
+
+**操作前校验：**
+- 乐观锁比对（文件哈希）：执行写操作时比对文件快照哈希。若遭外部修改，抛出 ConflictError，强制 Agent 重新进行认知构建后再决策。
+- 状态转换合法性：校验状态转换是否符合状态机规则（如 IN_PROGRESS → CREATED 非法）。
+
+**Harness Engine（检验引擎）：任务检验逻辑的承载。**
+
+当 Agent 调用 `verify_task()` 时，Harness Engine 驱动三层验证流程：
+- **Tier 1/2：** 系统自动检查（机械状态 + 客观规律验收），由 Harness 内置逻辑完成。
+- **Tier 3：** 语义对齐，在独立沙箱中 spawn Judge Task 执行。
+
+Harness Engine 本身**不是自主进程**——它没有主动触发能力，只能响应 Agent 的 `verify_task()` 调用。它是检验逻辑的**承载层**，而非检验决策者。
+
+**三个模块的边界：** Plane Assembler 是只读的，Tool Interface 是写的入口，Harness Engine 是验证出口。三者共同构成认知网关，无跨越自身职责范围的操作。
 
 ### 7.2 核心机制设计
 
@@ -348,17 +423,58 @@ mem0ress 是认知对齐平面（而不是 Agent 框架）。它专注于认知�
   * 原生 Git 数据回溯 (Git-Native Revert): 检验失败且路径报废时，LLM 调用工具回退数据平面，同时在状态平面生成 Gotcha 记录偏差经验，保持时间向前。
   * 带外约束检验 (Out-of-Band Verification): Tier 3 的语义对齐在独立沙箱中执行，通过 Judge Task 调用 LLM-as-a-Judge，杜绝与执行态 Agent 发生上下文污染。
 
-### 7.3 技术流程：Agent 驱动的事件循环
+### 7.3 技术流程：Agent 驱动的业务闭环
 
-mem0ress 本身不执行循环——它由 Agent 驱动。Agent 在需要对齐时调用 mem0ress：
+mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
-  1. 认知构建: Agent 调用 `get_status_plane()` 获取当前状态。
-  2. 工具调用: Agent 发出动作指令（创建任务、更新 Todo 等）。
-  3. 安全拦截: mem0ress 验证乐观锁与操作合法性，抛出 ConflictError 如有冲突。
-  4. 任务检验: Agent 调用 `verify_task()` 触发 Harness 三层验证。
-  5. 态势突变: 验证结果写入 Substrate（Gotcha 或完成），Agent 获取最新状态。
+  1. 认知构建: Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、Session 摘要）
+  2. 任务检验: Agent 调用 `verify_task()`，驱动 Harness 三层验证（机械状态 → 客观规律 → 语义对齐）
+  3. 状态更新: Agent 根据检验结果决策后续行动——更新 Todo、调用 `complete_task()`、标记 ABANDONED、或继续执行。状态更新通过 Tool Interface 执行写操作，支持 `update_todo`、`complete_task`、`abandon_task` 等。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
-### 7.4 动作、状态与节点表
+**系统自动机制（不属于业务流）：**
+
+每轮次结束时，系统自动触发 Session 快照，记录本轮状态变化，供后续追溯使用。
+
+### 7.4 决策执行：Agent 是所有决策的起点与终点
+
+mem0ress 中，人和 Agent 不存在分工——本质上都以 Agent 形态存在。决策权统一归属 Agent，Agent 按权限设定和危险性判断，自主行使或主动让度给人。
+
+**Agent 负责的决策：**
+- 任务创建时三要素的定义与完善
+- 是否触发 Tier 1/2/3 检验
+- 检验通过后是否调用 `complete_task()`
+- 是否标记任务为 ABANDONED
+- 下一步行动（修正、重试、或推进其他任务）
+
+**决策让度的触发条件：**
+
+Agent 按危险性阈值和权限设定，判断是否需要让人介入。危险性的判断维度包括：
+
+| 维度 | 低危 | 高危 |
+|------|------|------|
+| **影响范围** | 单任务内部 | 跨任务/跨模块 |
+| **可逆性** | 可随时回退 | 不可逆或代价高昂 |
+| **外部依赖** | 无外部依赖 | 依赖外部服务/人员 |
+| **决策后果** | 局部优化 | 全局目标偏离 |
+
+**让度的形式：**
+
+Agent 通过 spawn 人机协作任务实现让度——在任务 TODO 中标记"待人确认"，人在确认后 Agent 继续执行。让度是 Agent 的主动行为，不是系统强制中断。
+
+### 7.5 权限与让度配置
+
+通过权限分级控制让度边界。典型配置：
+
+| 权限等级 | 适用场景 | 可自主决策 | 需让度给人 |
+|----------|----------|------------|------------|
+| **L4 完全自主** | 探索性任务 | 全部 | 无 |
+| **L3 检验后自主** | 一般开发任务 | Tier 1/2/3 通过后自主完成标记 | `complete_task` |
+| **L2 高危审批** | 生产环境变更 | `add_todo`、`update_todo` | `complete_task`、`abandon_task` |
+| **L1 完全让度** | 高风险操作 | 无 | 所有状态变更 |
+
+权限等级在任务创建时由 Agent 判定，或由人工在任务 Manifest 中预设。
+
+### 7.6 动作、状态与节点表
 
 #### 动作表 (Action Table)
 
@@ -426,16 +542,6 @@ A: 任务模型（Task Model）是认知对齐平面的基本单元。将一切�
 - **可验证性**：每个 Task 都有明确的完成标准（Picture），便于检验
 - **无冲突设计**：父任务完成以其所有子任务完成为绝对前提，避免并发冲突
 
-### Q: 为什么任务模型包括 Picture、Requirements、Constraints？
-A: 认知三要素（Picture、Requirements、Constraints）构成完整的目标语义：
-- **Picture**：图景，任务完成后的终极成功状态，是语义层面的描述
-- **Requirements**：需求，可验证的硬性指标，是客观可达的验证标准
-- **Constraints**：约束，执行过程中不可逾越的底线
-
-三者缺一不可：Picture 定义"成功是什么"，Requirements 定义"如何证明成功了"，Constraints 定义"什么绝对不能做"。
-
-**任务构建顺序：** 先定义 Requirements，后定义 Constraints。任务构建时确保 Requirements 与 Constraints 不冲突——若冲突则任务在构建时即被标记为不可行，而非等到执行阶段才发现。
-
 ### Q: 为什么任务没有冲突协调机制？
 A: mem0ress 采用任务分形树状结构，父任务的完成以所有子任务完成为前提。这一设计使得冲突协调变得不必要：
 - **物理隔离**：不同任务处于不同目录，父任务目录下嵌套子任务目录，通过目录深度表达依赖关系
@@ -451,7 +557,6 @@ A: 双切片设计实现认知与数据的分离：
 
 ### Q: 为什么状态平面没有回溯？
 A: 状态平面是任一时刻的执行快照，不是历史记录。这是设计上的刻意选择：
-- **目的论认知：** 信息必须为意图服务，回溯历史与前向目标感相悖
 - **认知效率：** Agent 每次获取的是当前真相，而非沉积的变更历史
 - **绝对可观测性：** 基于纯文本和目录树，Agent 可直接读取，无需版本遍历
 
