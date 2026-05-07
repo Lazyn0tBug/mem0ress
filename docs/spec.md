@@ -406,7 +406,7 @@ todos:
 ### 7.1 任务创建
 任务的创建是确立认知边界的起点。系统通过声明式的方式，逐步逼近任务的核心。
 
-逐步完善三要素： Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 Picture（图景）、Requirements（需求）和 Constraints（约束）。这三个属性确立了判断未来动作是否偏离的绝对标准。
+逐步完善三要素： Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 Picture、Requirements 和 Constraints。这三个要素的填写有严格顺序——**先定义 Requirements，再定义 Constraints，最后由前两者共同推导出 Picture**。这个顺序是冲突检测的关键：若 Requirements 与 Constraints 在定义阶段就相互矛盾，系统立即标记任务为"不可行"，而非等到执行阶段才发现。
 
 Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的机械步（Todo）。这些 Todo 构成了后续检验进度的基准线。
 
@@ -463,19 +463,17 @@ Tier 3 不是每次 `verify_task()` 都自动进入的常规关卡。它由 Agen
 - 每个任务的 todo 完成度（如 "2/3 Todos 完成"）
 - 任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）
 - 偏差记录（Gotchas）
-- Session 最近变化摘要
+- Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）
 
-**Session 记录内容：**
-
-- 每个轮次的状态快照（code_progress, docs_progress, todos, status）
-- 变化动作记录
-- 用于理解演进，暂不主动访问
+状态平面**纯展示**，不展开 Session 详情。Picture/Requirements/Constraints 从 TaskManifest 获取，不显示在状态平面中。
 
 **Session 触发规则：**
 
 mem0ress 作为一个被动式的状态管理层，自身没有后台守护进程。Session 快照的触发通过以下方式完成：
 
 **系统自动触发：** 每交互轮次结束时，系统自动记录当前快照，无需 Agent 显式调用。
+
+**Session 记录内容：** 每个轮次的状态快照，包括 code_progress、docs_progress、todos 和 status。Session 采用版本快照模型，只追加不覆盖，用于理解演进，暂不主动访问。
 
 **Picture / Requirements / Constraints 从 TaskManifest 获取，不显示在状态平面中。**
 
@@ -593,7 +591,7 @@ mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
 **系统自动机制（不属于业务流）：**
 
-每轮次结束时，系统自动触发 Session 快照，记录本轮状态变化，供后续追溯使用。
+每轮次结束时，系统自动触发 Session 快照，记录本轮状态变化，供后续追溯使用。Agent 无需显式调用 `snapshot_session()`。
 
 ```mermaid
 %% label：Agent 驱动的业务闭环
