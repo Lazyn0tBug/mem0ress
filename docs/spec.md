@@ -143,21 +143,21 @@ graph LR
     subgraph Agent Context Window (当前工作记忆)
         direction LR
         subgraph Status Plane (状态平面 - 全量强制挂载)
-            Manifest[Task Manifest]
-            Picture[Picture 图景概要]
-            Ref1(ref: prd.md)
+            TaskID[Task ID]
+            TodoProg[TODO 进度]
+            TaskStatus[Task Status]
+            Gotchas[Gotchas]
         end
         subgraph Data Plane (数据平面 - 按需水化挂载)
             PRD[详细长篇 PRD 文档]
             Code[源码文件]
         end
-        Ref1 == "主动调用水化工具" ==> PRD
-        Manifest -. "控制 / 改变" .-> Code
+        TaskID -. "Manifest 获取 Picture/Requirements/Constraints" .-> TaskID
     end
 
     classDef status fill:#fff3e0,stroke:#e65100,stroke-width:2px;
     classDef data fill:#ede7f6,stroke:#4527a0,stroke-width:2px;
-    class Status Plane,Manifest,Picture,Ref1 status;
+    class Status Plane,TaskID,TodoProg,TaskStatus,Gotchas status;
     class Data Plane,PRD,Code data;
 ```
 
@@ -422,7 +422,7 @@ A: 认知三要素（Picture、Requirements、Constraints）构成完整的目�
 
 ### Q: 为什么任务没有冲突协调机制？
 A: mem0ress 采用任务分形树状结构，父任务的完成以所有子任务完成为前提。这一设计使得冲突协调变得不必要：
-- **物理隔离**：不同任务处于不同目录，通过目录深度表达依赖
+- **物理隔离**：不同任务处于不同目录，父任务目录下嵌套子任务目录，通过目录深度表达依赖关系
 - **顺序保障**：父任务必须等待所有子任务完成后才能完成
 - **系统级卸责**：冲突解决交由宿主环境处理，mem0ress 专注认知状态管理
 
@@ -453,6 +453,6 @@ Picture 作为完成标准防止"勾选心态"——Agent 不会在完成所有�
 A: 数据汤（Data Soup）发生在记忆系统将所有信息存入无结构的池子时：信息失去边界、新旧混杂、无法区分当前与过时，导致上下文污染（Context Collapse）和熵增。
 
 mem0ress 通过以下机制避免：
-- **目标锚定**：信息仅在与活跃 Task 关联时才有意义，失去目标指向的信息视为噪音
-- **冷/热生命周期**：关联的 Task 完成后，信息自动冷却，不在当前平面呈现
+- **目标锚定**：信息仅在与活跃 Task 关联时才有意义，失去目标指向的信息视为噪音，不予投影到当前平面
 - **知识隔离**：外部知识（KB）绝不直接流入内存，必须经 Agent 蒸馏后才能写入
+- **生命周期一致**：认知与任务关联，任务完成则认知生命周期结束
