@@ -19,7 +19,11 @@
 
 我们真正需要的，不是记忆，而是**认知（Cognition）**。
 
-### 1.2 系统定位
+### 1.2 系统定位与目标用户
+
+**目标用户：** AI/Agent 框架开发者。mem0ress 作为认知对齐平面，为开发者提供任务状态管理和目标态势感知能力，而非直接面向终端用户。
+
+mem0ress 是一个**认知对齐平面 (Cognitive Alignment Plane)**。它不是传统意义上的"记忆检索数据库 (RAG Database)"，也不以二进制或向量方式存储，而是一个基于纯文本的，通过利用已有信息来有效构建目标相关视图，并持续检验执行偏差的逻辑框架。
 
 在这个视角下，在 AI 应用中，记忆的本质不再是用来“回想”的，而是用来**“维持 AI 代理在极度复杂的数字环境中的神智清醒（Sanity）”**的。
 
@@ -88,7 +92,7 @@ graph TD
     subgraph 系统边界 (mem0ress / RAM)
         direction TB
         StatusPlane[Status Plane <br> 状态平面 / 当前任务态势]
-        DataPlane[Data Plane <br> 数据平面 / 客体与代码]
+        DataPlane[Data Plane <br> 数据平面 / commit ID 映射表]
     end
 
     subgraph 处理核心 (CPU)
@@ -418,7 +422,9 @@ A: 认知三要素（Picture、Requirements、Constraints）构成完整的目�
 - **Requirements**：需求，可验证的硬性指标，是客观可达的验证标准
 - **Constraints**：约束，执行过程中不可逾越的底线
 
-三者缺一不可：Picture 定义"成功是什么"，Requirements 定义"如何证明成功了"，Constraints 定义"什么绝对不能做"。分离确保验证的客观性与约束的不可违背性。
+三者缺一不可：Picture 定义"成功是什么"，Requirements 定义"如何证明成功了"，Constraints 定义"什么绝对不能做"。
+
+**任务构建顺序：** 先定义 Requirements，后定义 Constraints。任务构建时确保 Requirements 与 Constraints 不冲突——若冲突则任务在构建时即被标记为不可行，而非等到执行阶段才发现。
 
 ### Q: 为什么任务没有冲突协调机制？
 A: mem0ress 采用任务分形树状结构，父任务的完成以所有子任务完成为前提。这一设计使得冲突协调变得不必要：
