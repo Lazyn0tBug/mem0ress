@@ -403,11 +403,14 @@ todos:
 Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的机械步（Todo）。这些 Todo 构成了后续检验进度的基准线。
 
 ### 7.2 任务检验
-按照三步法，基于任务属性（Task Attributes），验证一个任务是否完成、是否偏离目标。
 
-* Tier 1: 机械状态检查 (Status Check)： 检查底层依赖。若宣称任务完成，但存在未勾选的 Todo 或子任务未闭环，直接阻断。
-* Tier 2: 客观规律验收 (Requirements Check)： 在沙箱中执行 Requirements 对应的脚本或测试。校验接口与物理产出是否达标。
-* Tier 3: 跨平面语义对齐 (Cross-Plane Alignment)： 核心纠偏机制。当 Tier 3 触发时，独立 Judge Agent 读取被检验任务的 manifest、picture、constraints 和 data plane 产出，执行语义对齐判断，结果写入被检验任务的 gotcha_refs。
+任务检验采用三层关卡模型，外加独立的 Constraints 阻断机制。
+
+**三层关卡（Tiers）：**
+
+* **Tier 1: Todo 完成检查 (Todo Check)：** 检查所有 Todo 步是否已被标记为完成。若存在未勾选的 Todo，直接阻断，不进入 Tier 2。
+* **Tier 2: Requirements 满足检查 (Requirements Check)：** 在沙箱中执行 Requirements 对应的脚本或测试，验证每个 Requirement 是否达标。若存在未满足的 Requirement，直接阻断，不进入 Tier 3。
+* **Tier 3: Picture 对齐检查 (Picture Alignment Check)：** Judge Agent 读取任务的 Picture 与实际产出，执行语义对齐判断。只有当 Picture 中包含无法自动化验证的指标（如"用户感到满意"）时才需要触发。
 
 **Tier 3 的触发条件：**
 
@@ -417,6 +420,18 @@ Tier 3 不是每次 `verify_task()` 都自动进入的常规关卡。它由 Agen
 - **Requirements 与 Picture 之间存在语义歧义**：Tier 2 验证了"功能可用"，但 Tier 1/2 无法判断"是否做了不该做的事"——这属于 Constraints 与 Picture 的跨平面对齐。
 - **任务风险等级为 L1/L2（高危）**：权限分级中高危任务（L1/L2）的完成检验强制触发 Tier 3，无论 Tier 1/2 结果如何。
 - **Agent 或利益相关者显式请求**：在任务 Manifest 中预设 `require_tier3_verification: true`，或在任务执行过程中 Agent 主动调用 `verify_task(tier3=true)`。
+
+**Constraints 阻断机制（独立于 Tiers 运行）：**
+
+Constraints 定义的是绝对不可逾越的红线。与 Tier 1/2/3 的"正向验证"不同，Constraints 是"反向阻断"——任何时刻一旦违反，立即阻断。
+
+Constraints 的检查**不依附于 Tier 关卡的顺序**，而是作为独立门控在以下时机触发：
+
+- **每次 Action 执行前**：任何 `add_todo`、`update_todo`、`complete_task` 等写操作执行前，先检查该操作是否违反当前任务的 Constraints。
+- **Tier 1/2/3 通过后**：即便三层关卡全部通过，若此时发现新的 Constraints 违反，检验仍告失败。
+- **任务创建时**：若新建任务的 Requirements 与 Constraints 存在矛盾（如"需支持离线使用"与"数据不得离开设备"），在创建阶段即标记为"约束冲突"。
+
+若违反 Constraints：系统记录 Gotcha 到 `gotcha_refs`，并阻断当前 Action，返回错误。Agent 接收后必须先解决冲突才能继续。
 
 **决策执行规则：**
 
