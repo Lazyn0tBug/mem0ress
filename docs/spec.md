@@ -7,40 +7,36 @@
 
 ### 1.1 背景
 
-“记忆”这个词带有极强的误导性，它暗示了一种向后看（Retrospective）、被动式（Passive）的存储行为——就像一个积满灰尘的档案柜。但我们在真正执行复杂任务时，需要的根本不是“翻找档案”，而是“向前的目标感（Forward-looking）”和“当下的全局掌控力（Situational Awareness）”。 
+"记忆"暗示了一种向后看（Retrospective）、被动式的存储行为。在真正执行复杂任务时，我们需要的不是"翻找档案"，而是"向前的目标感"和"当下的全局掌控力"。
 
-实际上我们都被“Memory（记忆）”这个词局限住了, 在不断地在卷“长文本上下文”和“精确检索”的时候，我们在大数据量和清晰认知之间不断徘徊，导致了系统级的结构性困境：
+当前 AI Agent 在"长文本上下文"和"精确检索"之间不断徘徊，催生了三个结构性问题：
 
-* **数据汤困境（The Data Soup Dilemma）：** 传统记忆将所有历史对话、代码片段、废弃架构融合成一锅没有边界的“数据汤”。系统试图依赖向量相似度算法来打捞信息，这不仅导致了严重的上下文污染（Context Collapse），也让记忆库随着时间推移陷入不可逆的熵增。
-* **意图迷失（The Intent Fallacy）：** 数据库本身没有意图。通过追溯历史来拼凑当下，永远无法匹配复杂任务中“向前看（Forward-looking）”的图景牵引。大模型极易陷入“为了写代码而写代码”的局部最优解。 
-* **以毒攻毒的架构补丁：** 许多 memory 系统本质上只是在“大模型之上再套一层大模型”，试图通过让 LLM 不断总结、反思和微调来缓解交互局限，但这从未触及“自主管理状态”这一架构核心，徒增算力消耗与幻觉风险。
+* **数据汤困境：** 传统记忆将历史对话、代码片段、废弃架构融合成一锅没有边界的"数据汤"，导致上下文污染（Context Collapse）和不可逆的熵增。
+* **意图迷失：** 数据库本身没有意图。通过追溯历史来拼凑当下，永远无法匹配"向前看"的目标牵引。
+* **大模型之上的大模型：** 许多 memory 系统徒增算力消耗，试图通过 LLM 总结 LLM 来缓解交互局限，但从未触及"自主管理状态"这一架构核心。
 
-当我们在讨论记忆的时候，我们实际上并不是关心过去每一秒的原始画面，我们实际上关心的是当前和未来。即我们现在在做什么（Task），我们已经完成了什么 (Plane)，我们还需要做什么 (Todo)，我们的目标是什么（Picture）, 我们当前与目标是否存在偏差 (Constraint)。
+当我们讨论记忆时，真正关心的不是过去每一秒的原始画面，而是当前和未来：我们现在在做什么（Task），已经完成了什么（状态平面），还需要做什么（Todo），目标是什么（Picture），当前是否偏离了目标（Constraints）。
 
-我们真正需要的，不是记忆，而是**认知（Cognition）**。
+我们需要的不是记忆，而是**认知（Cognition）**。
 
-### 1.2 系统定位与目标用户
+### 1.2 系统定位
 
-**目标用户：** AI/Agent 框架开发者。mem0ress 作为认知对齐平面，为开发者提供任务状态管理和目标态势感知能力，而非直接面向终端用户。
+**目标用户：** AI/Agent 框架开发者。mem0ress 为开发者提供任务状态管理和目标态势感知能力，而非直接面向终端用户。
 
-mem0ress 是一个**认知对齐平面 (Cognitive Alignment Plane)**。它不是传统意义上的"记忆检索数据库 (RAG Database)"，也不以二进制或向量方式存储，而是一个基于纯文本的，通过利用已有信息来有效构建目标相关视图，并持续检验执行偏差的逻辑框架。
-
-在这个视角下，在 AI 应用中，记忆的本质不再是用来“回想”的，而是用来**“维持 AI 代理在极度复杂的数字环境中的神智清醒（Sanity）”**的。
-
-mem0ress 是一个**认知对齐平面 (Cognitive Alignment Plane)**。它不是传统意义上的“记忆检索数据库 (RAG Database)”，也不以二进制或向量方式存储，而是一个基于纯文本的，通过利用已有信息来有效构建目标相关视图，并持续检验执行偏差的逻辑框架。
+mem0ress 是一个**认知对齐平面 (Cognitive Alignment Plane)**。它不是传统意义上的"记忆检索数据库"，也不以二进制或向量方式存储，而是一个基于纯文本的、通过利用已有信息来有效构建目标相关视图、并持续检验执行偏差的逻辑框架。
 
 其核心功能是：在任务执行过程中，为 AI Agent 提供清晰的意图边界（Picture）与执行约束（Constraints），确保 Agent 的动作始终与既定需求对齐，防止其在长路径任务中偏离目标。
 
-mem0ress 并不试图去重现所有记忆，而是使 AI 始终能够保持明确的认知：即，我是什么，我在做什么，我的目标是什么，我还有什么要做。传统的记忆中“我拥有什么信息”的执念，在这里被彻底抛开。
+mem0ress 不试图重现所有记忆，而是使 AI 始终能够保持明确的认知：我是谁、我在做什么、我的目标是什么、我还有什么要做。当前的 AI 已经足够智能，不需要从会话中一遍又一遍检索相似信息，但它往往在多轮会话之后对自己的目标认知产生了偏差。
 
-我们认为，当前的 AI 已经足够智能，它不需要从会话中一遍又一遍地检索和过滤相似的信息，但它往往在多轮会话之后，对自己的目标认知产生了偏差。
+### 1.3 核心解法：认知切片分离
 
-### 1.3 核心解法：动态平面和数据基座
+mem0ress 将信息流拆分为两个时间切片：
 
-针对上述痛点，mem0ress 提出了彻底的范式转移：停止构建庞大的记忆库，将目标放在构建动态的认知系统。mem0ress 将信息流拆分为两个维度：
+* **状态平面 (Status Plane)：** 任一时刻，任务相关的所有执行状态（Todo 进度、代码产出、文档进度、组件状态等）的聚合快照。它是前向的、不断更新的，负责告诉 Agent"现在在哪"以及"离目标还有多远"。
+* **数据平面 (Data Plane)：** 任一时刻，所有相关数据的 commit ID 快照。它是每一时刻状态的客观物理承载，顺着状态平面的指针按需路由挂载。
 
-* **认知对齐平面 (Cognitive Alignment Plane - 状态)：** 代表当前的动态态势。它是前向的、不断更新的，负责告诉 Agent“现在在哪”以及“离目标还有多远”。
-* **认知基座 (Cognitive Substrate - 数据)：** 代表物理存储的静态数据。包含代码、文档和历史记录。它是每一时刻状态的客观物理承载。
+两者都不是组件，而是时间切片。状态平面定义"此刻任务走到了哪"，数据平面定义"此刻相关数据是什么版本"。
 
 通过这种分离，系统能够以极低的 Token 成本，让 Agent 始终保持对目标的关注，并能在**任务创建、任务检验与认知构建**的严密心智循环中，快速发现并修正偏差。
 
@@ -70,47 +66,47 @@ mem0ress 的诞生，源于对当前 AI Agent 发展路径的底层反思。我�
 
 ### 2.4 三层物理隔离 (The CPU-RAM-Disk Model)
 
-**捍卫工作记忆的纯洁性，拒绝客观数据的直接污染。**
+**三层物理隔离**是对 L1/L2/L3 的功能分类描述，不是另一套独立的分层体系：
 
-系统实施了极其严格的三层隔离：
-* **CPU（处理枢纽）：** AI Agent，负责理解、推理、决策与执行。
-* **RAM（工作内存）：** mem0ress 本体，维持高频、强状态的态势感知（Plane）与私有经验。
-* **Disk（客观硬盘）：** 外部的向量数据库、API 官方文档、全网知识。
+* **CPU = LLM (Agent)：** 处理枢纽，负责理解、推理、决策与执行。
+* **RAM = L1 + L2 (mem0ress)：** 工作内存，维持高频、强状态的认知切片（状态平面 + 数据平面）。
+* **Disk = L3 (外部知识库)：** 无状态的客观数据，外部向量数据库、API 文档、全网知识。
 
-硬盘数据绝不直接污染内存。外部知识必须经由 Agent 检索、理解后，蒸馏为服务于目标的经验，才能写入 RAM。
+外部数据绝不直接流入工作内存。Agent 必须先检索、理解，再蒸馏内化为服务于目标的经验，才能写入 RAM。
+
+> **注：** 状态平面和数据平面都是时间切片，不是组件。图中的 Status Plane / Data Plane 指的是"某一时刻的切片内容"，而非独立的进程或服务。
 
 ```mermaid
-%% label：三层物理隔离
+%% label：三层物理隔离（L1/L2/L3 的功能映射）
 graph TD
-    subgraph 外部世界 (Disk / 硬盘)
+    subgraph L3 ["L3 / Disk (外部知识库)"]
         direction TB
-        VectorDB[(外部向量数据库)]
-        API[API 官方文档]
-        Web[全网搜索源]
+        VectorDB[(向量数据库)]
+        API[API 文档]
+        Web[全网搜索]
     end
 
-    subgraph 系统边界 (mem0ress / RAM)
+    subgraph L1 ["L1 / CPU (Agent 处理枢纽)"]
+        LLM((LLM))
+    end
+
+    subgraph L2 ["L2 / RAM (mem0ress 本体)"]
         direction TB
-        StatusPlane[Status Plane <br> 状态平面 / 当前任务态势]
-        DataPlane[Data Plane <br> 数据平面 / commit ID 映射表]
+        StatusSlice["状态平面<br>(任务执行快照)"]
+        DataSlice["数据平面<br>(commit ID 快照)"]
     end
 
-    subgraph 处理核心 (CPU)
-        LLM((大语言模型 <br> Agent))
-    end
+    L3 -- "检索与阅读" --> LLM
+    LLM -- "蒸馏内化" --> L2
+    L2 -- "挂载切片" --> L1
+    L1 <==> "高频交互" --> LLM
 
-    VectorDB -. "绝对禁止物理直连污染" .-> StatusPlane
-    VectorDB & API & Web -- "1. 检索与阅读" --> LLM
-    LLM -- "2. 蒸馏内化 (提取经验)" --> DataPlane
-    DataPlane -- "3. 挂载" --> StatusPlane
-    StatusPlane <== "4. 高频工作记忆交互" ==> LLM
-
-    classDef core fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
-    classDef ram fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef disk fill:#fafafa,stroke:#9e9e9e,stroke-width:1px,stroke-dasharray: 5 5;
-    class LLM core;
-    class StatusPlane,DataPlane ram;
-    class VectorDB,API,Web disk; 
+    classDef l1 fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
+    classDef l2 fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef l3 fill:#fafafa,stroke:#9e9e9e,stroke-width:1px,stroke-dasharray:5 5;
+    class LLM l1;
+    class StatusSlice,DataSlice l2;
+    class VectorDB,API,Web l3;
 ```
 
 ## 3. 工程准则
@@ -134,35 +130,47 @@ mem0ress 只专注一件事：认知的生命周期管理，即任务的创建�
 
 约束 (Constraints)： 执行任务时绝对不可逾越的底线。
 
-### 4.2 动态位面分离 (Dynamic Plane Separation)
-状态平面 (Status Plane)： 显示当前认知系统状态。纯展示，不做诊断。Agent 醒来时强制挂载，显示所有任务的结构和进度，但不包含偏差警告或诊断结论。
+### 4.2 认知切片 (Cognitive Slices)
 
-会话 (Session)： 每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。可用于理解演进，暂不主动访问。Session 记录执行进度（代码写到哪、文档完成多少、TODO 状态），不记录目标（Picture/Requirements/Constraints，这些从 TaskManifest 获取）。
+mem0ress 在任一时刻都持有两个时间切片：
 
-数据平面 (Data Plane)： 长篇文档或日志载荷。顺着状态平面的指针按需路由水化挂载。
+**状态平面 (Status Plane)：** 任务相关的所有执行状态的聚合快照。包括：
+- 任务树结构（父子关系）
+- 每个任务的 todo 完成度（如 "2/3 Todos 完成"）
+- 任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）
+- 偏差记录（Gotchas）
+- Session 最近变化摘要
+
+Agent 唤醒时强制挂载，**纯展示，不做诊断**。
+
+**数据平面 (Data Plane)：** 所有相关数据的 commit ID 快照。包括：
+- 各仓库当前 commit ID 映射
+- 长篇文档（PRD、设计稿等）的版本指针
+
+顺着状态平面的指针**按需水化挂载**，不默认加载。
+
+**Session：** 每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。Session 记录执行进度（代码写到哪、文档完成多少、TODO 状态），不记录 Picture/Requirements/Constraints（这些从 TaskManifest 获取）。
 
 ```mermaid
-%% label：动态位面分离
+%% label：认知切片分离
 graph LR
-    subgraph Agent Context Window (当前工作记忆)
+    subgraph 任一时刻的认知切片
         direction LR
-        subgraph Status Plane (状态平面 - 全量强制挂载)
+        subgraph StatusSlice["状态平面（执行快照）"]
             TaskID[Task ID]
             TodoProg[TODO 进度]
             TaskStatus[Task Status]
             Gotchas[Gotchas]
         end
-        subgraph Data Plane (数据平面 - 按需水化挂载)
-            PRD[详细长篇 PRD 文档]
-            Code[源码文件]
+        subgraph DataSlice["数据平面（commit ID 快照）"]
+            RepoA[frontend: abc123]
+            RepoB[backend: def456]
         end
-        TaskID -. "Manifest 获取 Picture/Requirements/Constraints" .-> TaskID
     end
+    AgentContext["Agent Context Window"]
 
-    classDef status fill:#fff3e0,stroke:#e65100,stroke-width:2px;
-    classDef data fill:#ede7f6,stroke:#4527a0,stroke-width:2px;
-    class Status Plane,TaskID,TodoProg,TaskStatus,Gotchas status;
-    class Data Plane,PRD,Code data;
+    StatusSlice & DataSlice --> AgentContext
+    TaskID -. "Manifest 提供<br>Picture / Requirements<br>/ Constraints" .-> TaskID
 ```
 
 ## 5. 物理文档模型 (Document Model)
@@ -246,8 +254,9 @@ data_plane:
   backend-repo: def456
 todos: [{text:"...", done:true}, ...]
 status: IN_PROGRESS
-gotchas: []
 ```
+
+每个 Turn 的 Session 快照中包含当时的数据平面快照（commit ID 映射），用于追踪多仓库开发环境的状态演进。
 
 **Data Plane 模板 (data-plane/refs.md)：**
 
@@ -292,20 +301,21 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 - Judge 的输入是"被检验任务的摘要"（picture + constraints + data plane summary），而非原始全部文件
 - Judge 的输出是 aligned/deviation/reasoning，写入被检验任务的 gotcha_refs
 
-### 6.3 认知构建 (Cognition Building: 态势投影)
-这是贯穿生命周期始终的核心动作。在任何节点（刚启动时、执行中、或检验失败后），系统都需要为 Agent 构建当前任务的状态平面（Status Plane）。
+### 6.3 认知构建 (Cognition Building)
 
-**状态平面**
+这是贯穿生命周期始终的核心动作。在任何节点（刚启动时、执行中、或检验失败后），系统都需要为 Agent 构建当前任务的认知切片。
 
-* 纯展示，无诊断：状态平面只呈现当前状态，不做偏差判断
+**状态切片（状态平面）：**
+
+* 纯展示，无诊断：只呈现当前状态，不做偏差判断
 * 实时扫描：每次调用直接读文件系统，不缓存
 * 全面覆盖：显示所有任务，不隐藏任何节点
 * 非侵入：只读不写，不修改任何状态
 
-**状态平面显示内容：**
+**状态切片显示内容：**
 - 任务树结构（父子关系）
 - 每个任务的 todo 完成度（如 "2/3 Todos 完成"）
-- 任务状态（CREATED/IN_PROGRESS/COMPLETED/ABANDONED）
+- 任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）
 - 偏差记录（Gotchas）
 - Session 最近变化摘要
 
@@ -314,7 +324,7 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 - 变化动作记录
 - 用于理解演进，暂不主动访问
 
-**Picture/Requirements/Constraints 从 TaskManifest 获取，不显示在 Status Plane。**
+**Picture / Requirements / Constraints 从 TaskManifest 获取，不显示在状态切片中。**
 
 ## 7. 技术方案 (Technical Implementation)
 
@@ -327,7 +337,7 @@ mem0ress 是认知对齐平面（而不是 Agent 框架）。它专注于认知�
 
   * Plane Assembler (平面组装器): 负责"认知构建"。动态扫描并编译出 Status Plane。纯展示，不做诊断。
   * Tool Interface (工具接口): 提供有限的任务操作工具，供 Agent 调用。**不是执行引擎**——Agent 执行工具，mem0ress 只管理认知状态。
-  * Harness Engine (检验引擎): 负责"任务检验"。独立的三层验证，发现偏差并报告。
+  * Harness Engine (检验引擎): 负责执行**任务检验**。当 Agent 调用 `verify_task()` 时，Harness Engine 驱动三层验证流程——Tier 1/2 为系统自动检查，Tier 3 为语义对齐，由 Judge Task 落地。Harness Engine 本身不是自主进程，只是检验逻辑的承载。
 
 * L2 Cognitive Substrate(认知基座): File System 与 Git 共同构成，提供态势的物理承载。
 
@@ -336,7 +346,7 @@ mem0ress 是认知对齐平面（而不是 Agent 框架）。它专注于认知�
   * 引用水化机制 (Hydration): 解析清单时，ref: 指针不默认加载。LLM 需主动调用工具将其“水化”并挂载到 Data Plane 中。
   * 乐观锁冲突感知 (Optimistic Locking): 执行写操作时比对文件哈希。若遭外部修改，抛出 409 Conflict，强制 LLM 重新进行认知构建后决断。
   * 原生 Git 数据回溯 (Git-Native Revert): 检验失败且路径报废时，LLM 调用工具回退数据平面，同时在状态平面生成 Gotcha 记录偏差经验，保持时间向前。
-  * 带外约束检验 (Out-of-Band Verification): Harness 引擎执行沙箱隔离测试，并通过独立路由调用 LLM-as-a-Judge，杜绝与执行态 Agent 发生上下文污染。
+  * 带外约束检验 (Out-of-Band Verification): Tier 3 的语义对齐在独立沙箱中执行，通过 Judge Task 调用 LLM-as-a-Judge，杜绝与执行态 Agent 发生上下文污染。
 
 ### 7.3 技术流程：Agent 驱动的事件循环
 
@@ -433,17 +443,17 @@ A: mem0ress 采用任务分形树状结构，父任务的完成以所有子任�
 - **系统级卸责**：冲突解决交由宿主环境处理，mem0ress 专注认知状态管理
 
 ### Q: 为什么使用状态平面与数据平面？
-A: 双平面设计实现认知与数据的分离：
-- **状态平面（Status Plane）**：当前认知系统状态，展示 Task ID、TODO 进度、Status、Gotchas，是前向的、不断更新的
-- **数据平面（Data Plane）**：代码和文档的版本引用（通过 commit ID 映射），长篇文档或日志载荷
+A: 双切片设计实现认知与数据的分离：
+- **状态平面：** 任务执行状态的聚合快照（Todo 进度、代码产出、文档进度、组件状态等）
+- **数据平面：** 所有相关数据的 commit ID 快照
 
-这种分离让 Agent 始终以极低 Token 成本了解"现在在哪"和"离目标还有多远"。
+两者都是时间切片，而非组件。这种分离让 Agent 始终以极低 Token 成本了解"现在在哪"和"离目标还有多远"。
 
 ### Q: 为什么状态平面没有回溯？
-A: 状态平面是纯展示模型，只呈现当前状态，不做偏差判断。这是设计上的刻意选择：
-- **目的论认知**：信息必须为意图服务，回溯历史与前向目标感相悖
-- **认知效率**：Agent 每次获取的是当前真相，而非沉积的变更历史
-- **绝对可观测性**：基于纯文本和目录树，Agent 可直接读取，无需版本遍历
+A: 状态平面是任一时刻的执行快照，不是历史记录。这是设计上的刻意选择：
+- **目的论认知：** 信息必须为意图服务，回溯历史与前向目标感相悖
+- **认知效率：** Agent 每次获取的是当前真相，而非沉积的变更历史
+- **绝对可观测性：** 基于纯文本和目录树，Agent 可直接读取，无需版本遍历
 
 若需历史演进，Session 提供版本快照模型用于追踪。
 
