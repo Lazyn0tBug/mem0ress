@@ -237,7 +237,7 @@ graph TB
 
 ### 4.1 单一事实来源与绝对覆写 (SSOT & Absolute Overwrite)
 
-拒绝模糊的认知合并。新认知产生时，直接对旧认知进行绝对覆写（Overwrite）。系统在覆写前提供严格的冲突检查机制，确保认知的确定性。
+拒绝模糊的认知合并。**运行时工作区**（LLM 的认知空间）内产生新认知时，直接覆写旧认知——这是避免认知歧义的核心机制。系统在覆写前提供严格的冲突检查机制，确保认知的确定性。覆写发生在运行时，持久化仍遵循「不要存储要按需发现」原则。
 
 ### 4.2 系统级卸责 (System-Level Offloading)
 
@@ -543,9 +543,10 @@ mem0ress 暴露给 Agent 的不是一套通用编程接口，而是一组有限�
 **Harness Engine（检验引擎）：任务检验逻辑的承载。**
 
 当 Agent 调用 `verify_task()` 时，Harness Engine 驱动四层验证流程：
-- **Tier 0：** Constraints 约束检查，可能触发自动修复或让度给人。
-- **Tier 1/2：** 系统自动检查（机械状态 + 客观规律验收），由 Harness 内置逻辑完成。
-- **Tier 3：** 语义对齐，在独立沙箱中 spawn Judge Task 执行。
+- **Tier 0（前置处理）：** Constraints 约束检查，独立于 Harness 之外的前置处理器。检查当前 Task 的所有 Constraints 是否满足。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。修复成功后重跑 Tier 0 确认，通过后进入 Tier 1。
+- **Tier 1：** Todo 完成检查 + 直接子任务完成检查。检查两个独立的前置条件——(1) 所有 Todo 步是否已被标记为完成；(2) 所有直接子任务是否状态为 COMPLETED。若存在未完成的 Todo 或未关闭的子任务，直接阻断，不进入 Tier 2。
+- **Tier 2：** Requirements 满足检查。在沙箱中执行 Requirements 对应的脚本或测试，验证每个 Requirement 是否达标。若存在未满足的 Requirement，直接阻断，不进入 Tier 3。
+- **Tier 3：** 语义对齐检查。Judge Agent 读取任务的 Picture 与实际产出，执行语义对齐判断。只有当 Picture 中包含无法自动化验证的指标时才触发。
 
 Harness Engine 本身**不是自主进程**——它没有主动触发能力，只能响应 Agent 的 `verify_task()` 调用。它是检验逻辑的**承载层**，而非检验决策者。
 
@@ -565,9 +566,6 @@ graph TB
     Agent --> TI
     Agent --> HE
 
-    PA --> TI
-    PA -. "verify_task() 触发" .-> HE
-
     classDef mod fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
     classDef agent fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
     class PA,TI,HE mod;
@@ -585,7 +583,7 @@ graph TB
 
 mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
-  1. 认知构建: Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、Session 摘要）
+  1. 认知构建: Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 Manifest 按需读取，不在状态平面中展开。
   2. 任务检验: Agent 调用 `verify_task()`，驱动 Harness 四层验证（约束检查 → 机械状态 → 客观规律 → 语义对齐）
   3. 状态更新: Agent 根据检验结果决策后续行动——更新 Todo、调用 `complete_task()`、标记 ABANDONED、或继续执行。状态更新通过 Tool Interface 执行写操作，支持 `update_todo`、`complete_task`、`abandon_task` 等。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
@@ -607,9 +605,28 @@ sequenceDiagram
     rect rgba(46, 125, 50, 0.1)
         Note over Agent,System: Agent 主动决策（业务流）
         Agent->>PA: get_status_plane()
-        PA-->>Agent: 状态平面快照
-        Agent->>HE: verify_task()
-        HE-->>Agent: aligned / deviation
+        PA-->>Agent: 状态平面快照<br/>(任务树 | TODO进度 | 状态 | Gotchas | Session指针)
+
+        Note over Agent: Tier 0: 前置处理<br/>(独立于 Harness 之外)
+        Agent->>HE: verify_task(tier0_only=true)
+        alt Constraints 满足
+            HE-->>Agent: Tier 0 通过
+        else Constraints 违反（可修复）
+            HE-->>Agent: Tier 0 违反 → 自动修复
+            Agent->>HE: verify_task(tier0_only=true) 重跑
+        else Constraints 违反（不可修复）
+            HE-->>Agent: Tier 0 违反 → 让度给人
+        end
+
+        Agent->>HE: verify_task() 完整验证
+        HE-->>Agent: Tier 1/2 结果
+
+        Note over Agent: Tier 3: 按条件触发<br/>(主观指标 | 语义歧义 | L1/L2高危 | 显式请求)
+        alt Tier 3 触发条件满足
+            Agent->>HE: verify_task(tier3=true)
+            HE-->>Agent: Tier 3 语义对齐结果
+        end
+
         Agent->>TI: complete_task() / update_todo() / abandon_task()
         TI-->>Agent: 状态更新确认
     end
@@ -636,7 +653,7 @@ sequenceDiagram
 | `update_todo` | 执行步骤 | 更新步骤状态 |
 | `remove_todo` | 执行步骤 | 删除步骤 |
 | `add_gotcha` | 偏差记录 | 记录偏差 |
-| `snapshot_session` | 轮次 | （系统自动触发，每轮次结束时记录，无需 Agent 调用） |
+| `snapshot_session` | 轮次 | **（系统自动触发）** 每轮次结束时记录，无需 Agent 调用 |
 | `get_status_plane` | 轮次 | 获取状态平面 |
 | `get_session` | 轮次 | 获取会话历史 |
 | `verify_task` | 验证 | 触发 Harness 四层验证 |
@@ -724,7 +741,7 @@ Gotcha 是带外偏差记录，记录检验中发现的偏离与经验，不参�
 ## 关联检验
 - 任务: {task_id}
 - 时间: {timestamp}
-- 检验 Tier: {Tier 1/2/3}
+- 检验 Tier: {Tier 0/1/2/3}
 ````
 
 ### B.3 Data Plane 模板 (data-plane/refs.md)
