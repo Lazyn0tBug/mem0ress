@@ -413,7 +413,9 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 * **Tier 2: Requirements 满足检查 (Requirements Check)：** 在沙箱中执行 Requirements 对应的脚本或测试，验证每个 Requirement 是否达标。若存在未满足的 Requirement，直接阻断，不进入 Tier 3。
 * **Tier 3: Picture 对齐检查 (Picture Alignment Check)：** Judge Agent 读取任务的 Picture 与实际产出，执行语义对齐判断。只有当 Picture 中包含无法自动化验证的指标（如"用户感到满意"）时才需要触发。
 
-**关卡通过关系：** Tier 0 未通过 → 阻断，不进入 Tier 1；Tier 1 未通过 → 阻断，不进入 Tier 2；以此类推。Tier 3 是最后一关，全部通过才算完成检验。
+**关卡通过关系：** Tier 1 失败不阻断 Tier 2（因为 Todo 完成与 Requirements 满足可能不同步），但 Tier 2 失败阻断 Tier 3。Tier 3 是最后一关，Tier 1 + Tier 2 全部通过才进入。
+
+**Tier 2 的增量验证逻辑：** Tier 1 检查的是结构性前置条件，Tier 2 检查的是 Requirements 是否满足。由于 Todo 与 Requirements 理想情况下为 1:1 对应，Tier 2 可根据 Tier 1 的状态优化验证范围：若 Tier 1 未完成，则只检查未通过 Todo 对应的 Requirements；若 Tier 1 完成，则重新全部检查所有 Requirements（最终确认）。
 
 **Tier 0 与 Tier 1/2/3 的本质区别：** Tier 1/2/3 是纯检验，不做数据变更；Tier 0 的约束检查可能涉及数据修复。两者分属不同性质，因此不合并为同一关卡。
 

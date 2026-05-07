@@ -157,7 +157,9 @@ Constraints  是否完成   Requirements  Picture
 | **Tier 2** | Requirements 是否满足 | 可自动化脚本/测试验证每个 Requirement | 无 |
 | **Tier 3** | Picture 是否对齐 | Judge Agent 语义判断（主观感知类 Picture 专用） | 无 |
 
-**通过关系：** Tier 0 未通过 → 阻断，不进入 Tier 1；Tier 1 未通过 → 阻断，不进入 Tier 2；以此类推。Tier 3 是最后一关，全部通过才算完成检验。
+**通过关系：** Tier 1 失败不阻断 Tier 2（Todo 完成与 Requirements 满足可能不同步）；Tier 2 失败阻断 Tier 3。Tier 1 + Tier 2 全部通过才进入 Tier 3。
+
+**Tier 2 增量验证：** 若 Tier 1 未完成，只检查未通过 Todo 对应的 Requirements；若 Tier 1 完成，重新全部检查所有 Requirements。
 
 ---
 
