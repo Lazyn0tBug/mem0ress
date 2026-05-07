@@ -415,7 +415,7 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 
 **关卡通过关系：** Tier 1 失败不阻断 Tier 2（因为 Todo 完成与 Requirements 满足可能不同步），但 Tier 2 失败阻断 Tier 3。Tier 3 是最后一关，Tier 1 + Tier 2 全部通过才进入。
 
-**Tier 2 的增量验证逻辑：** Tier 1 检查的是结构性前置条件，Tier 2 检查的是 Requirements 是否满足。由于 Todo 与 Requirements 理想情况下为 1:1 对应，Tier 2 可根据 Tier 1 的状态优化验证范围：若 Tier 1 未完成，则只检查未通过 Todo 对应的 Requirements；若 Tier 1 完成，则重新全部检查所有 Requirements（最终确认）。
+**Tier 2 的验证模式：** Tier 2 根据 Tier 1 的状态决定验证范围：若 Tier 1 未完成，则只检查所有未通过的 Requirements（效率优先）；若 Tier 1 完成，则重新全部检查所有 Requirements（最终确认）。Tier 1 与 Tier 2 之间不存在 Todo 与 Requirements 的映射关系。
 
 **Tier 0 与 Tier 1/2/3 的本质区别：** Tier 1/2/3 是纯检验，不做数据变更；Tier 0 的约束检查可能涉及数据修复。两者分属不同性质，因此不合并为同一关卡。
 

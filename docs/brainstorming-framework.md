@@ -159,7 +159,7 @@ Constraints  是否完成   Requirements  Picture
 
 **通过关系：** Tier 1 失败不阻断 Tier 2（Todo 完成与 Requirements 满足可能不同步）；Tier 2 失败阻断 Tier 3。Tier 1 + Tier 2 全部通过才进入 Tier 3。
 
-**Tier 2 增量验证：** 若 Tier 1 未完成，只检查未通过 Todo 对应的 Requirements；若 Tier 1 完成，重新全部检查所有 Requirements。
+**Tier 2 验证模式：** Tier 2 根据 Tier 1 的状态决定验证范围：若 Tier 1 未完成，则只检查所有未通过的 Requirements（效率优先）；若 Tier 1 完成，则重新全部检查所有 Requirements（最终确认）。Tier 1 与 Tier 2 之间不存在 Todo 与 Requirements 的映射关系。
 
 ---
 
