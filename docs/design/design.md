@@ -1,38 +1,35 @@
 ## 1. 项目目录结构 (Project Structure)
 
-我们将严格按照第 7 章的架构（L1 控制台、L2 存储层、LLM 接口、Harness 引擎）来划分模块：
 
-
+本项目采用 **“认知拦截器 (Cognitive Interceptor)”** 模式。mem0ress 不编排业务逻辑，但通过挂钩 (Hook) 任务执行的生命周期，实现自动化的态势投影与会话捕捉。
 
 ```plaintext
 mem0ress/
 ├── pyproject.toml         # 核心项目配置 (基于 uv)
-├── .python-version        # uv 固定的 Python 版本 (如 3.12)
+├── .python-version        # uv 固定的 Python 版本 (3.12+)
 ├── README.md
-├── .mem0ress/             # [测试沙箱] 认知基座 (Cognitive Substrate)
-│   ├── inbox.md
-│   └── tasks/
+├── .mem0ress/             # [认知基座 Substrate] 物理承载层
+│   └── tasks/             # 分形任务树 (包含 index.md, session.md, gotchas/)
 └── src/
     └── mem0ress/
         ├── __init__.py
-        ├── cli.py         # [入口] 终端交互，提供任务创建 (Task Creation) 等指令
-        ├── gateway/       # [认知网关 L1] 替代原 core，连接大脑与基座的中枢
+        ├── cli.py         # [终端入口] 用于初始化基座、查看态势图、调试校验
+        ├── core/          # [核心契约] 基于 Pydantic 的强类型定义
         │   ├── __init__.py
-        │   ├── loop.py    # 事件驱动控制循环 (对齐循环)
-        │   └── plane.py   # Plane Assembler (认知构建：组装状态/数据平面)
-        ├── substrate/     # [认知基座 L2] 替代原 storage，物理客体与状态管理
+        │   └── schema.py  # 定义认知三要素、TaskManifest、Session、Gotcha 模型
+        ├── gateway/       # [认知网关] 负责读写交互与生命周期拦截
         │   ├── __init__.py
-        │   ├── parser.py  # Manifest 解析与 Schema 校验 (Pydantic)
-        │   ├── fs.py      # 乐观锁写入、水化路由与冲突感知
-        │   └── git_ops.py # 底层 Git 固化与回溯机制
-        ├── llm/           # [大脑接口]
+        │   ├── intercept.py # 核心拦截器：CognitiveContext (上下文管理器)
+        │   ├── plane.py   # Plane Assembler (认知构建：态势投影)
+        │   └── actions.py # Tool Interface (写入操作：update_todo, create_task)
+        ├── substrate/     # [基座操作] 底层物理 I/O
         │   ├── __init__.py
-        │   ├── client.py  # LiteLLM 封装 (无状态推理算力)
-        │   └── tools.py   # 暴露给 Agent 的 Tool Calls (如水化、状态突变)
-        └── harness/       # [检验引擎] 任务检验 (Task Verification)
+        │   ├── fs.py      # Markdown/YAML 双向解析、乐观锁校验
+        │   └── git_ops.py # Git 固化、管理数据平面 (Data Plane) commit ID 映射
+        └── harness/       # [检验引擎] 任务检验逻辑
             ├── __init__.py
-            ├── runner.py  # Tier 2: 客观规律验收 (沙箱脚本执行)
-            └── judge.py   # Tier 3: 跨平面语义对齐 (LLM-as-a-Judge)
+            ├── runner.py  # Tier 1/2: 机械检查与沙箱脚本执行
+            └── judge.py   # Tier 3: 语义对齐裁决 (独立运行的 Judge LLM)
 ```
 
 ## 2. 核心配置文件 (pyproject.toml)
@@ -43,16 +40,19 @@ mem0ress/
 [project]
 name = "mem0ress"
 version = "0.1.0"
-description = "A text-based Cognitive Alignment Plane (CAP) and situational awareness framework for LLM Agents."
+description = "A text-based Cognitive Alignment Plane (CAP) and situational awareness SDK for LLM Agents."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "typer>=0.12.3",       # 优雅的 CLI 框架
-    "pydantic>=2.7.0",     # 强类型 Schema 与认知三要素校验
+    "typer>=0.12.3",       # 用于构建 CLI 外壳
+    "pydantic>=2.7.0",     # 强类型 Schema，完美配合 ty 进行类型推断
+    "pytest>=8.0",
+    "ruff>=0.9.0",
+    "ty>=0.0.32",
     "pyyaml>=6.0.1",       # Markdown Frontmatter 解析
-    "litellm>=1.35.0",     # LLM 网关，支持多模型路由
-    "gitpython>=3.1.43",   # 认知基座的 Git 版本控制
-    "rich>=13.7.1",        # CLI 终端美观的态势投影展示
+    "litellm>=1.35.0",     # 仅用于 Harness Engine 的 Judge 语义裁决
+    "gitpython>=3.1.43",   # 数据平面的 commit ID 管理
+    "rich>=13.7.1",        # 终端可视化的态势投影展示
 ]
 
 [project.scripts]
@@ -62,6 +62,7 @@ mem0 = "mem0ress.cli:app"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# Astral 工具链配置 (Ruff + Ty)
 [tool.ruff]
 line-length = 100
 target-version = "py312"
@@ -69,37 +70,58 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"] 
 ignore = []
+
+[tool.ty]
+# 开启 ty 的严格类型检查模式，保证内核代码的确定性
+strict = true
 ```
 
-## 3. MVP 落地 Todo 清单 (Execution Todos)
+## 3. 核心机制：认知拦截器 (Gateway Interceptor)
+为了解决“自动捕捉会话”的需求，gateway/intercept.py 提供 CognitiveContext 上下文管理器。这是 mem0ress 参与 Event Loop 的唯一优雅方式。
 
-为了避免陷入“一口吃成个胖子”的陷阱，我们将开发过程拆解为 5 个具有明确可交付成果的阶段（这本身就是一个标准的 mem0ress Task）：
+### 3.1 运行逻辑
 
-* [ ] Phase 1: 基础设施与数据结构 (L2 Storage & Schema)
+  1. 进入上下文 (__enter__)：
+  
+    * 调用 Plane Assembler 扫描物理基座。
+    * 自动投影生成最新的 Status Plane 文本块。
+    * 将投影注入到 Agent 的当前上下文变量中。
+  
+  2. 退出上下文 (__exit__)：
+  
+    * 拦截并捕获本轮 Agent 的输出以及产生的 Tool Calls 动作。
+    * 自动触发 Session 快照：计算代码与文档的 Delta，记录到 session.md。
+    * 若检测到 complete_task 等关键状态变更，自动执行基座的 Git 固化。
 
-  * [ ] 初始化 uv 环境，配置 ruff 和 typer 脚手架。
-  * [ ] 使用 Pydantic 定义 Manifest (Task) 和 Gotcha 的严格数据模型。
-  * [ ] 实现 storage/parser.py：能够正确读取 .md 文件并分离 YAML 头部与 Markdown 正文。
+## 4. MVP 落地 Todo 清单 (基于生命周期重构)
 
-* [ ] Phase 2: 态势平面组装 (Plane Assembler)
+开发过程被严格重塑为 5 个具有明确架构边界的阶段：
 
-  * [ ] 实现目录树遍历逻辑，提取所有 index.md 的核心字段。
-  * [ ] 实现 Status Plane 编译器：将其压缩为极简的 System Prompt 文本。
-  * [ ] 实现引用水化 (ref: 解析)：通过正则或字符串匹配，按需读取外部文档至 Data Plane。
+* [ ] Phase 1: 基座契约与强类型闸门 (Substrate & Type Safety)
 
-* [ ] Phase 3: 动作网关与冲突控制 (Tools & Optimistic Locking)
+  * [ ] 初始化 uv 项目，配置 ruff 和 ty 守护进程。
+  * [ ] 在 core/schema.py 中定义任务三要素模型，确保字段符合 spec.md 语义。
+  * [ ] 实现 substrate/fs.py：支持 Markdown 与 Pydantic 的转换，并在写入时执行内容 Hash 的乐观锁校验。
+  
+* [ ] Phase 2: 认知构建与生命周期拦截 (Cognition Building & Hooking)
 
-  * [ ] 在 storage/fs.py 实现带乐观锁的 write_document，若哈希不一致抛出异常。
-  * [ ] 封装基础的 Git 自动化操作（初始化仓库、自动 Commit 固化）。
-  * [ ] 将读/写能力包装为标准的 JSON Tool 格式格式，供 LLM 调用。
+  * [ ] 实现 gateway/plane.py：递归扫描 .mem0ress/tasks，生成带有层级依赖关系的态势文本。
+  * [ ] 实现 gateway/intercept.py：编写 CognitiveContext 拦截器。
+  * [ ] 实现 Data Plane 的“引用水化”逻辑：按需展开 ref: 指针指向的外部长文档。
+  
+* [ ] Phase 3: 任务创建引擎与动作网关 (Task Creation & Actions)
 
-* [ ] Phase 5: LLM 循环与推理介入 (LLM Event Loop)
+  * [ ] 在 cli.py 实现 mem0 task create 指令，强制交互式录入图景与约束。
+  * [ ] 在 gateway/actions.py 实现工具集：update_todo, add_gotcha, link_data_plane。
+  * [ ] 封装 git_ops.py，实现每次动作后的 commit ID 自动关联。
+  
+* [ ] Phase 4: 任务检验引擎 (Task Verification - Harness)
 
-  * [ ] 接入 LiteLLM，打通 API 通讯。
-  * [ ] 编写核心 loop.py：投射平面 -> 发给 LLM -> 拦截并执行 Tool -> 更新状态。
+  * [ ] Tier 1 (机械)：扫描当前任务树，验证所有子任务是否已闭环。
+  * [ ] Tier 2 (客观)：利用 subprocess 在隔离沙箱运行校验脚本，验证 Requirements。
+  * [ ] Tier 3 (语义)：水化物理代码产出，调用独立裁判模型比对 Picture 和 Constraints。
+  
+* [ ] Phase 5: 绝对可观测性与 CI/CD
 
-* [ ] Phase 5: 约束检验台 (Harness Engine)
-
-  * [ ] 捕获任务 Todo 状态变更的事件钩子。
-  * [ ] 实现 harness/runner.py：读取并 subprocess.run() 外部验证脚本（Tier 2）。
-  * [ ] 实现 harness/judge.py：调用另一个无状态 LLM 进行 Picture 语义比对（Tier 3），并生成 Failure Patch。
+  * [ ] 利用 Rich 实现终端态势图（Status Plane Tree）。
+  * [ ] 配置 GitHub Actions：在 CI 流程中强制运行 ruff check 和 ty check。

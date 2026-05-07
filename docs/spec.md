@@ -270,7 +270,7 @@ data_plane:
 
 **index.md 模板：**
 
-```markdown
+````markdown
 ---
 id: {task_id}
 type: task
@@ -300,7 +300,7 @@ todos:
 ```
 
 > **模板参考：** Session 模板、Gotcha 模板、Data Plane 模板见附录 B。
-```
+````
 
 ## 6. 逻辑与流程设计 (Logic & Workflow Design)
 在 mem0ress 中，整个系统的运转不再是机械的文件读写，而是围绕任务目标的动态生命周期：任务创建、任务检验、认知构建。这是一个不断前向对齐的闭环。
@@ -352,29 +352,35 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 - 用于理解演进，暂不主动访问
 
 **Session 触发规则：**
-每交互轮次结束时，系统自动触发 Session 快照，自动填写时间戳和当前状态。Agent 无需显式调用 `snapshot_session()`。
+mem0ress 作为一个被动式的状态管理层，自身没有后台守护进程。Session 快照的触发通过以下两种方式之一完成：
+1. **显式调用：** Agent 在每轮交互结束时，显式调用 `record_session()` 工具。
+2. **网关钩子 (Hook)：** 宿主 Agent 框架在调用 mem0ress 的 `Tool Interface` 执行关键写操作（如 `update_todo`, `add_gotcha`）后，通过系统内置钩子自动记录当前快照。
 
 **Picture / Requirements / Constraints 从 TaskManifest 获取，不显示在状态切片中。**
 
 ## 7. 技术方案 (Technical Implementation)
 
-mem0ress 是认知对齐平面（而不是 Agent 框架）。它专注于认知状态管理，不执行工具或做决策。
 
+mem0ress 是认知对齐平面, 并非独立运行的任务引擎，而是以 **“认知中间件”** 的形式注入到 Agent 的执行循环中。
+
+* **非编排原则：** mem0ress 不决定 Agent 下一步该调用哪个 API，也不负责复杂的 ReAct 推理逻辑。
+* **生命周期挂钩 (Lifecycle Hook)：** mem0ress 必须参与 Event Loop 的关键节点。通过“拦截”每轮会话的输入与输出，实现自动化的：
+    1. **投射 (Before Turn)：** 在 LLM 思考前，将最新的状态平面注入上下文。
+    2. **快照 (After Turn)：** 在 LLM 响应后，自动对比数据平面变化并记录 Session 序列。
+    
 ### 7.1 系统架构设计 (System Architecture)
 
-mem0ress 是认知对齐平面（而不是 Agent 框架）。它专注于认知状态管理，不执行工具或做决策。其内部划分为三个职责分明的模块：
+它专注于认知状态管理，不执行工具或做决策。其内部划分为三个职责分明的模块：
 
 **Plane Assembler（平面组装器）：认知构建的执行单元。**
 
 职责是**实时编译**当前任务的状态平面。每次 Agent 调用 `get_status_plane()` 时，Plane Assembler 直接扫描文件系统，聚合所有 Task 节点的 Manifest 和 Session，写入状态平面输出。设计上它是纯展示层——不缓存、不诊断、不决策，只做文件系统扫描和文本聚合。
 
-**Tool Interface（工具接口）：认知操作的有限工具集。**
-
-mem0ress 暴露给 Agent 的不是一套通用编程接口，而是一组有限的任务操作工具（`create_task`、`update_todo`、`complete_task` 等）。这与"执行引擎"的本质区别在于：Tool Interface **只管理认知状态的写入**，不执行任何业务逻辑。Agent 需要自己理解任务语义，Tool Interface 只确保操作符合规范（例如检查状态转换是否合法）。
-
+**Tool Interface（工具接口）：认知操作的写入入口。**
+mem0ress 暴露给 Agent 的不是一套通用编程接口，而是一组有限的任务操作工具（`create_task`、`update_todo`、`complete_task` 等）。Tool Interface **只管理认知状态的写入**，不执行业务逻辑。
 **操作前校验：**
-- 乐观锁比对（文件哈希）：执行写操作时比对文件快照哈希。若遭外部修改，抛出 ConflictError，强制 Agent 重新进行认知构建后再决策。
-- 状态转换合法性：校验状态转换是否符合状态机规则（如 IN_PROGRESS → CREATED 非法）。
+- **乐观锁比对（文件哈希）：** 执行写操作时比对文件快照哈希。若遭外部修改，抛出 ConflictError，强制 Agent 重新获取状态平面后再决策。
+- **状态转换合法性：** 校验状态转换是否符合规范（如 IN_PROGRESS → CREATED 非法）。
 
 **Harness Engine（检验引擎）：任务检验逻辑的承载。**
 
