@@ -283,3 +283,61 @@ mem0ress 本身不执行循环——它由 Agent 驱动。Agent 在需要对齐�
   3. 安全拦截: mem0ress 验证乐观锁与操作合法性，抛出 ConflictError 如有冲突。
   4. 任务检验: Agent 调用 `verify_task()` 触发 Harness 三层验证。
   5. 态势突变: 验证结果写入 Substrate（Gotcha 或完成），Agent 获取最新状态。
+
+### 7.4 动作、状态与节点表
+
+#### 动作表 (Action Table)
+
+| Action | 类型 | 说明 |
+|--------|------|------|
+| `create_task` | 任务节点 | 创建新任务 |
+| `get_task` | 任务节点 | 读取任务详情 |
+| `update_task` | 任务节点 | 更新任务属性 |
+| `delete_task` | 任务节点 | 删除任务 |
+| `add_todo` | 执行步骤 | 添加步骤 |
+| `update_todo` | 执行步骤 | 更新步骤状态 |
+| `remove_todo` | 执行步骤 | 删除步骤 |
+| `add_gotcha` | 偏差记录 | 记录偏差 |
+| `snapshot_session` | 轮次 | 记录当前轮次快照 |
+| `get_status_plane` | 轮次 | 获取状态平面 |
+| `get_session` | 轮次 | 获取会话历史 |
+| `verify_task` | 验证 | 触发 Harness 三层验证 |
+| `hydrate_ref` | 数据平面 | 水化引用 |
+
+#### 状态表 (State Table)
+
+| State | 范围 | 说明 |
+|-------|------|------|
+| `CREATED` | Task | 任务已创建 |
+| `IN_PROGRESS` | Task | 任务进行中 |
+| `COMPLETED` | Task | 任务完成 |
+| `ABANDONED` | Task | 任务废弃 |
+| `IDLE` | Framework | 空闲（无活跃任务） |
+| `ACTIVE` | Framework | 有任务在进行 |
+| `VERIFYING` | Framework | 验证中 |
+
+#### 节点表 (Node Table)
+
+| Node | 说明 |
+|------|------|
+| `Turn N` | 轮次节点（1.1, 1.2, 2.1...），记录每个轮次的状态快照 |
+| `Task` | 任务节点，代表一个独立的认知单元 |
+| `Subtask` | 子任务节点，嵌套于父任务目录下 |
+
+#### 轮次与动作对应关系
+
+```
+Turn N 的典型流程：
+
+1. 开始轮次
+   └── get_status_plane() → 了解当前状态
+
+2. 执行动作（可能多个）
+   ├── create_task(...)     # 新任务
+   ├── update_todo(...)     # 推进步骤
+   ├── add_gotcha(...)      # 记录偏差
+   └── verify_task(...)     # 验证
+
+3. 结束轮次
+   └── snapshot_session() → 记录这轮的状态变化
+```
