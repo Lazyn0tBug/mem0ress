@@ -170,10 +170,98 @@ graph LR
     └── auth_module/
         ├── index.md         # The Manifest (包含图景、需求与 Todo)
         ├── session.md       # 每个轮次的状态快照（Session 历史）
+        ├── data-plane/      # Data Plane 引用（仓库 → commit ID 映射）
         └── gotchas/         # 该任务独享的认知增量与偏差修正记录
 ```
 
 `index.md`扮演了声明式清单（Manifest）。Session 记录每个轮次的执行进度，Picture/Requirements/Constraints 从 Manifest 获取，不重复记录。
+
+**Data Plane 关联表：**
+
+Data Plane 通过仓库名 → commit ID 的映射来记录代码状态：
+
+```markdown
+data_plane:
+  frontend-repo: abc123
+  backend-repo: def456
+  docs-repo: ghi789
+```
+
+每个 Turn 的 Session 快照中包含当时的 data_plane 状态，用于追踪多仓库开发环境。
+
+### 5.1 Task 模板
+
+**index.md 模板：**
+
+```markdown
+---
+id: {task_id}
+type: task
+status: created
+cognitive_triad:
+  picture: {描述任务完成后的终极成功状态}
+  requirements: []
+  constraints: []
+data_plane: {}
+gotcha_refs: []
+todos:
+  - [ ] {第一步}
+---
+# {task_id}
+
+## Picture
+{picture}
+
+## Requirements
+- ...
+
+## Constraints
+- ...
+
+## Todos
+- [ ] ...
+```
+
+**session.md 模板：**
+
+```markdown
+# Session: {task_id}
+
+## Turn 1.1
+date: YYYY-MM-DD
+code_progress: "..."
+data_plane: {}
+todos: [{text:"...", done:false}]
+status: CREATED
+
+## Turn 1.2
+date: YYYY-MM-DD
+code_progress: "..."
+data_plane:
+  frontend-repo: abc123
+  backend-repo: def456
+todos: [{text:"...", done:true}, ...]
+status: IN_PROGRESS
+gotchas: []
+```
+
+**Data Plane 模板 (data-plane/refs.md)：**
+
+```markdown
+# Data Plane: {task_id}
+
+## Repositories
+
+| Repository | Commit ID | Description |
+|------------|-----------|-------------|
+| frontend-repo | abc123 | 登录页面实现 |
+| backend-repo | def456 | Auth API 完成 |
+
+## 最新引用
+
+- frontend-repo: abc123
+- backend-repo: def456
+```
 
 ## 6. 逻辑与流程设计 (Logic & Workflow Design)
 在 mem0ress 中，整个系统的运转不再是机械的文件读写，而是围绕任务目标的动态生命周期：任务创建、任务检验、认知构建。这是一个不断前向对齐的闭环。
@@ -293,7 +381,8 @@ mem0ress 本身不执行循环——它由 Agent 驱动。Agent 在需要对齐�
 | `create_task` | 任务节点 | 创建新任务 |
 | `get_task` | 任务节点 | 读取任务详情 |
 | `update_task` | 任务节点 | 更新任务属性 |
-| `delete_task` | 任务节点 | 删除任务 |
+| `complete_task` | 任务节点 | 标记任务完成 |
+| `abandon_task` | 任务节点 | 标记任务废弃 |
 | `add_todo` | 执行步骤 | 添加步骤 |
 | `update_todo` | 执行步骤 | 更新步骤状态 |
 | `remove_todo` | 执行步骤 | 删除步骤 |
@@ -302,7 +391,7 @@ mem0ress 本身不执行循环——它由 Agent 驱动。Agent 在需要对齐�
 | `get_status_plane` | 轮次 | 获取状态平面 |
 | `get_session` | 轮次 | 获取会话历史 |
 | `verify_task` | 验证 | 触发 Harness 三层验证 |
-| `hydrate_ref` | 数据平面 | 水化引用 |
+| `link_data_plane` | 数据平面 | 关联仓库 commit ID |
 
 #### 状态表 (State Table)
 
