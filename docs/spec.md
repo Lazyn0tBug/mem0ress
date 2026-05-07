@@ -29,7 +29,7 @@ mem0ress 是一个**认知对齐平面 (Cognitive Alignment Plane)**。它不是
 
 mem0ress 不试图重现所有记忆，而是使 AI 始终能够保持明确的认知：我是谁、我在做什么、我的目标是什么、我还有什么要做。当前的 AI 已经足够智能，不需要从会话中一遍又一遍检索相似信息，但它往往在多轮会话之后对自己的目标认知产生了偏差。
 
-### 1.3 核心解法：认知切片分离
+### 1.3 核心解法：状态平面与数据平面分离
 
 mem0ress 将信息流拆分为两个时间切片：
 
@@ -56,7 +56,7 @@ mem0ress 的诞生，源于对当前 AI Agent 发展路径的底层反思。我�
 
 **放弃记录流水账，对抗上下文熵增。**
 
-人类的大脑之所以高效，是因为它懂得遗忘过程，只铭记结果。系统不记录 Agent 执行过程中的所有流水账，仅记录导致目标推进或路径修正的“状态突变（Delta）”。通过记录认知切片而非过程录像，有效控制上下文规模。
+人类的大脑之所以高效，是因为它懂得遗忘过程，只铭记结果。系统不记录 Agent 执行过程中的所有流水账，仅记录导致目标推进或路径修正的"状态突变（Delta）"。通过记录状态突变而非过程录像，有效控制上下文规模。
 
 ### 2.3 同构的认知单元：分形树状结构 (Isomorphic Task Unit)
 
@@ -99,7 +99,7 @@ graph TD
     class A1a,A1b leaf;
 ```
 
-### 2.4 认知切片的数据流架构 (Cognitive Slice Data Flow)
+### 2.4 认知平面的数据流架构
 
 mem0ress 的认知数据来自会话本身，而非外部知识库。系统从会话流中 **hook** 出构建认知所需的信息，这是与外部数据完全独立的并行过程——外部知识（向量数据库、API 文档、全网搜索）属于 Agent 的背景知识，mem0ress 不感知、不管理，也不依赖它们。
 
@@ -110,12 +110,12 @@ mem0ress 的认知数据来自会话本身，而非外部知识库。系统从�
 * **状态平面：** 从会话中提取任务执行状态（Todo 进度、代码产出、文档进度、组件状态），聚合为某一时刻的执行快照。
 * **数据平面：** 从会话中提取相关数据的 commit ID 快照，记录代码和文档在某一时刻的版本。
 
-两个切片都来源于会话，**按需水化**，不默认加载。Agent 获取切片后，在其 LLM 的认知工作区中完成目标推理与决策。
+两个切片都来源于会话，**按需展开**，不默认加载。Agent 获取切片后，在其 LLM 的认知工作区中完成目标推理与决策。
 
 > **注：** 状态平面和数据平面都是时间切片，不是组件。图中的状态平面 / 数据平面指的是"某一时刻的切片内容"，而非独立的进程或服务。mem0ress 的认知工作区与 Agent 的 LLM 处于同一层，两者共享会话上下文。
 
 ```mermaid
-%% label：认知切片数据流
+%% label：认知平面的数据流
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#e3f2fd', 'tertiaryColor': '#fafafa', 'fontFamily': 'arial' } } }%%
 graph TB
     subgraph 会话层["会话流 (Conversation)"]
@@ -190,16 +190,15 @@ Constraints 定义的是红线，回答"什么绝对不能做"。与 Requirement
 
 三要素在任务生命周期中承担不同角色。构建任务时，**先定义 Requirements，再定义 Constraints**——因为 Constraints 是冲突检测的锚点，若 Requirements 与 Constraints 相互矛盾，任务在创建时即被标记为不可行。Picture 位于最高层，指导 Requirements 的制定，而 Requirements 反过来校验 Picture 的可达性。整个过程中，三者互相约束，任何一方的变化都可能影响其他两者。
 
-### 4.2 认知切片 (Cognitive Slices)
+### 4.2 认知平面的两个核心：状态平面与数据平面
 
-mem0ress 在任一时刻都持有两个时间切片：
+mem0ress 的认知平面由两个核心 Plane 构成，它们都是**时间切片**（某一时刻的快照），不是组件。
 
 **状态平面 (Status Plane)：** 任务相关的所有执行状态的聚合快照。包括：
 - 任务树结构（父子关系）
 - 每个任务的 todo 完成度（如 "2/3 Todos 完成"）
 - 任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）
 - 偏差记录（Gotchas）
-- Session 最近变化摘要
 
 Agent 唤醒时强制挂载，**纯展示，不做诊断**。
 
@@ -207,12 +206,14 @@ Agent 唤醒时强制挂载，**纯展示，不做诊断**。
 - 各仓库当前 commit ID 映射
 - 长篇文档（PRD、设计稿等）的版本指针
 
-顺着状态平面的指针**按需水化挂载**，不默认加载。
+顺着状态平面的指针**按需展开挂载**，不默认加载。
 
-**Session：** 每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。Session 记录执行进度（代码写到哪、文档完成多少、TODO 状态），不记录 Picture/Requirements/Constraints（这些从 TaskManifest 获取）。
+**Session 作为数据来源：** Session 是每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。它是状态平面内容的数据来源之一，但不等于平面本身——平面是某一时刻的聚合快照，Session 是快照的时间序列。
+
+Session 记录执行进度（代码写到哪、文档完成多少、TODO 状态），不记录 Picture/Requirements/Constraints（这些从 TaskManifest 获取）。
 
 ```mermaid
-%% label：认知切片分离
+%% label：状态平面与数据平面的构成
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#757575', 'secondaryColor': '#fff3e0', 'tertiaryColor': '#fafafa' } } }%%
 graph LR
     subgraph SP_Group["状态平面（执行快照）"]
@@ -227,8 +228,13 @@ graph LR
         REPOB["backend: def456"]
     end
 
+    subgraph SESSION_Group["Session（数据来源）"]
+        HIST["历史快照序列"]
+    end
+
     SP_Group --> AC["Agent Context Window"]
     DP_Group --> AC
+    HIST -.->|提供数据| SP_Group
     TID -.->|Manifest 提供<br>Picture/Requirements<br>/Constraints| TID
 ```
 
@@ -324,7 +330,7 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 
 ### 6.3 认知构建 (Cognition Building)
 
-这是贯穿生命周期始终的核心动作。在任何节点（刚启动时、执行中、或检验失败后），系统都需要为 Agent 构建当前任务的认知切片。
+这是贯穿生命周期始终的核心动作。在任何节点（刚启动时、执行中、或检验失败后），系统都需要为 Agent 构建当前任务的状态平面。
 
 **状态切片（状态平面）：**
 
@@ -360,7 +366,7 @@ mem0ress 是认知对齐平面（而不是 Agent 框架）。它专注于认知�
 
 **Plane Assembler（平面组装器）：认知构建的执行单元。**
 
-职责是**实时编译**当前任务的认知切片（状态平面）。每次 Agent 调用 `get_status_plane()` 时，Plane Assembler 直接扫描文件系统，聚合所有 Task 节点的 Manifest 和 Session，写入状态平面输出。设计上它是纯展示层——不缓存、不诊断、不决策，只做文件系统扫描和文本聚合。
+职责是**实时编译**当前任务的状态平面。每次 Agent 调用 `get_status_plane()` 时，Plane Assembler 直接扫描文件系统，聚合所有 Task 节点的 Manifest 和 Session，写入状态平面输出。设计上它是纯展示层——不缓存、不诊断、不决策，只做文件系统扫描和文本聚合。
 
 **Tool Interface（工具接口）：认知操作的有限工具集。**
 
@@ -405,7 +411,7 @@ graph TB
 
 ### 7.2 核心机制设计
 
-  * 引用水化机制 (Hydration): 解析清单时，ref: 指针不默认加载。LLM 需主动调用工具将其“水化”并挂载到 Data Plane 中。
+  * 引用展开机制: 解析清单时，ref: 指针不默认加载。LLM 需主动调用工具将其展开并挂载到 Data Plane 中。
   * 乐观锁冲突感知 (Optimistic Locking): 执行写操作时比对文件哈希。若遭外部修改，抛出 409 Conflict，强制 LLM 重新进行认知构建后决断。
   * 原生 Git 数据回溯 (Git-Native Revert): 检验失败且路径报废时，LLM 调用工具回退数据平面，同时在状态平面生成 Gotcha 记录偏差经验，保持时间向前。
   * 带外约束检验 (Out-of-Band Verification): Tier 3 的语义对齐在独立沙箱中执行，通过 Judge Task 调用 LLM-as-a-Judge，杜绝与执行态 Agent 发生上下文污染。
@@ -658,5 +664,5 @@ A: 数据汤（Data Soup）发生在记忆系统将所有信息存入无结构�
 
 mem0ress 通过以下机制避免：
 - **目标锚定**：信息仅在与活跃 Task 关联时才有意义，失去目标指向的信息视为噪音，不予投影到当前平面
-- **知识隔离**：外部知识（KB）绝不直接流入内存，必须经 Agent 蒸馏后才能写入
+- **认知来源隔离**：mem0ress 的认知数据来源于会话 hook，不管理也不依赖外部知识（向量数据库/API 文档/全网搜索）——外部知识属于 Agent 的背景知识，Agent 按需检索后体现在会话中，mem0ress 只从会话流提取切片
 - **生命周期一致**：认知与任务关联，任务完成则认知生命周期结束
