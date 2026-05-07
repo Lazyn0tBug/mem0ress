@@ -312,34 +312,6 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 
 **Picture/Requirements/Constraints 从 TaskManifest 获取，不显示在 Status Plane。**
 
-```mermaid
-%% label：认知对齐生命周期
-sequenceDiagram
-    participant Agent as Agent (推理)
-    participant Substrate as 认知基座 (物理存储)
-    participant Harness as Harness (检验引擎)
-
-    Note over Agent, Substrate: 1. 任务创建 (立项与锚定)
-    Agent->>Substrate: 确立 Picture, Requirements, Constraints 与 Todo
-    
-    loop 对齐循环
-        Note over Agent, Substrate: 3. 认知构建 (态势投影)
-        Substrate->>Agent: 投影当前 Status Plane (含偏差警告)
-        Agent->>Substrate: 执行动作 (推进 Todo 或修改代码)
-        
-        Note over Agent, Harness: 2. 任务检验 (属性验证)
-        Agent->>Harness: 宣告节点完成，触发检验
-        Harness->>Substrate: 获取属性与物理产出进行比对
-        
-        alt 发现偏差 (偏离约束或测试失败)
-            Harness-->>Agent: 抛出偏差与偏离分析
-            Agent->>Substrate: 修正需求、追加 Todo 或记录 Gotcha
-        else 检验通过
-            Harness->>Substrate: Git 固化，准许任务闭环
-        end
-    end
-```
-
 ## 7. 技术方案 (Technical Implementation)
 
 mem0ress 是认知对齐平面（而不是 Agent 框架）。它专注于认知状态管理，不执行工具或做决策。
@@ -402,8 +374,6 @@ mem0ress 本身不执行循环——它由 Agent 驱动。Agent 在需要对齐�
 | `COMPLETED` | 任务完成 |
 | `ABANDONED` | 任务废弃 |
 
-> 注：Framework 状态（IDLE/ACTIVE/VERIFYING）为派生信息，可通过 Status Plane 计算得出，不需要显式维护。
-
 #### 节点表 (Node Table)
 
 | Node | 说明 |
@@ -429,3 +399,60 @@ Turn N 的典型流程：
 3. 结束轮次
    └── snapshot_session() → 记录这轮的状态变化
 ```
+
+## 8. FAQ
+
+### Q: 为什么我们需要的是"认知"而不是"记忆"？
+A: 记忆是向后看（Retrospective）、被动式的存储行为。mem0ress 不是检索过去对话的存储系统，而是**前向的认知系统**，维持 AI 对当前目标、进度和认知缺口的 awareness。核心区分：传统记忆问"我们之前讨论了什么"，认知框架问"我要达成什么目标？我离目标还有多远？我还需要做什么？"
+
+### Q: 为什么采用任务模型，以及一切皆任务？
+A: 任务模型（Task Model）是认知对齐平面的基本单元。将一切视为任务带来以下优势：
+- **同构性**：所有认知单元（Task）拥有相同结构，降低解析复杂度
+- **可分解性**：复杂目标拆解为子任务，物理上通过目录深度表达依赖关系
+- **可验证性**：每个 Task 都有明确的完成标准（Picture），便于检验
+- **无冲突设计**：父任务完成以其所有子任务完成为绝对前提，避免并发冲突
+
+### Q: 为什么任务模型包括 Picture、Requirements、Constraints？
+A: 认知三要素（Picture、Requirements、Constraints）构成完整的目标语义：
+- **Picture**：图景，任务完成后的终极成功状态，是语义层面的描述
+- **Requirements**：需求，可验证的硬性指标，是客观可达的验证标准
+- **Constraints**：约束，执行过程中不可逾越的底线
+
+三者缺一不可：Picture 定义"成功是什么"，Requirements 定义"如何证明成功了"，Constraints 定义"什么绝对不能做"。分离确保验证的客观性与约束的不可违背性。
+
+### Q: 为什么任务没有冲突协调机制？
+A: mem0ress 采用任务分形树状结构，父任务的完成以所有子任务完成为前提。这一设计使得冲突协调变得不必要：
+- **物理隔离**：不同任务处于不同目录，通过目录深度表达依赖
+- **顺序保障**：父任务必须等待所有子任务完成后才能完成
+- **系统级卸责**：冲突解决交由宿主环境处理，mem0ress 专注认知状态管理
+
+### Q: 为什么使用状态平面与数据平面？
+A: 双平面设计实现认知与数据的分离：
+- **状态平面（Status Plane）**：当前认知系统状态，展示 Task ID、TODO 进度、Status、Gotchas，是前向的、不断更新的
+- **数据平面（Data Plane）**：代码和文档的版本引用（通过 commit ID 映射），长篇文档或日志载荷
+
+这种分离让 Agent 始终以极低 Token 成本了解"现在在哪"和"离目标还有多远"。
+
+### Q: 为什么状态平面没有回溯？
+A: 状态平面是纯展示模型，只呈现当前状态，不做偏差判断。这是设计上的刻意选择：
+- **目的论认知**：信息必须为意图服务，回溯历史与前向目标感相悖
+- **认知效率**：Agent 每次获取的是当前真相，而非沉积的变更历史
+- **绝对可观测性**：基于纯文本和目录树，Agent 可直接读取，无需版本遍历
+
+若需历史演进，Session 提供版本快照模型用于追踪。
+
+### Q: 为什么 Picture（图景）是完成标准，而不是 Requirements、Constraints 或者子任务清单？
+A: Picture 是语义层面的成功状态，Requirements 是可验证的指标，Constraints 是不可逾越的底线，子任务清单是执行路径：
+- **Picture vs Requirements**：即使所有 Requirements 满足，Picture 可能未达成（如"用户说还是慢"）
+- **Picture vs 子任务**：子任务是路径而非目的地，完成所有子任务不等于达成目标
+- **Picture vs Constraints**：Constraints 是底线，Picture 是目标，两者维度不同
+
+Picture 作为完成标准防止"勾选心态"——Agent 不会在完成所有条目后仍然错失实际需求。
+
+### Q: 什么是"数据汤"困境，mem0ress 如何避免？
+A: 数据汤（Data Soup）发生在记忆系统将所有信息存入无结构的池子时：信息失去边界、新旧混杂、无法区分当前与过时，导致上下文污染（Context Collapse）和熵增。
+
+mem0ress 通过以下机制避免：
+- **目标锚定**：信息仅在与活跃 Task 关联时才有意义，失去目标指向的信息视为噪音
+- **冷/热生命周期**：关联的 Task 完成后，信息自动冷却，不在当前平面呈现
+- **知识隔离**：外部知识（KB）绝不直接流入内存，必须经 Agent 蒸馏后才能写入
