@@ -404,13 +404,18 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 
 ### 7.2 任务检验
 
-任务检验采用三层关卡模型，外加独立的 Constraints 阻断机制。
+任务检验采用四层关卡模型。
 
-**三层关卡（Tiers）：**
+**四层关卡（Tiers）：**
 
+* **Tier 0: Constraints 约束检查：** 检查当前 Task 的所有 Constraints 是否满足。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。修复成功后重跑 Tier 0 确认，通过后进入 Tier 1。
 * **Tier 1: Todo 完成检查 (Todo Check)：** 检查所有 Todo 步是否已被标记为完成。若存在未勾选的 Todo，直接阻断，不进入 Tier 2。
 * **Tier 2: Requirements 满足检查 (Requirements Check)：** 在沙箱中执行 Requirements 对应的脚本或测试，验证每个 Requirement 是否达标。若存在未满足的 Requirement，直接阻断，不进入 Tier 3。
 * **Tier 3: Picture 对齐检查 (Picture Alignment Check)：** Judge Agent 读取任务的 Picture 与实际产出，执行语义对齐判断。只有当 Picture 中包含无法自动化验证的指标（如"用户感到满意"）时才需要触发。
+
+**关卡通过关系：** Tier 0 未通过 → 阻断，不进入 Tier 1；Tier 1 未通过 → 阻断，不进入 Tier 2；以此类推。Tier 3 是最后一关，全部通过才算完成检验。
+
+**Tier 0 与 Tier 1/2/3 的本质区别：** Tier 1/2/3 是纯检验，不做数据变更；Tier 0 的约束检查可能涉及数据修复。两者分属不同性质，因此不合并为同一关卡。
 
 **Tier 3 的触发条件：**
 
@@ -420,18 +425,6 @@ Tier 3 不是每次 `verify_task()` 都自动进入的常规关卡。它由 Agen
 - **Requirements 与 Picture 之间存在语义歧义**：Tier 2 验证了"功能可用"，但 Tier 1/2 无法判断"是否做了不该做的事"——这属于 Constraints 与 Picture 的跨平面对齐。
 - **任务风险等级为 L1/L2（高危）**：权限分级中高危任务（L1/L2）的完成检验强制触发 Tier 3，无论 Tier 1/2 结果如何。
 - **Agent 或利益相关者显式请求**：在任务 Manifest 中预设 `require_tier3_verification: true`，或在任务执行过程中 Agent 主动调用 `verify_task(tier3=true)`。
-
-**Constraints 阻断机制（独立于 Tiers 运行）：**
-
-Constraints 定义的是绝对不可逾越的红线。与 Tier 1/2/3 的"正向验证"不同，Constraints 是"反向阻断"——任何时刻一旦违反，立即阻断。
-
-Constraints 的检查**不依附于 Tier 关卡的顺序**，而是作为独立门控在以下时机触发：
-
-- **每次 Action 执行前**：任何 `add_todo`、`update_todo`、`complete_task` 等写操作执行前，先检查该操作是否违反当前任务的 Constraints。
-- **Tier 1/2/3 通过后**：即便三层关卡全部通过，若此时发现新的 Constraints 违反，检验仍告失败。
-- **任务创建时**：若新建任务的 Requirements 与 Constraints 存在矛盾（如"需支持离线使用"与"数据不得离开设备"），在创建阶段即标记为"约束冲突"。
-
-若违反 Constraints：系统记录 Gotcha 到 `gotcha_refs`，并阻断当前 Action，返回错误。Agent 接收后必须先解决冲突才能继续。
 
 **决策执行规则：**
 
@@ -541,7 +534,8 @@ mem0ress 暴露给 Agent 的不是一套通用编程接口，而是一组有限�
 
 **Harness Engine（检验引擎）：任务检验逻辑的承载。**
 
-当 Agent 调用 `verify_task()` 时，Harness Engine 驱动三层验证流程：
+当 Agent 调用 `verify_task()` 时，Harness Engine 驱动四层验证流程：
+- **Tier 0：** Constraints 约束检查，可能触发自动修复或让度给人。
 - **Tier 1/2：** 系统自动检查（机械状态 + 客观规律验收），由 Harness 内置逻辑完成。
 - **Tier 3：** 语义对齐，在独立沙箱中 spawn Judge Task 执行。
 
@@ -584,7 +578,7 @@ graph TB
 mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
   1. 认知构建: Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、Session 摘要）
-  2. 任务检验: Agent 调用 `verify_task()`，驱动 Harness 三层验证（机械状态 → 客观规律 → 语义对齐）
+  2. 任务检验: Agent 调用 `verify_task()`，驱动 Harness 四层验证（约束检查 → 机械状态 → 客观规律 → 语义对齐）
   3. 状态更新: Agent 根据检验结果决策后续行动——更新 Todo、调用 `complete_task()`、标记 ABANDONED、或继续执行。状态更新通过 Tool Interface 执行写操作，支持 `update_todo`、`complete_task`、`abandon_task` 等。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
 **系统自动机制（不属于业务流）：**
@@ -637,7 +631,7 @@ sequenceDiagram
 | `snapshot_session` | 轮次 | （系统自动触发，每轮次结束时记录，无需 Agent 调用） |
 | `get_status_plane` | 轮次 | 获取状态平面 |
 | `get_session` | 轮次 | 获取会话历史 |
-| `verify_task` | 验证 | 触发 Harness 三层验证 |
+| `verify_task` | 验证 | 触发 Harness 四层验证 |
 | `link_data_plane` | 数据平面 | 关联仓库 commit ID |
 
 #### 状态表 (State Table)

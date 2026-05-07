@@ -129,52 +129,35 @@ Task Constraints: [执行边界]
 
 ---
 
-### Tier 验证结构（三层关卡）
+### Tier 验证结构（四层关卡）
 
 ```
-Tier 1 ──→ Tier 2 ──→ Tier 3
-  │          │          │
-  ↓          ↓          ↓
-检查 Todo   检查      检查
-是否完成   Requirements  Picture
-           是否满足   是否对齐
+Tier 0 ──→ Tier 1 ──→ Tier 2 ──→ Tier 3
+  │          │          │          │
+  ↓          ↓          ↓          ↓
+检查      检查 Todo   检查      检查
+Constraints  是否完成   Requirements  Picture
+是否满足                是否满足   是否对齐
 ```
 
-**三层各司其职，不做跨层判断：**
+**Tier 0：约束检查（可能有数据变更）**
+- 检查当前 Task 的所有 Constraints 是否满足
+- 若有违反，尝试自动修复
+  - 修复成功 → 重跑 Tier 0 确认 → Tier 1
+  - 修复失败 → Agent 按权限决定：
+    - L1/L2：立即让度给人（TODO 标记"待人确认"，spawn 协作任务）
+    - L3/L4：再尝试一次，失败则让度给人
 
-| 层级 | 检查内容 | 通过标准 |
-|------|---------|---------|
-| **Tier 1** | Todo 是否全部完成 | 每个 Todo 步都被标记为完成 |
-| **Tier 2** | Requirements 是否满足 | 可自动化脚本/测试验证每个 Requirement |
-| **Tier 3** | Picture 是否对齐 | Judge Agent 语义判断（主观感知类 Picture 专用） |
+**Tier 1/2/3：纯检验，不做数据变更**
 
-**通过关系：** Tier 1 未通过 → 阻断，不进入 Tier 2；Tier 2 未通过 → 阻断，不进入 Tier 3。Tier 3 是最后一关，全部通过才算完成检验。
+|| 层级 | 检查内容 | 通过标准 | 是否有数据变更 |
+||------|---------|---------|--------------|
+| **Tier 0** | Constraints 是否满足 | 全部 Constraint 无违反 | 可能修复（自动或手动） |
+| **Tier 1** | Todo 是否全部完成 | 每个 Todo 步都被标记为完成 | 无 |
+| **Tier 2** | Requirements 是否满足 | 可自动化脚本/测试验证每个 Requirement | 无 |
+| **Tier 3** | Picture 是否对齐 | Judge Agent 语义判断（主观感知类 Picture 专用） | 无 |
 
----
-
-### Constraints 的检查位置（待解决）
-
-Constraints 定义的是**绝对不可逾越的红线**。一旦违反，系统必须立即阻断。
-
-问题是：Constraints 应该在哪里检查？
-
-**选项 A：作为独立门控，独立于 Tier 1/2/3 运行**
-- 优点：Constraints 不受层级限制，任何时刻都可阻断
-- 缺点：需要额外的检查机制
-
-**选项 B：与每个 Tier 并行检查**
-- 优点：与现有 Tier 机制整合
-- 缺点：违反即阻断，但 Tier 还在顺序通过
-
-**选项 C：在 Tier 2 之后、Tier 3 之前插入 Constraints 检查**
-- 优点：逻辑清晰——先验证进度（Todo），再验证硬指标（Requirements），再验证底线（Constraints），最后验证语义（Picture）
-- 缺点：若 Constraints 在 Tier 3 之前，Tier 3 执行期间 Constraints 仍然失效
-
-**选项 D：在 Action 执行前检查（per-action gate）**
-- 优点：Constraints 作为预防机制，而非事后检验
-- 缺点：系统复杂度增加
-
-**核心矛盾：** Tier 1/2/3 是"正向验证"模型（通过则前进），而 Constraints 是"反向阻断"模型（违反则停止）。将后者塞入前者的顺序关卡，逻辑上不兼容。
+**通过关系：** Tier 0 未通过 → 阻断，不进入 Tier 1；Tier 1 未通过 → 阻断，不进入 Tier 2；以此类推。Tier 3 是最后一关，全部通过才算完成检验。
 
 ---
 
@@ -190,7 +173,10 @@ Constraints 定义的是**绝对不可逾越的红线**。一旦违反，系统�
 
  5. **如何与现有工具集成？** 这个框架是否需要独立的工具链，还是可以叠加在现有工具（笔记软件、飞书文档）之上？
 
- 6. **Constraints 的检查位置？** Tier 1/2/3 是正向验证模型，Constraints 是反向阻断模型。两者逻辑不兼容。Options A/B/C/D 各自的权衡见上文"Constraints 的检查位置"章节。
+ 6. **Constraints 的检查位置？** → ✅ **已解决：作为 Tier 0，在 Tier 1 之前检查**
+   - Tier 0 = 约束检查，可能有数据变更
+   - Tier 1/2/3 = 纯检验，不做数据变更
+   - 无法修复时按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）
 
 ---
 
