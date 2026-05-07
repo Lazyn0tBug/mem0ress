@@ -1,7 +1,11 @@
+---
+title: 认知对齐平面(Cognitive Alignment Plane)
+version: 3.6 (Master Blueprint)
+definition: 辅助 AI Agent 构建目标态势并校准执行偏差的轻量级工具框架
+---
+
 # mem0ress: 认知对齐平面(Cognitive Alignment Plane)架构规约
 
-**版本:** v3.5 (Master Blueprint)
-**定位:** 辅助 AI Agent 构建目标态势并校准执行偏差的轻量级工具框架
 
 ## 1. 综述 (Overview)
 
@@ -15,7 +19,7 @@
 * **意图迷失：** 数据库本身没有意图。通过追溯历史来拼凑当下，永远无法匹配"向前看"的目标牵引。
 * **大模型之上的大模型：** 许多 memory 系统徒增算力消耗，试图通过 LLM 总结 LLM 来缓解交互局限，但从未触及"自主管理状态"这一架构核心。
 
-当我们讨论记忆时，真正关心的不是过去每一秒的原始画面，而是当前和未来：我们现在在做什么（Task），已经完成了什么（状态平面），还需要做什么（Todo），目标是什么（Picture），当前是否偏离了目标（Constraints）。
+当我们讨论记忆时，真正关心的不是过去每一秒的原始画面，而是当前和未来：我们现在在做什么(Task)，已经完成了什么(状态平面)，还需要做什么(Todo)，是否满足需求(Requirements)，是否符合约束(Constraints)，是否达成目标(Picture)。
 
 我们需要的不是记忆，而是**认知（Cognition）**。
 
@@ -25,7 +29,7 @@
 
 mem0ress 是一个**认知对齐平面 (Cognitive Alignment Plane)**。它不是传统意义上的"记忆检索数据库"，也不以二进制或向量方式存储，而是一个基于纯文本的、通过利用已有信息来有效构建目标相关视图、并持续检验执行偏差的逻辑框架。
 
-其核心功能是：在任务执行过程中，为 AI Agent 提供清晰的意图边界（Picture）与执行约束（Constraints），确保 Agent 的动作始终与既定需求对齐，防止其在长路径任务中偏离目标。
+其核心功能是：在任务执行过程中，为 AI Agent 提供清晰的图景（Picture）与执行约束（Constraints），确保 Agent 的动作始终与既定需求对齐，防止其在长路径任务中偏离目标。
 
 mem0ress 不试图重现所有记忆，而是使 AI 始终能够保持明确的认知：我是谁、我在做什么、我的目标是什么、我还有什么要做。当前的 AI 已经足够智能，不需要从会话中一遍又一遍检索相似信息，但它往往在多轮会话之后对自己的目标认知产生了偏差。
 
@@ -297,7 +301,6 @@ todos:
 
 ## Todos
 - [ ] ...
-```
 
 > **模板参考：** Session 模板、Gotcha 模板、Data Plane 模板见附录 B。
 ````
@@ -324,6 +327,7 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 检验结果（aligned / deviation）由 Agent 接收。任务完成后是否调用 `complete_task()`，由 Agent 基于危险性判断自主决定，或按权限设定让度给人。ABANDONED 由 Agent 主动触发，与检验结果无关。
 
 **任务状态与检验的关系：**
+
 - Tier 1/2/3 全部通过 → 检验通过，任务状态保持不变，Agent 自行决定是否调用 `complete_task()`
 - 检验未通过 → 偏差记录写入 gotcha_refs，Agent 决定下一步（修正、重试或标记 ABANDONED）
 - `complete_task()` 的调用权属于决策权，可由 AI Agent 自主行使，或按权限分级让度给人
@@ -340,6 +344,7 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 * 非侵入：只读不写，不修改任何状态
 
 **状态切片显示内容：**
+
 - 任务树结构（父子关系）
 - 每个任务的 todo 完成度（如 "2/3 Todos 完成"）
 - 任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）
@@ -347,11 +352,13 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 - Session 最近变化摘要
 
 **Session 记录内容：**
+
 - 每个轮次的状态快照（code_progress, docs_progress, todos, status）
 - 变化动作记录
 - 用于理解演进，暂不主动访问
 
 **Session 触发规则：**
+
 mem0ress 作为一个被动式的状态管理层，自身没有后台守护进程。Session 快照的触发通过以下两种方式之一完成：
 1. **显式调用：** Agent 在每轮交互结束时，显式调用 `record_session()` 工具。
 2. **网关钩子 (Hook)：** 宿主 Agent 框架在调用 mem0ress 的 `Tool Interface` 执行关键写操作（如 `update_todo`, `add_gotcha`）后，通过系统内置钩子自动记录当前快照。
@@ -541,7 +548,7 @@ Agent 通过 spawn 人机协作任务实现让度——在任务 TODO 中标记"
 
 #### 轮次与动作对应关系
 
-```
+````markdown
 Turn N 的典型流程：
 
 1. 开始轮次
@@ -555,13 +562,13 @@ Turn N 的典型流程：
 
 3. 结束轮次
    └── （系统自动）Session 快照 → 无需 Agent 调用
-```
+````
 
 ## 附录 B: 模板参考
 
 ### B.1 Session 模板 (session.md)
 
-```markdown
+````markdown
 # Session: {task_id}
 
 ## Turn 1.1
@@ -579,7 +586,7 @@ data_plane:
   backend-repo: def456
 todos: [{text:"...", done:true}, ...]
 status: IN_PROGRESS
-```
+````
 
 每个 Turn 的 Session 快照中包含当时的数据平面快照（commit ID 映射），用于追踪多仓库开发环境的状态演进。
 
@@ -589,7 +596,7 @@ status: IN_PROGRESS
 
 Gotcha 是带外偏差记录，记录检验中发现的偏离与经验，不参与主流程，不影响任务状态，不阻断 Agent 继续执行。
 
-```markdown
+````markdown
 # Gotcha: {task_id}
 
 ## 偏离描述
@@ -605,11 +612,11 @@ Gotcha 是带外偏差记录，记录检验中发现的偏离与经验，不参�
 - 任务: {task_id}
 - 时间: {timestamp}
 - 检验 Tier: {Tier 1/2/3}
-```
+````
 
 ### B.3 Data Plane 模板 (data-plane/refs.md)
 
-```markdown
+````markdown
 # Data Plane: {task_id}
 
 ## Repositories
@@ -623,7 +630,7 @@ Gotcha 是带外偏差记录，记录检验中发现的偏离与经验，不参�
 
 - frontend-repo: abc123
 - backend-repo: def456
-```
+````
 
 ## 8. FAQ
 
