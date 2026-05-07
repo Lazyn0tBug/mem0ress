@@ -72,6 +72,30 @@ mem0ress 的诞生，源于对当前 AI Agent 发展路径的底层反思。我�
 
 **依赖表达的物理化：** 父任务目录下嵌套子任务目录，通过目录深度而非数据库外键表达依赖关系。这使得依赖的可见性不需要查询——`ls` 即是最直接的展示。"父任务是否完成"等价于"子任务目录是否全部关闭"，无需额外的状态聚合查询。
 
+```mermaid
+%% label：分形树状结构
+graph TD
+    root["/tasks<br>root"]
+    taskA["auth_module/<br>index.md"]
+    taskA1["oauth_google/<br>index.md"]
+    taskA2["oauth_github/<br>index.md"]
+    taskA3["session_store/<br>index.md"]
+    taskA1a["oauth_google/provider/<br>index.md"]
+    taskA1b["oauth_google/callback/<br>index.md"]
+
+    root --> taskA
+    taskA --> taskA1
+    taskA --> taskA2
+    taskA --> taskA3
+    taskA1 --> taskA1a
+    taskA1 --> taskA1b
+
+    classDef task fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef root fill:#fafafa,stroke:#9e9e9e,stroke-width:1px,stroke-dasharray:5 5;
+    class root root;
+    class taskA,taskA1,taskA2,taskA3,taskA1a,taskA1b task;
+```
+
 ### 2.4 三层物理隔离 (The CPU-RAM-Disk Model)
 
 **三层物理隔离**是对 L1/L2/L3 的功能分类描述，不是另一套独立的分层体系：
@@ -355,6 +379,22 @@ Harness Engine 本身**不是自主进程**——它没有主动触发能力，�
 
 **三个模块的边界：** Plane Assembler 是只读的，Tool Interface 是写的入口，Harness Engine 是验证出口。三者共同构成认知网关，无跨越自身职责范围的操作。
 
+```mermaid
+%% label：三模块边界
+graph LR
+    Agent["Agent Context"]
+
+    PA["Plane Assembler<br>只读出口"]
+    HE["Harness Engine<br>验证出口"]
+    TI["Tool Interface<br>写操作入口"]
+
+    Agent <--> PA
+    Agent <--> HE
+    PA --> TI
+    HE --> TI
+    PA -.-> HE: 验证触发
+```
+
 ### 7.2 核心机制设计
 
   * 引用水化机制 (Hydration): 解析清单时，ref: 指针不默认加载。LLM 需主动调用工具将其“水化”并挂载到 Data Plane 中。
@@ -373,6 +413,33 @@ mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 **系统自动机制（不属于业务流）：**
 
 每轮次结束时，系统自动触发 Session 快照，记录本轮状态变化，供后续追溯使用。
+
+```mermaid
+%% label：Agent 驱动的业务闭环
+sequenceDiagram
+    autonumber
+    participant Agent
+    participant PA as Plane Assembler
+    participant TI as Tool Interface
+    participant HE as Harness Engine
+    participant System
+
+    rect rgb(232, 245, 233)
+        Note over Agent,System: Agent 主动决策（业务流）
+        Agent->>PA: get_status_plane()
+        PA-->>Agent: 状态平面快照
+        Agent->>HE: verify_task()
+        HE-->>Agent: aligned / deviation
+        Agent->>TI: complete_task() / update_todo() / abandon_task()
+        TI-->>Agent: 状态更新确认
+    end
+
+    rect rgb(245, 245, 245)
+        Note over Agent,System: 系统自动机制
+        System->>System: 每轮次结束
+        System->>System: Session 快照（自动）
+    end
+```
 
 ### 6.4 决策执行：Agent 是所有决策的起点与终点
 
