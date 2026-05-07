@@ -783,16 +783,20 @@ graph TB
 
     PA["Plane Assembler<br>只读出口"]
     TI["Tool Interface<br>写操作入口"]
-    HE["Harness Engine<br>验证出口"]
+    HE["Harness Engine<br>验证出口（Tiers 1-3）"]
+    T0["Tier 0 前置处理器<br>（独立于 Harness 之外）"]
 
     Agent --> PA
     Agent --> TI
+    Agent --> T0
     Agent --> HE
 
     classDef mod fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
     classDef agent fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
+    classDef t0 fill:#fff9c4,stroke:#f9a825,stroke-width:2px;
     class PA,TI,HE mod;
     class Agent agent;
+    class T0 t0;
 ```
 
 ### 8.2 核心机制设计
@@ -822,6 +826,7 @@ sequenceDiagram
     participant Agent
     participant PA as Plane Assembler
     participant TI as Tool Interface
+    participant T0 as Tier 0 前置处理器
     participant HE as Harness Engine
     participant System
 
@@ -831,14 +836,14 @@ sequenceDiagram
         PA-->>Agent: 状态平面快照<br/>(任务树 | TODO进度 | 状态 | Gotchas | Session指针)
 
         Note over Agent: Tier 0: 前置处理<br/>(独立于 Harness 之外)
-        Agent->>HE: verify_task(tier0_only=true)
+        Agent->>T0: verify_task(tier0_only=true)
         alt Constraints 满足
-            HE-->>Agent: Tier 0 通过
+            T0-->>Agent: Tier 0 通过
         else Constraints 违反（可修复）
-            HE-->>Agent: Tier 0 违反 → 自动修复
-            Agent->>HE: verify_task(tier0_only=true) 重跑
+            T0-->>Agent: Tier 0 违反 → 自动修复
+            Agent->>T0: verify_task(tier0_only=true) 重跑
         else Constraints 违反（不可修复）
-            HE-->>Agent: Tier 0 违反 → 让度给人
+            T0-->>Agent: Tier 0 违反 → 让度给人
         end
 
         Agent->>HE: verify_task() 完整验证
