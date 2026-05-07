@@ -268,68 +268,7 @@ todos:
 - [ ] ...
 ```
 
-**session.md 模板：**
-
-```markdown
-# Session: {task_id}
-
-## Turn 1.1
-date: YYYY-MM-DD
-code_progress: "..."
-data_plane: {}
-todos: [{text:"...", done:false}]
-status: CREATED
-
-## Turn 1.2
-date: YYYY-MM-DD
-code_progress: "..."
-data_plane:
-  frontend-repo: abc123
-  backend-repo: def456
-todos: [{text:"...", done:true}, ...]
-status: IN_PROGRESS
-```
-
-每个 Turn 的 Session 快照中包含当时的数据平面快照（commit ID 映射），用于追踪多仓库开发环境的状态演进。
-
-**Gotcha 模板 (gotchas/{timestamp}.md)：**
-
-Gotcha 是带外偏差记录，记录检验中发现的偏离与经验，不参与主流程，不影响任务状态，不阻断 Agent 继续执行。
-
-```markdown
-# Gotcha: {task_id}
-
-## 偏离描述
-{具体偏离了什么（Picture / Requirements / Constraints）}
-
-## 原因分析
-{为什么偏离}
-
-## 经验总结
-{下次如何避免}
-
-## 关联检验
-- 任务: {task_id}
-- 时间: {timestamp}
-- 检验 Tier: {Tier 1/2/3}
-```
-
-**Data Plane 模板 (data-plane/refs.md)：**
-
-```markdown
-# Data Plane: {task_id}
-
-## Repositories
-
-| Repository | Commit ID | Description |
-|------------|-----------|-------------|
-| frontend-repo | abc123 | 登录页面实现 |
-| backend-repo | def456 | Auth API 完成 |
-
-## 最新引用
-
-- frontend-repo: abc123
-- backend-repo: def456
+> **模板参考：** Session 模板、Gotcha 模板、Data Plane 模板见附录 B。
 ```
 
 ## 6. 逻辑与流程设计 (Logic & Workflow Design)
@@ -435,7 +374,7 @@ mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
 每轮次结束时，系统自动触发 Session 快照，记录本轮状态变化，供后续追溯使用。
 
-### 7.4 决策执行：Agent 是所有决策的起点与终点
+### 6.4 决策执行：Agent 是所有决策的起点与终点
 
 mem0ress 中，人和 Agent 不存在分工——本质上都以 Agent 形态存在。决策权统一归属 Agent，Agent 按权限设定和危险性判断，自主行使或主动让度给人。
 
@@ -461,7 +400,7 @@ Agent 按危险性阈值和权限设定，判断是否需要让人介入。危�
 
 Agent 通过 spawn 人机协作任务实现让度——在任务 TODO 中标记"待人确认"，人在确认后 Agent 继续执行。让度是 Agent 的主动行为，不是系统强制中断。
 
-### 7.5 权限与让度配置
+### 6.5 权限与让度配置
 
 通过权限分级控制让度边界。典型配置：
 
@@ -474,7 +413,7 @@ Agent 通过 spawn 人机协作任务实现让度——在任务 TODO 中标记"
 
 权限等级在任务创建时由 Agent 判定，或由人工在任务 Manifest 中预设。
 
-### 7.6 动作、状态与节点表
+## 附录 A: 动作、状态与节点表
 
 #### 动作表 (Action Table)
 
@@ -489,7 +428,7 @@ Agent 通过 spawn 人机协作任务实现让度——在任务 TODO 中标记"
 | `update_todo` | 执行步骤 | 更新步骤状态 |
 | `remove_todo` | 执行步骤 | 删除步骤 |
 | `add_gotcha` | 偏差记录 | 记录偏差 |
-| `snapshot_session` | 轮次 | 记录当前轮次快照 |
+| `snapshot_session` | 轮次 | （系统自动触发，每轮次结束时记录，无需 Agent 调用） |
 | `get_status_plane` | 轮次 | 获取状态平面 |
 | `get_session` | 轮次 | 获取会话历史 |
 | `verify_task` | 验证 | 触发 Harness 三层验证 |
@@ -527,7 +466,75 @@ Turn N 的典型流程：
    └── verify_task(...)     # 验证
 
 3. 结束轮次
-   └── snapshot_session() → 记录这轮的状态变化
+   └── （系统自动）Session 快照 → 无需 Agent 调用
+```
+
+## 附录 B: 模板参考
+
+### B.1 Session 模板 (session.md)
+
+```markdown
+# Session: {task_id}
+
+## Turn 1.1
+date: YYYY-MM-DD
+code_progress: "..."
+data_plane: {}
+todos: [{text:"...", done:false}]
+status: CREATED
+
+## Turn 1.2
+date: YYYY-MM-DD
+code_progress: "..."
+data_plane:
+  frontend-repo: abc123
+  backend-repo: def456
+todos: [{text:"...", done:true}, ...]
+status: IN_PROGRESS
+```
+
+每个 Turn 的 Session 快照中包含当时的数据平面快照（commit ID 映射），用于追踪多仓库开发环境的状态演进。
+
+**触发规则：** 每交互轮次结束时，系统自动触发 Session 快照，自动填写时间戳和当前状态。Agent 无需显式调用 `snapshot_session()`。
+
+### B.2 Gotcha 模板 (gotchas/{timestamp}.md)
+
+Gotcha 是带外偏差记录，记录检验中发现的偏离与经验，不参与主流程，不影响任务状态，不阻断 Agent 继续执行。
+
+```markdown
+# Gotcha: {task_id}
+
+## 偏离描述
+{具体偏离了什么（Picture / Requirements / Constraints）}
+
+## 原因分析
+{为什么偏离}
+
+## 经验总结
+{下次如何避免}
+
+## 关联检验
+- 任务: {task_id}
+- 时间: {timestamp}
+- 检验 Tier: {Tier 1/2/3}
+```
+
+### B.3 Data Plane 模板 (data-plane/refs.md)
+
+```markdown
+# Data Plane: {task_id}
+
+## Repositories
+
+| Repository | Commit ID | Description |
+|------------|-----------|-------------|
+| frontend-repo | abc123 | 登录页面实现 |
+| backend-repo | def456 | Auth API 完成 |
+
+## 最新引用
+
+- frontend-repo: abc123
+- backend-repo: def456
 ```
 
 ## 8. FAQ
