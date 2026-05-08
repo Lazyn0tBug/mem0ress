@@ -78,7 +78,7 @@ graph TB
 
 ### 2.4 Harness Engine（约束检验引擎）
 
-**职责：** 封装 Tier 0 的约束越界检查。Tier 0 在每轮次结束后由系统自动触发。若约束违反且无法修复，Agent 发起让度请求并暂停执行；收到宿主响应后继续或终止。让度响应的路由和处理由宿主系统负责，mem0ress 仅持有让度请求的发起点和恢复点。
+**职责：** 封装 Tier 0 的约束越界检查。Tier 0 在每轮次结束后由系统自动触发。若约束违反且无法修复，mem0ress 持有让度请求的发起点并等待恢复信号。
 
 ### 2.5 任务完成度检查（Tier 1/2/3）
 
@@ -191,7 +191,7 @@ sequenceDiagram
 | `verify_task()` | Harness Engine + 任务完成度检查 | Tier 0 自动触发，Tier 1/2/3 按需调用 |
 | Tier 0 自动检查 | Harness Engine | after-turn 系统自动触发 |
 | Tier 1/2/3 检查 | 任务完成度检查组件 | Agent 按需调用 |
-| `snapshot_session` | System | after-turn 系统自动触发 |
+| `snapshot_session` | — | 外部调用触发，mem0ress 内部自动追加 |
 
 ---
 
@@ -226,7 +226,7 @@ mem0ress 使用文件树表达认知的从属关系与上下文边界，对应 s
 
 ### 6.2 Session 快照
 
-**触发链路：** 宿主系统在每轮次结束时自动调用 mem0ress 的 Session 快照接口，追加记录到 session.md。写入内容由 spec.md B.1 Session 模板定义。
+**触发链路：** mem0ress 在每轮次结束时暴露 Session 快照接口，被调用时自动追加记录到 session.md。写入内容由 spec.md B.1 Session 模板定义。
 
 ### 6.3 Gotcha 偏差记录
 
