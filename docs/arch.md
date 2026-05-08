@@ -111,7 +111,7 @@ flowchart TB
 
 | 接口 | 说明 |
 |------|------|
-| `verify()` | 执行 Tier 0 → 1 → 2 → 3 完整链路检验，停在断点处 |
+| `verify()` | 执行 Tier 0 → 1 → 2 → 3 完整检验链路，写入 `report.md` |
 | 返回 | 写入 `report.md`，通过 hook 返回值通知主 Agent |
 
 **状态变化**：

@@ -139,18 +139,18 @@ Task 创建 → spawn Judge Agent (id: {task_id}-judge)
 
 ### 3.3 任务检验逻辑 (Judge Agent)
 
-Judge Agent 执行 Tier 0/1/2/3 检验，按断点依次执行，尽可能跑完整条链路。检验结束时一次性生成报告，写入 `report.md`，通过 hook 返回值通知主 Agent。
+Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告写入 `report.md`。
 
-**Tier 执行顺序：**
+**各层触发时机：**
 
-- **Tier 0：** 每轮次结束后由系统自动触发，只读 Constraints 和当前代码状态，检测违反事实
-- **Tier 1：** Tier 0 通过后执行，检查所有 Todo 步是否已完成、所有直接子任务是否已关闭
-- **Tier 2：** Tier 1 通过后执行，验证每个 Requirement 是否达标
-- **Tier 3：** Tier 2 通过后按需触发（Picture 涉及主观判断 / 宿主判定高危 / Agent 显式请求），Judge Agent 准备判断所需信息，实际判断由主 Agent 执行
+- **Tier 0：** 每轮次结束后由系统自动触发。只读 Constraints 和当前代码状态，检测违反事实并写入报告。
+- **Tier 1：** 由主 Agent 按需调用。检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。
+- **Tier 2：** 由主 Agent 按需调用。验证每个 Requirement 是否达标。
+- **Tier 3：** 由 Agent 按需触发（Picture 涉及主观判断 / 宿主判定高危 / Agent 显式请求）。Judge Agent 准备判断所需信息，实际判断由主 Agent 执行。
 
 **报告生成规则：**
-- 本轮次检验结束时生成，无论停在哪一层
-- 每轮覆写 `report.md`，不追加
+- 检验结束时一次性生成，写入 `report.md`
+- 每轮覆写，不追加
 - 主 Agent 通过 hook 返回值感知报告已生成，唤醒时读取
 
 **Judge Agent 交互接口：**
@@ -173,7 +173,7 @@ Judge Agent 执行 Tier 0/1/2/3 检验，按断点依次执行，尽可能跑完
 mem0ress 的核心业务闭环由 Agent 的三个主动决策构成：
 
 1. **认知构建：** Agent 调用 `get_status_plane()`，获取状态平面快照（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 Manifest 按需读取，不在状态平面中展开。
-2. **任务检验：** Agent 调用 `verify(tiers=[...])`，驱动 Judge Agent 执行 Tier 0~3 检验。Tier 0 在每轮次结束后由系统自动触发。
+2. **任务检验：** Agent 调用 `verify()`，驱动 Judge Agent 执行 Tier 0~3 检验。Tier 0 在每轮次结束后由系统自动触发。
 3. **状态更新：** Agent 根据检验结果调用 Tool Interface 写操作（`complete_task`、`abandon_task`、`update_todo` 等）。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
 **系统自动机制（不属于业务流）：**

@@ -552,34 +552,14 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 
 ### 7.2 任务检验
 
-任务检验采用四层关卡模型。
+任务检验通过 Judge Agent 执行，外部调用接口为 `verify()`，调用后生成一次性报告写入 `report.md`。
 
 **四层关卡（Tiers）：**
 
-* **Tier 0: Constraints 约束检查：** Tier 0 在每轮次结束后由系统自动触发。若有违反，检测并报告违反事实，由主 Agent 决定是否修复及如何修复；若主 Agent 无法修复，发起让度请求并同步等待外部响应。
-* **Tier 1: Todo 完成检查 + 直接子任务完成检查：** 检查两个前置条件——(1) 所有 Todo 步是否已完成；(2) 所有直接子任务是否已关闭。若存在未完成项，直接阻断，不进入 Tier 2。
-* **Tier 2: Requirements 满足检查 (Requirements Check)：** 验证每个 Requirement 是否达标。若存在未满足项，直接阻断，不进入 Tier 3。
-* **Tier 3: 语义对齐检查 (Semantic Alignment Check)：** 读取任务的 Picture 与实际产出，执行语义对齐判断。触发条件见 7.2。
-
-```mermaid
-%% label：四层检验递进关系
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#fce4ec', 'primaryTextColor': '#880e4f', 'primaryBorderColor': '#c62828', 'lineColor': '#616161', 'noteBkgColor': '#fce4ec', 'noteTextColor': '#880e4f' } } }%%
-flowchart TB
-    T0["Tier 0\nConstraints 检查"] --> T1["Tier 1\nTodo 完成检查\n+ 子任务完成检查"]
-    T1 --> T2["Tier 2\nRequirements 满足检查"]
-    T2 --> T3["Tier 3\n语义对齐检查\n（按需触发）"]
-    T3 --> DONE["本轮次检验结束\n生成报告"]
-    T0 -.->|T0 未完成| DONE
-    T1 -.->|T1 未完成| DONE
-    T2 -.->|T2 未完成| DONE
-    style T0 fill:#fff9c4,stroke:#f9a825
-    style T1 fill:#fff3e0,stroke:#ff6f00
-    style T2 fill:#e3f2fd,stroke:#1565c0
-    style T3 fill:#f3e5f5,stroke:#6a1b9a
-    style DONE fill:#c8e6c9,stroke:#2e7d32
-```
-
-**检验执行规则：** Tier 0 → 1 → 2 → 3 按断点依次执行，尽可能跑完整条链路。本轮次检验结束时（无论停在哪一层），一次性生成报告并写入 `report.md`，由主 Agent 在唤醒时读取。
+* **Tier 0: Constraints 约束检查：** 每轮次结束后由系统自动触发。检查 Constraints 是否被违反，若有违反报告违反事实，由主 Agent 决定是否修复及如何修复。
+* **Tier 1: Todo 完成检查：** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。
+* **Tier 2: Requirements 满足检查：** 验证每个 Requirement 是否达标。
+* **Tier 3: 语义对齐检查：** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 由 Agent 按需触发，不每次自动进入。
 
 **Tier 3 的触发条件：**
 
@@ -592,11 +572,10 @@ Tier 3 不是每次检验都自动进入的常规关卡。它由 Agent 根据任
 
 **决策执行规则：**
 
-检验结果（aligned / deviation）由 Agent 接收。任务完成后是否标记完成，由 Agent 基于危险性判断自主决定，或按权限设定让度给人。ABANDONED 由 Agent 主动标记，与检验结果无关。
+检验结果由 Agent 从 `report.md` 读取。任务完成后是否标记完成，由 Agent 基于危险性判断自主决定，或按权限设定让度给人。ABANDONED 由 Agent 主动标记，与检验结果无关。
 
 **任务状态与检验的关系：**
 
-- Tier 0 → 1 → 2 → 3 按断点依次检验，无论停在哪层均生成一次性报告，写入 `report.md`
 - 检验通过 → Agent 可标记任务完成
 - 检验未通过 → Agent 决定下一步（修正、重试或废弃）
 
@@ -960,7 +939,7 @@ repositories:
 | Next Action | 主 Agent 的下一步建议，由 Judge Agent 根据检验结果给出 |
 
 **写入约定：**
-- 本轮次检验结束时生成，无论停在哪一层
+- 检验结束时一次性生成，写入 `report.md`
 - 每轮覆写，不追加
 - 主 Agent 通过 hook 返回值感知报告已生成，唤醒时读取
 
