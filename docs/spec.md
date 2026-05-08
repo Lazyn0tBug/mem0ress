@@ -241,9 +241,9 @@ mem0ress 的认知数据来自会话本身，而非外部知识库。系统从�
 * **状态平面：** 从会话中提取任务执行状态（Todo 进度、代码产出、文档进度、组件状态），聚合成某一时刻的执行快照。Agent 唤醒时强制挂载（因为它回答的是"我在哪"）。
 * **数据平面：** 从会话中提取相关数据的 commit ID 快照，记录代码和文档在某一时刻的版本。Agent 需要操作具体数据时才按需挂载。
 
-两个平面都来源于会话，按需挂载。Agent 获取平面后，在其 LLM 的认知工作区中完成目标推理与决策。
+两个平面都来源于会话，按需挂载。Agent 获取平面后，在其**认知工作区**中完成目标推理与决策。
 
-> **注：** 状态平面和数据平面都是时间切片，不是组件。图中的状态平面 / 数据平面指的是"某一时刻的快照"，而非独立的进程或服务。mem0ress 的认知工作区与 Agent 的 LLM 处于同一层，两者共享会话上下文。
+> **注：** 状态平面和数据平面都是时间切片，不是组件。图中的状态平面 / 数据平面指的是"某一时刻的快照"，而非独立的进程或服务。认知工作区是 Agent 的内部工作空间，两者是一体的。
 
 ```mermaid
 %% label：认知平面的数据流
@@ -253,25 +253,23 @@ graph TB
         CF["Agent 执行动作<br>中间产物产出"]
     end
 
-    subgraph 认知层["mem0ress 认知工作区 (与 LLM 同层)"]
+    subgraph 认知层["mem0ress 认知工作区"]
         SP["状态平面"]
         DP["数据平面"]
     end
 
-    subgraph LLM层["LLM 认知工作区"]
-        LLM[("LLM")]
-    end
+    CF["Agent 执行动作<br>中间产物产出"]
+    Agent["(Agent)"]
 
     CF -->|hook 出认知数据| 认知层
-    认知层 -->|挂载平面| LLM层
-    LLM -->|决策与执行| CF
+    认知层 -->|挂载平面| Agent
 
     classDef conv fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
     classDef cog fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
-    classDef llm fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef agent fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
     class CF conv;
     class SP,DP cog;
-    class LLM llm;
+    class Agent agent;
 ```
 
 以上四大理念，共同构成了 mem0ress 的设计哲学。以下工程准则，是将上述理念落实为具体约束的实践规范——违反这些准则，即等同于违反第二章（核心洞察）的设计初衷。
@@ -322,7 +320,7 @@ graph TB
 
 ### 4.1 单一事实来源与绝对覆写 (SSOT & Absolute Overwrite)
 
-拒绝模糊的认知合并。**运行时工作区**（LLM 的认知空间）内产生新认知时，直接覆写旧认知——这是避免认知歧义的核心机制。系统在覆写前提供严格的冲突检查机制，确保认知的确定性。覆写发生在运行时，持久化仍遵循「不要存储要按需发现」原则。
+拒绝模糊的认知合并。**运行时工作区**（Agent 的认知空间）内产生新认知时，直接覆写旧认知——这是避免认知歧义的核心机制。系统在覆写前提供严格的冲突检查机制，确保认知的确定性。覆写发生在运行时，持久化仍遵循「不要存储要按需发现」原则。
 
 ### 4.2 系统级卸责 (System-Level Offloading)
 
@@ -594,7 +592,7 @@ Tier 3 不是每次 `verify_task()` 都自动进入的常规关卡。它由 Agen
 
 **决策执行规则：**
 
-检验结果（aligned / deviation）由 Agent 接收。任务完成后是否调用 `complete_task()`，由 Agent 基于危险性判断自主决定，或按权限设定让度给人。ABANDONED 由 Agent 主动触发，与检验结果无关。
+检验结果（aligned / deviation）由 Agent 接收。任务完成后是否调用 `complete_task()`，由 Agent 基于危险性判断自主决定，或按权限设定让度给人。ABANDONED 由 Agent 主动调用 `abandon_task()` 标记，与检验结果无关。
 
 **任务状态与检验的关系：**
 
@@ -671,7 +669,7 @@ stateDiagram-v2
 - 任务创建时三要素的定义与完善
 - 是否触发 Tier 1/2 检验，以及按需触发 Tier 3（Tier 0 为自动前置处理，不在决策范围内）
 - 检验通过后是否调用 `complete_task()`
-- 是否标记任务为 ABANDONED
+- 是否调用 `abandon_task()` 标记废弃
 - 下一步行动（修正、重试、或推进其他任务）
 
 **决策让度的触发条件：**
@@ -746,8 +744,8 @@ mem0ress 是认知对齐平面, 并非独立运行的任务引擎，而是以 **
 
 * **非编排原则：** mem0ress 不决定 Agent 下一步该调用哪个 API，也不负责复杂的 ReAct 推理逻辑。
 * **生命周期挂钩 (Lifecycle Hook)：** mem0ress 必须参与 Event Loop 的关键节点。通过“拦截”每轮会话的输入与输出，实现自动化的：
-    1. **投射 (Before Turn)：** 在 LLM 思考前，将最新的状态平面注入上下文。
-    2. **快照 (After Turn)：** 在 LLM 响应后，自动对比数据平面变化并记录 Session 序列。
+1. **投射 (Before Turn)：** 在 Agent 思考前，将最新的状态平面注入上下文。
+2. **快照 (After Turn)：** 在 Agent 响应后，自动对比数据平面变化并记录 Session 序列。
     
 ### 8.1 系统架构设计
 
@@ -758,10 +756,7 @@ mem0ress 是认知对齐平面, 并非独立运行的任务引擎，而是以 **
 职责是**实时编译**当前任务的状态平面。每次 Agent 调用 `get_status_plane()` 时，Plane Assembler 直接扫描文件系统，聚合所有 Task 节点的 Manifest 和 Session，写入状态平面输出。设计上它是纯展示层——不缓存、不诊断、不决策，只做文件系统扫描和文本聚合。
 
 **Tool Interface（工具接口）：认知操作的写入入口。**
-mem0ress 暴露给 Agent 的不是一套通用编程接口，而是一组有限的任务操作工具（`create_task`、`update_todo`、`complete_task` 等）。Tool Interface **只管理认知状态的写入**，不执行业务逻辑。
-**操作前校验：**
-- **乐观锁比对（文件哈希）：** 执行写操作时比对文件快照哈希。若遭外部修改，抛出 ConflictError，强制 Agent 重新获取状态平面后再决策。
-- **状态转换合法性：** 校验状态转换是否符合规范（如 IN_PROGRESS → CREATED 非法）。
+mem0ress 暴露给 Agent 的不是一套通用编程接口，而是一组有限的任务操作工具（`create_task`、`complete_task`、`abandon_task`、`update_todo` 等）。Tool Interface **只管理认知状态的写入**，不执行业务逻辑。
 
 **Harness Engine（约束检验引擎）：仅封装 Tier 0 的约束越界检查。**
 
@@ -806,10 +801,9 @@ graph TB
 
 ### 8.2 核心机制设计
 
-  * 引用展开机制: 解析清单时，ref: 指针不默认加载。LLM 需主动调用工具将其展开并挂载到 Data Plane 中。
-  * 乐观锁冲突感知 (Optimistic Locking): 执行写操作时比对文件哈希。若遭外部修改，抛出 409 Conflict，强制 LLM 重新进行认知构建后决断。
-  * 原生 Git 数据回溯 (Git-Native Revert): 检验失败且路径报废时，LLM 调用工具回退数据平面，同时在状态平面生成 Gotcha 记录偏差经验，保持时间向前。
-  * 带外约束检验 (Out-of-Band Verification): Tier 3 的语义对齐在独立沙箱中执行，通过 Judge Task 调用 LLM-as-a-Judge，杜绝与执行态 Agent 发生上下文污染。
+* 引用展开机制: 解析清单时，ref: 指针不默认加载。Agent 需主动调用工具将其展开并挂载到 Data Plane 中。
+* 原生 Git 数据回溯 (Git-Native Revert): 检验失败且路径报废时，Agent 调用工具回退数据平面，同时在状态平面生成 Gotcha 记录偏差经验，保持时间向前。
+  * 带外约束检验 (Out-of-Band Verification): Tier 3 的语义对齐在独立沙箱中执行，通过 Judge Agent 调用 LLM-as-a-Judge，杜绝与执行态 Agent 发生上下文污染。
 
 ### 8.3 技术流程：Agent 驱动的业务闭环
 
@@ -817,7 +811,7 @@ mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
   1. 认知构建: Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 Manifest 按需读取，不在状态平面中展开。
   2. 任务检验: Agent 调用 `verify_task()`，驱动 Harness 约束越界检查（Tier 0）+ 任务完成度检查（Tier 1/2/3）
-  3. 状态更新: Agent 根据检验结果决策后续行动——更新 Todo、调用 `complete_task()`、标记 ABANDONED、或继续执行。状态更新通过 Tool Interface 执行写操作，支持 `update_todo`、`complete_task`、`abandon_task` 等。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
+  3. 状态更新: Agent 根据检验结果决策后续行动——更新 Todo、调用 `complete_task()` 标记完成、`abandon_task()` 标记废弃、或继续执行。状态更新通过 Tool Interface 执行写操作，支持 `complete_task`、`abandon_task`、`update_todo` 等。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
 **系统自动机制（不属于业务流）：**
 
@@ -868,7 +862,7 @@ sequenceDiagram
             VC-->>Agent: Tier 3 语义对齐结果
         end
 
-        Agent->>TI: complete_task() / update_todo() / abandon_task()
+        Agent->>TI: complete_task() / abandon_task() / update_todo()
         TI-->>Agent: 状态更新确认
     end
 
@@ -889,11 +883,12 @@ sequenceDiagram
 
 | Action | 模块 | 说明 |
 |--------|------|------|
-| `create_task` | gateway/actions.py | 创建新任务。定义三要素（Picture/Requirements/Constraints）、Todo 步、权限等级。Tier 0 在**每轮次结束后**由系统自动触发，不在此处检查 Constraints 冲突 |
+| `create_task` | gateway/actions.py | 创建新任务。定义三要素（Picture/Requirements/Constraints）、Todo 步、权限等级。Constraints 检查在**每轮次结束后**由 Tier 0 自动触发，create_task 本身不执行约束检查 |
 | `get_task` | gateway/actions.py | 读取任务详情，返回 Manifest 中的完整三要素、执行进度和当前状态 |
-| `update_task` | gateway/actions.py | 更新任务属性（三要素、Todo、权限等级等）。执行写操作前比对文件哈希（乐观锁），若遭外部修改抛出 409 Conflict，**强制 Agent 重新 get_status_plane 后再决策** |
-| `complete_task` | gateway/actions.py | 标记任务完成。调用权归属决策权，Agent 可自主行使或按权限让度给人 |
-| `abandon_task` | gateway/actions.py | 标记任务废弃，由 Agent 主动触发（与检验结果无关） |
+| `update_task` | gateway/actions.py | 更新任务属性（三要素、Todo、权限等级等）。**Upsert 语义**：任务不存在时自动创建 |
+| `complete_task` | gateway/actions.py | 标记任务完成。底层调用 `mark_task(task_id, COMPLETED)`。无前置条件校验——Agent 应在确认 Tier 3 通过后再调用。若 Tier 3 未通过而调用，则直接忽略（no-op）。调用权归属决策权，Agent 可自主行使或按权限让度给人 |
+| `abandon_task` | gateway/actions.py | 标记任务废弃。底层调用 `mark_task(task_id, ABANDONED)`。无前置条件校验。由 Agent 主动触发（与检验结果无关） |
+| `mark_task` | gateway/actions.py | 底层状态标记原语。`mark_task(task_id, status)` 直接修改任务状态，不做任何前置校验。`complete_task` / `abandon_task` / `pause_task` 均基于此封装 |
 
 ##### 二、Todo 操作（Todo Operations）
 
@@ -915,7 +910,7 @@ sequenceDiagram
 |--------|------|------|
 | `verify_task(tier1_only=true)` | harness/runner.py | **Tier 1**：Todo 完成检查 + 直接子任务完成检查。两个前置条件须同时满足——(1) 所有 Todo 步 done=true；(2) 所有直接子任务状态=COMPLETED。若存在未完成项，直接阻断 |
 | `verify_task(tier2_only=true)` | harness/runner.py | **Tier 2**：Requirements 满足检查。在沙箱中执行脚本或测试，验证每个 Requirement 是否达标。若存在未满足项，直接阻断，不进入 Tier 3 |
-| `verify_task(tier3=true)` | harness/judge.py | **Tier 3**：语义对齐检查。通过独立 Judge LLM 执行，读取 Picture 与实际产出做语义判断。与执行态 Agent 上下文隔离。**按需触发**，触发条件见下方"Tier 3 触发条件" |
+| `verify_task(tier3=true)` | harness/judge.py | **Tier 3**：语义对齐检查。通过独立 Judge Agent 执行，读取 Picture 与实际产出做语义判断。与执行态 Agent 上下文隔离。**按需触发**，触发条件见下方"Tier 3 触发条件" |
 | `verify_task()` | harness/ | 触发 Harness 约束越界检查（Tier 0）+ 任务完成度检查（Tier 1 → Tier 2 → Tier 3）。Tier 0 由系统自动触发，Tier 1/2/3 由 Agent 按需调用 |
 
 > **Tier 0 Guard（after-turn 自动触发）：**
@@ -977,7 +972,7 @@ Turn N 的典型流程：
    ├── create_task(...)       # 新任务（含三要素定义）
    │                          # 自动触发 Tier 0 前置 Guard（Constraints 检查）
    ├── get_task(...)         # 读取任务详情
-   ├── update_task(...)       # 更新任务属性（含乐观锁校验）
+   ├── update_task(...)       # 更新任务属性（含 Upsert 语义）
    ├── add_todo(...)         # 添加步骤
    ├── update_todo(...)      # 更新步骤状态
    ├── remove_todo(...)      # 删除步骤
@@ -985,8 +980,8 @@ Turn N 的典型流程：
    ├── verify_task(...)      # 触发 Harness 验证流程
    │                          # Tier 0 由 create/update_task 自动触发
    │                          # Tier 1/2/3 由 Agent 按需调用
-   ├── complete_task(...)    # 标记完成（决策权）
-   ├── abandon_task(...)      # 标记废弃（Agent 主动）
+   ├── complete_task(...)    # 标记完成（底层 mark_task(task_id, COMPLETED)）
+   ├── abandon_task(...)    # 标记废弃（底层 mark_task(task_id, ABANDONED)）
    ├── get_session(...)      # 按需获取 Session 历史
    └── link_data_plane(...)  # 关联数据平面 commit ID
 
@@ -1127,7 +1122,7 @@ A: 任务模型（Task Model）是认知对齐平面的基本单元。将一切�
 - **无冲突设计**：父任务完成以其所有子任务完成为绝对前提，避免并发冲突
 
 ### Q: 为什么任务没有冲突协调机制？
-A: mem0ress 的设计遵循**冲突只能避免，无法解决**的哲学原则（来自 MetaDev 规范的哲学四）。协调机制（锁、乐观锁、悲观锁、消息队列、共识协议）是试图在冲突发生后解决它，但更好的做法是通过设计使冲突根本不发生。
+A: mem0ress 的设计遵循**冲突只能避免，无法解决**的哲学原则（来自 MetaDev 规范的哲学四）。协调机制是试图在冲突发生后解决它，但更好的做法是通过设计使冲突根本不发生。
 
 mem0ress 通过以下设计消除冲突：
 - **物理隔离**：不同任务处于不同目录，父任务目录下嵌套子任务目录，通过目录深度表达依赖关系
