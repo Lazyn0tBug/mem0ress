@@ -139,40 +139,30 @@ Task 创建 → spawn Judge Agent (id: {task_id}-judge)
 
 ### 3.3 任务检验逻辑 (Judge Agent)
 
-Judge Agent 执行 Tier 0/1/2/3 检验。Tier 0 和 Tier 1/2/3 职责不同：
+Judge Agent 执行 Tier 0/1/2/3 检验，按断点依次执行，尽可能跑完整条链路。检验结束时一次性生成报告，写入 `report.md`，通过 hook 返回值通知主 Agent。
 
-**Tier 0 — Constraints 约束检查：**
-每轮次结束后由系统自动触发。若有违反：
-1. 检测并报告违反事实
-2. 主 Agent 根据报告决定是否修复及如何修复
-3. 若主 Agent 无法修复，发起让度请求并等待外部响应，同时记录 Gotcha
-4. Judge Agent 只读不写，不参与任何数据修复
+**Tier 执行顺序：**
 
-**Tier 1 — Todo 完成度 + 子任务关闭检查：**
-- 所有 Todo 步是否已完成
-- 所有直接子任务是否已关闭（COMPLETED 或 ABANDONED）
-- 任一未完成则直接阻断，不进入 Tier 2
+- **Tier 0：** 每轮次结束后由系统自动触发，只读 Constraints 和当前代码状态，检测违反事实
+- **Tier 1：** Tier 0 通过后执行，检查所有 Todo 步是否已完成、所有直接子任务是否已关闭
+- **Tier 2：** Tier 1 通过后执行，验证每个 Requirement 是否达标
+- **Tier 3：** Tier 2 通过后按需触发（Picture 涉及主观判断 / 宿主判定高危 / Agent 显式请求），Judge Agent 准备判断所需信息，实际判断由主 Agent 执行
 
-**Tier 2 — Requirements 满足检查：**
-- 验证每个 Requirement 是否达标
-- 未满足则直接阻断，不进入 Tier 3
-
-**Tier 3 — 语义对齐检查：**
-- Judge Agent 读取 Picture 与实际产出，准备语义对齐上下文
-- **由 Agent 自主判断是否触发**（spec.md 7.2），不自动执行
-- Judge Agent 只准备判断所需信息（Picture、Constraints、产出摘要），**实际判断由 Agent 执行**
-- 触发条件：Picture 涉及主观判断 / Constraints 与 Picture 存在语义歧义 / 宿主判定高危 / Agent 显式请求
+**报告生成规则：**
+- 本轮次检验结束时生成，无论停在哪一层
+- 每轮覆写 `report.md`，不追加
+- 主 Agent 通过 hook 返回值感知报告已生成，唤醒时读取
 
 **Judge Agent 交互接口：**
 
 | 接口 | 说明 |
 |------|------|
-| `verify(tiers: ["tier0", "tier1", "tier2", "tier3"])` | 执行指定 Tier 检验 |
-| 返回 `{verdict, tier_results}` | 对齐结果 + 每层详细报告 |
+| `verify()` | 执行 Tier 0 → 1 → 2 → 3 完整链路检验，写入 `report.md` |
+| 返回 | 通过 hook 返回值通知主 Agent，主 Agent 唤醒时读取 `report.md` |
 
 **Judge Agent 与主 Agent 的交互原则：**
 - Judge Agent 读取 Task 文件系统，不读取主 Agent 的执行上下文（带外）
-- 验证结果返回给主 Agent，由主 Agent 决策下一步
+- 检验结果写入 `report.md`，不直接返回给主 Agent
 
 ### 3.4 乐观锁机制 (Optimistic Locking)
 

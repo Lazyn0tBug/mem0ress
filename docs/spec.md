@@ -565,28 +565,21 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 %% label：四层检验递进关系
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#fce4ec', 'primaryTextColor': '#880e4f', 'primaryBorderColor': '#c62828', 'lineColor': '#616161', 'noteBkgColor': '#fce4ec', 'noteTextColor': '#880e4f' } } }%%
 flowchart TB
-    T0["Tier 0\nConstraints 检查\n（报告 → 主 Agent 处理 | 无法处理 → 让度）"] --> T1["Tier 1\nTodo 完成检查\n+ 子任务完成检查"]
-    T1 -->|阻断：不通过| BLOCK1["阻断 → 记录 Gotcha"]
-    T1 -->|通过| T2["Tier 2\nRequirements 满足检查"]
-    T2 -->|阻断：不满足| BLOCK2["阻断 → 记录 Gotcha"]
-    T2 -->|通过| T3["Tier 3\n语义对齐检查\n（宿主判定高危：强制触发 | 其他：按需触发）"]
-    T3 -->|通过| PASS["检验通过\nAgent 决策下一步"]
-    T3 -->|不通过| BLOCK3["记录 Gotcha\nAgent 决策下一步"]
-    T3 -.->|不触发时| SKIP["Tier 3 跳过"]
-    SKIP -.-> PASS
+    T0["Tier 0\nConstraints 检查"] --> T1["Tier 1\nTodo 完成检查\n+ 子任务完成检查"]
+    T1 --> T2["Tier 2\nRequirements 满足检查"]
+    T2 --> T3["Tier 3\n语义对齐检查\n（按需触发）"]
+    T3 --> DONE["本轮次检验结束\n生成报告"]
+    T0 -.->|T0 未完成| DONE
+    T1 -.->|T1 未完成| DONE
+    T2 -.->|T2 未完成| DONE
     style T0 fill:#fff9c4,stroke:#f9a825
     style T1 fill:#fff3e0,stroke:#ff6f00
     style T2 fill:#e3f2fd,stroke:#1565c0
     style T3 fill:#f3e5f5,stroke:#6a1b9a
-    style BLOCK1 fill:#ffcdd2,stroke:#c62828
-    style BLOCK2 fill:#ffcdd2,stroke:#c62828
-    style BLOCK3 fill:#ffcdd2,stroke:#c62828
-    style PASS fill:#c8e6c9,stroke:#2e7d32
+    style DONE fill:#c8e6c9,stroke:#2e7d32
 ```
 
-**关卡通过关系：** Tier 1 失败直接阻断，不进入 Tier 2；但 Tier 2 失败阻断 Tier 3。Tier 3 是最后一关，Tier 1 + Tier 2 全部通过才进入。
-
-**Tier 0 与 Tier 1/2/3 的区别在于触发方式：Tier 0 每轮次结束后由系统自动触发，是强制前置检查；Tier 1/2/3 由主 Agent 按需调用。四者均为检验——只读数据，报告结果。**
+**检验执行规则：** Tier 0 → 1 → 2 → 3 按断点依次执行，尽可能跑完整条链路。本轮次检验结束时（无论停在哪一层），一次性生成报告并写入 `report.md`，由主 Agent 在唤醒时读取。
 
 **Tier 3 的触发条件：**
 
@@ -603,9 +596,9 @@ Tier 3 不是每次检验都自动进入的常规关卡。它由 Agent 根据任
 
 **任务状态与检验的关系：**
 
-- Tier 1/2/3 全部通过 → 检验通过，Agent 可标记任务完成
-- Tier 1/2/3 任一未通过或未检验 → 标记完成无效
-- 检验未通过 → 偏差记录写入 gotcha_refs，Agent 决定下一步（修正、重试或废弃）
+- Tier 0 → 1 → 2 → 3 按断点依次检验，无论停在哪层均生成一次性报告，写入 `report.md`
+- 检验通过 → Agent 可标记任务完成
+- 检验未通过 → Agent 决定下一步（修正、重试或废弃）
 
 ### 7.2.1 Judge Agent
 
@@ -661,12 +654,13 @@ verification_history: []
 
 Judge Agent Manifest 存储在 Task 目录下，文件名为 `{task_id}-judge.md`。
 
-```
+```text
 .mem0ress/tasks/{task_id}/
 ├── index.md              # Task Manifest
 ├── session.md            # Task Session
 ├── data-plane/
 ├── gotchas/
+├── report.md             # 本轮次检验报告（每轮覆写）
 └── {task_id}-judge.md   # Judge Agent Manifest（平铺）
 ```
 
@@ -680,7 +674,7 @@ Judge Agent 不创建独立目录，其 Manifest 和 Session（验证历史追�
 
 **Judge Agent 与主 Agent 的交互**：
 
-Judge Agent 读取 Task 文件系统（Manifest、Session、代码/文档），不读取主 Agent 的执行上下文。验证结果返回给主 Agent，由主 Agent 决策下一步。
+Judge Agent 读取 Task 文件系统（Manifest、Session、代码/文档），不读取主 Agent 的执行上下文。检验完成后，结果写入 `report.md` 并通过 hook 返回值通知主 Agent。主 Agent 唤醒时读取该文件，获取本轮次检验结果。
 
 ### 7.3 认知构建
 
@@ -916,6 +910,59 @@ repositories:
 **与 Session 的关系：**
 - 每轮 Session 快照中的 `data_plane` 字段引用当前 `data-plane/refs.md` 中的 commit map
 - 不在 Session 中重复记录完整的 Data Plane 内容，只记录快照指针
+
+---
+
+### B.4 Report 模板 (report.md)
+
+本轮次检验结束时一次性生成，写入 `report.md`，每轮覆写。
+
+**模板格式：**
+
+````markdown
+# Verification Report: {task_id}
+
+## Timestamp
+{YYYY-MM-DDTHH:MM:SS}
+
+## Tier Results
+
+### Tier 0: Constraints
+- **Result:** PASS / FAIL / NOT_RUN
+- **Findings:** {违反事实或通过说明}
+
+### Tier 1: Todo + Subtask Completion
+- **Result:** PASS / FAIL / NOT_RUN
+- **Findings:** {未完成的 Todo 或子任务}
+
+### Tier 2: Requirements
+- **Result:** PASS / FAIL / NOT_RUN
+- **Findings:** {未满足的 Requirements}
+
+### Tier 3: Semantic Alignment
+- **Result:** PASS / FAIL / NOT_TRIGGERED
+- **Findings:** {语义偏差描述}
+
+## Summary
+- **Highest Tier Reached:** Tier {0/1/2/3}
+- **Verdict:** aligned / deviation
+- **Next Action:** {主 Agent 的下一步建议}
+````
+
+**字段说明：**
+
+| 字段 | 说明 |
+|------|------|
+| Timestamp | 报告生成时间 |
+| Tier Results | 每一层的结果（PASS/FAIL/NOT_RUN），以及具体发现 |
+| Highest Tier Reached | 本轮次检验走到的最深层级 |
+| Verdict | aligned（全部通过）/ deviation（存在未通过项） |
+| Next Action | 主 Agent 的下一步建议，由 Judge Agent 根据检验结果给出 |
+
+**写入约定：**
+- 本轮次检验结束时生成，无论停在哪一层
+- 每轮覆写，不追加
+- 主 Agent 通过 hook 返回值感知报告已生成，唤醒时读取
 
 ## 9. FAQ
 

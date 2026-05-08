@@ -74,7 +74,7 @@ graph TB
 
 ### 2.4 Judge Agent（Tier 0/1/2/3 执行器）
 
-**职责**：执行 Tier 0/1/2/3 检验，只读数据，返回检验结果。Judge Agent 不参与任何数据修复。
+**职责**：执行 Tier 0/1/2/3 检验，只读数据。检验完成后，将结果写入 `report.md`，通过 hook 返回值通知主 Agent。
 
 **与 Task 的关系**：
 - 每个 Task 伴生一个 Judge Agent
@@ -83,12 +83,13 @@ graph TB
 
 **文件存储**：
 
-```
+```text
 .mem0ress/tasks/{task_id}/
 ├── index.md                    # Task Manifest
 ├── session.md                  # Task Session
 ├── data-plane/refs.md          # Data Plane
 ├── gotchas/{timestamp}.md      # Gotcha 记录
+├── report.md                   # 本轮次检验报告（每轮覆写）
 └── {task_id}-judge.md         # Judge Agent Manifest（平铺）
 ```
 
@@ -110,8 +111,8 @@ flowchart TB
 
 | 接口 | 说明 |
 |------|------|
-| `verify(tiers: ["tier0", "tier1", "tier2", "tier3"])` | 执行指定 Tier 检验 |
-| 返回 `{verdict, tier_results}` | 对齐结果和详细报告 |
+| `verify()` | 执行 Tier 0 → 1 → 2 → 3 完整链路检验，停在断点处 |
+| 返回 | 写入 `report.md`，通过 hook 返回值通知主 Agent |
 
 **状态变化**：
 
