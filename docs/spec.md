@@ -868,44 +868,72 @@ sequenceDiagram
 
 ## 附录 A: 动作、状态与节点表
 
-> **说明：** 本附录记录所有认知操作动作。其中"**（系统自动）**"标注的动作由系统在生命周期中自动触发，Agent 无需显式调用；其余动作为 Agent 可调用的工具接口。
+> **说明：** 本附录记录所有认知操作动作，按职责分为五类，彼此正交。系统自动机制标注"**（系统自动）**"，Agent 无需显式调用。
 
 #### 动作表 (Action Table)
 
-##### Agent 可调用动作（Tool Interface）
+##### 一、任务操作（Task Operations）
 
 | Action | 模块 | 说明 |
 |--------|------|------|
-| `create_task` | gateway/actions.py | 创建新任务，定义三要素（Picture/Requirements/Constraints）和 Todo 步 |
-| `get_task` | gateway/actions.py | 读取任务详情，返回 Manifest 中的完整三要素和执行状态 |
-| `update_task` | gateway/actions.py | 更新任务属性（三要素、权限等级等），校验状态转换合法性 |
+| `create_task` | gateway/actions.py | 创建新任务。定义三要素（Picture/Requirements/Constraints）、Todo 步、权限等级。**创建时自动触发 Tier 0 检查**（见下方"Tier 0 前置Guard"），Constraints 冲突立即标记「不可行」 |
+| `get_task` | gateway/actions.py | 读取任务详情，返回 Manifest 中的完整三要素、执行进度和当前状态 |
+| `update_task` | gateway/actions.py | 更新任务属性（三要素、Todo、权限等级等）。执行写操作前比对文件哈希（乐观锁），若遭外部修改抛出 409 Conflict，**强制 Agent 重新 get_status_plane 后再决策** |
 | `complete_task` | gateway/actions.py | 标记任务完成。调用权归属决策权，Agent 可自主行使或按权限让度给人 |
 | `abandon_task` | gateway/actions.py | 标记任务废弃，由 Agent 主动触发（与检验结果无关） |
+
+##### 二、Todo 操作（Todo Operations）
+
+| Action | 模块 | 说明 |
+|--------|------|------|
 | `add_todo` | gateway/actions.py | 添加执行步骤到任务清单 |
 | `update_todo` | gateway/actions.py | 更新步骤状态（done: true/false） |
 | `remove_todo` | gateway/actions.py | 删除执行步骤 |
-| `add_gotcha` | gateway/actions.py | 记录检验中发现的偏差，带外写入 gotchas/ 目录，不影响任务状态 |
-| `get_status_plane` | gateway/plane.py | 获取状态平面快照（任务树/TODO 进度/状态/Gotchas/Session 指针）。**纯展示，不做诊断**，不展开 Picture/Requirements/Constraints |
-| `get_session` | gateway/plane.py | 按需获取指定任务的 Session 历史快照序列 |
-| `verify_task` | harness/ | 触发 Harness 验证流程 |
-| `link_data_plane` | substrate/git_ops.py | 关联仓库 commit ID 到数据平面，建立数据版本指针 |
 
-##### Agent 可调用动作（Tiers 验证）
+##### 三、偏差记录（Gotcha Operations）
 
 | Action | 模块 | 说明 |
 |--------|------|------|
-| `verify_task(tier0_only=true)` | harness/runner.py | **Tier 0 前置处理**：Constraints 约束检查。自动触发，不在 Agent 决策范围内。若违反：可修复 → 自动修复后重跑；不可修复 → 按权限让度给人 |
-| `verify_task(tier1_only=true)` | harness/runner.py | **Tier 1**：Todo 完成检查 + 直接子任务完成检查。Agent 按需调用 |
-| `verify_task(tier2_only=true)` | harness/runner.py | **Tier 2**：Requirements 满足检查。在沙箱中执行脚本或测试。Agent 按需调用 |
-| `verify_task(tier3=true)` | harness/judge.py | **Tier 3**：语义对齐检查。通过独立 Judge LLM 执行，与执行态 Agent 上下文隔离。**按需触发**（Picture 涉及主观判断 / Constraints 与 Picture 存在语义歧义 / L1/L2 高危任务 / 显式请求） |
+| `add_gotcha` | gateway/actions.py | 记录检验中发现的偏差。带外写入 gotchas/ 目录，不影响任务状态，不阻断 Agent 执行 |
+
+##### 四、检验操作（Verify Operations）
+
+| Action | 模块 | 说明 |
+|--------|------|------|
+| `verify_task(tier1_only=true)` | harness/runner.py | **Tier 1**：Todo 完成检查 + 直接子任务完成检查。两个前置条件须同时满足——(1) 所有 Todo 步 done=true；(2) 所有直接子任务状态=COMPLETED。若存在未完成项，直接阻断 |
+| `verify_task(tier2_only=true)` | harness/runner.py | **Tier 2**：Requirements 满足检查。在沙箱中执行脚本或测试，验证每个 Requirement 是否达标。若存在未满足项，直接阻断，不进入 Tier 3 |
+| `verify_task(tier3=true)` | harness/judge.py | **Tier 3**：语义对齐检查。通过独立 Judge LLM 执行，读取 Picture 与实际产出做语义判断。与执行态 Agent 上下文隔离。**按需触发**，触发条件见下方"Tier 3 触发条件" |
+| `verify_task()` | harness/ | 触发完整 Harness 验证流程（Tier 1 → Tier 2 → Tier 3）。各层依次递进：Tier 1 阻断 → Tier 2 阻断 → Tier 3 通过/不通过 |
+
+> **Tier 0 前置 Guard（非 verify_task 变体）：**
+>
+> Tier 0 不是 Agent 可调用的 verify_task 变体，而是 `create_task` / `update_task` 调用链上的**自动前置处理器**。它在任务创建或更新时自动触发：
+> - 检查当前 Task 的所有 Constraints 是否满足
+> - 若违反：可修复 → 自动修复后重跑 Tier 0 → 通过后继续；不可修复 → 按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）
+> - Tier 0 可能涉及数据修复（与 Tier 1/2/3 纯检验性质不同）
+>
+> **Tier 1 与 Tier 2 的关系：** 两者独立递进。Tier 1 失败不阻断 Tier 2（Todo 完成与 Requirements 满足可能不同步），但 Tier 2 失败阻断 Tier 3。
+
+> **Tier 3 触发条件（任一满足即触发）：**
+>
+> 1. **Picture 涉及主观判断**：包含"用户感到满意"、"界面美观"等无法自动化验证的指标
+> 2. **Constraints 与 Picture 存在语义歧义**：Tier 1/2 无法判断"是否做了不该做的事"
+> 3. **任务风险等级 L1/L2**：Manifest 中预设 `risk_level: L1` 或 `L2`，强制触发 Tier 3
+> 4. **Agent 或利益相关者显式请求**：Manifest 中预设 `require_tier3_verification: true`，或 Agent 主动调用 `verify_task(tier3=true)`
+
+##### 五、查询操作（Query Operations）
+
+| Action | 模块 | 说明 |
+|--------|------|------|
+| `get_status_plane` | gateway/plane.py | 获取状态平面快照。**纯展示，不做诊断**，只呈现任务树/TODO 进度/状态/Gotchas/Session 指针，**不展开 Picture/Requirements/Constraints** |
+| `get_session` | gateway/plane.py | 按需获取指定任务的 Session 历史快照序列（Turn 列表） |
+| `link_data_plane` | substrate/git_ops.py | 关联仓库 commit ID 到数据平面，建立/更新 data-plane/refs.md 中的 commit 映射 |
 
 ##### 系统自动机制（无需 Agent 调用）
 
 | Action | 触发时机 | 说明 |
 |--------|----------|------|
-| `snapshot_session` | **每轮次结束时自动触发** | 拦截器（gateway/intercept.py）的 `__exit__` 中自动计算 Delta，追加记录到 session.md。记录内容：code_progress/docs_progress/todos/status。**不含 Picture/Requirements/Constraints**（从 Manifest 获取，不重复记录） |
-
-> **注意：** Tier 0 虽由 `harness/runner.py` 承载，但作为独立于 Harness Engine 的前置处理器，其触发逻辑与 Tier 1/2/3 不同。Tier 1/2/3 属纯检验，Tier 0 可能涉及数据修复。详见第 7.2 节"四层关卡"和第 8.1 节"系统架构设计"中 Tier 0 的定位说明。
+| `snapshot_session` | **每轮次结束时自动触发** | 拦截器（`gateway/intercept.py`）的 `__exit__` 中自动计算 Delta，追加记录到 session.md。记录内容：code_progress/docs_progress/todos/status。**不含 Picture/Requirements/Constraints**（从 Manifest 获取，不重复记录）。采用版本快照模型，只追加不覆盖 |
 
 #### 状态表 (State Table)
 
@@ -933,18 +961,21 @@ Turn N 的典型流程：
    └── get_status_plane() → 了解当前状态（纯展示，不展开 PRC 三要素）
 
 2. 执行动作（可能多个）
-   ├── create_task(...)     # 新任务（含三要素定义）
-   ├── get_task(...)        # 读取任务详情
-   ├── update_task(...)     # 更新任务属性
-   ├── update_todo(...)     # 推进步骤
-   ├── add_todo(...)        # 添加步骤
-   ├── remove_todo(...)     # 删除步骤
-   ├── add_gotcha(...)      # 记录偏差
-   ├── verify_task(...)     # 触发 Harness 验证（Tier 0 自动前置，Tier 1/2/3 按需）
-   ├── complete_task(...)   # 标记完成（决策权）
-   ├── abandon_task(...)    # 标记废弃（Agent 主动触发）
-   ├── get_session(...)     # 按需获取 Session 历史
-   └── link_data_plane(...) # 关联数据平面 commit ID
+   ├── create_task(...)       # 新任务（含三要素定义）
+   │                          # 自动触发 Tier 0 前置 Guard（Constraints 检查）
+   ├── get_task(...)         # 读取任务详情
+   ├── update_task(...)       # 更新任务属性（含乐观锁校验）
+   ├── add_todo(...)         # 添加步骤
+   ├── update_todo(...)      # 更新步骤状态
+   ├── remove_todo(...)      # 删除步骤
+   ├── add_gotcha(...)       # 记录偏差（带外）
+   ├── verify_task(...)      # 触发 Harness 验证流程
+   │                          # Tier 0 由 create/update_task 自动触发
+   │                          # Tier 1/2/3 由 Agent 按需调用
+   ├── complete_task(...)    # 标记完成（决策权）
+   ├── abandon_task(...)      # 标记废弃（Agent 主动）
+   ├── get_session(...)      # 按需获取 Session 历史
+   └── link_data_plane(...)  # 关联数据平面 commit ID
 
 3. 结束轮次
    └── （系统自动）snapshot_session → Delta 追加到 session.md
