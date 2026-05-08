@@ -556,7 +556,7 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 
 **四层关卡（Tiers）：**
 
-* **Tier 0: Constraints 约束检查：** Tier 0 在每轮次结束后由系统自动触发。若有违反，尝试自动修复；若无法修复，发起让度请求并同步等待外部响应。
+* **Tier 0: Constraints 约束检查：** Tier 0 在每轮次结束后由系统自动触发。若有违反，检测并报告违反事实，由主 Agent 决定是否修复及如何修复；若主 Agent 无法修复，发起让度请求并同步等待外部响应。
 * **Tier 1: Todo 完成检查 + 直接子任务完成检查：** 检查两个前置条件——(1) 所有 Todo 步是否已完成；(2) 所有直接子任务是否已关闭。若存在未完成项，直接阻断，不进入 Tier 2。
 * **Tier 2: Requirements 满足检查 (Requirements Check)：** 验证每个 Requirement 是否达标。若存在未满足项，直接阻断，不进入 Tier 3。
 * **Tier 3: 语义对齐检查 (Semantic Alignment Check)：** 读取任务的 Picture 与实际产出，执行语义对齐判断。触发条件见 7.2。
@@ -565,7 +565,7 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 %% label：四层检验递进关系
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#fce4ec', 'primaryTextColor': '#880e4f', 'primaryBorderColor': '#c62828', 'lineColor': '#616161', 'noteBkgColor': '#fce4ec', 'noteTextColor': '#880e4f' } } }%%
 flowchart TB
-    T0["Tier 0\nConstraints 检查\n（可修复 → 重跑 | 不可修复 → 让度）"] --> T1["Tier 1\nTodo 完成检查\n+ 子任务完成检查"]
+    T0["Tier 0\nConstraints 检查\n（报告 → 主 Agent 处理 | 无法处理 → 让度）"] --> T1["Tier 1\nTodo 完成检查\n+ 子任务完成检查"]
     T1 -->|阻断：不通过| BLOCK1["阻断 → 记录 Gotcha"]
     T1 -->|通过| T2["Tier 2\nRequirements 满足检查"]
     T2 -->|阻断：不满足| BLOCK2["阻断 → 记录 Gotcha"]
@@ -586,7 +586,7 @@ flowchart TB
 
 **关卡通过关系：** Tier 1 失败直接阻断，不进入 Tier 2；但 Tier 2 失败阻断 Tier 3。Tier 3 是最后一关，Tier 1 + Tier 2 全部通过才进入。
 
-**Tier 0 与 Tier 1/2/3 的本质区别：** Tier 1/2/3 是纯检验，不做数据变更；Tier 0 的约束检查可能涉及数据修复。两者分属不同性质，因此不合并为同一关卡。
+**Tier 0 与 Tier 1/2/3 的区别在于触发方式：Tier 0 每轮次结束后由系统自动触发，是强制前置检查；Tier 1/2/3 由主 Agent 按需调用。四者均为纯检验——只读数据，报告结果，不修改任何状态。**
 
 **Tier 3 的触发条件：**
 
@@ -760,7 +760,7 @@ stateDiagram-v2
 
 | 触发条件 | 让度行为 |
 |----------|----------|
-| Tier 0 不可修复失败 | Agent 发起让度请求，同步等待外部响应 |
+| Tier 0 检测到约束违反且主 Agent 无法自行修复 | Agent 发起让度请求，同步等待外部响应 |
 | 任务通过 Tier 1/2/3 检验，但宿主判定为高危 | Agent 发起让度请求，同步等待外部响应 |
 | 其他 | Agent 自主继续 |
 
@@ -774,7 +774,7 @@ mem0ress 不预设权限等级，"高危"的判断算法由宿主系统自行定
 
 本规范仅定义让度的行为接口：
 
-- **触发时机：** 仅限于 Tier 0 不可修复失败，或任务完成标记时宿主判定为高危
+- **触发时机：** 仅限于 Tier 0 检测到约束违反且主 Agent 无法自行修复，或任务完成标记时宿主判定为高危
 - **让度行为：** Agent 发起请求，同步等待外部响应，执行暂停
 - **响应内容：** 宿主返回允许/拒绝，Agent 根据响应决定下一步
 
@@ -865,7 +865,7 @@ Gotcha 是带外偏差记录，写入路径为 `gotchas/{timestamp}.md`（文件
 - 在偏差确认后写入 gotchas/ 目录
 - 不参与主流程，不影响任务状态，不阻断 Agent 继续执行
 - 属于带外记录，供后续复盘和追溯使用
-- **Tier 0 失败的 Gotcha 在让度流程中记录**——当 Tier 0 不可修复时，Agent 发起让度请求，同时记录 Gotcha，记录时机不晚于让度请求发起时刻
+- **Tier 0 违反的 Gotcha 在让度流程中记录**——当 Tier 0 检测到约束违反且主 Agent 无法自行修复时，Agent 发起让度请求，同时记录 Gotcha，记录时机不晚于让度请求发起时刻
 
 ---
 

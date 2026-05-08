@@ -44,7 +44,9 @@ design.md 只在 substrate/fs.py 提到"Hash 乐观锁"，但对 SSOT 和反黑�
 
 ### 4. Tier 0 的前置处理器定位模糊
 
-spec 明确 Tier 0 是**独立于 Harness Engine 之外的前置处理器**，与 Tier 1/2/3 性质不同（Tier 0 可能涉及数据修复，Tier 1/2/3 纯检验）。
+~~spec 明确 Tier 0 是**独立于 Harness Engine 之外的前置处理器**，与 Tier 1/2/3 性质不同（Tier 0 可能涉及数据修复，Tier 1/2/3 纯检验）。~~
+
+**已修正（spec v3.6+）：** spec 现已明确 Tier 0 与 Tier 1/2/3 均为纯检验——只读数据，报告结果，不修改任何状态。Tier 0 与其他 Tier 的区别仅在于触发方式（每轮次自动触发 vs 主 Agent 按需调用），而非性质。
 
 design.md 在 3.2 节和 3.3 节两处提到 Tier 0，位置和定性都不清晰：
 ```

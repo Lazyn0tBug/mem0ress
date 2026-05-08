@@ -74,7 +74,7 @@ graph TB
 
 ### 2.4 Judge Agent（Tier 0/1/2/3 执行器）
 
-**职责**：执行 Tier 0/1/2/3 检验，返回对齐结果。
+**职责**：执行 Tier 0/1/2/3 检验，只读数据，返回检验结果。Judge Agent 不修改任何状态，不参与任何数据修复。
 
 **与 Task 的关系**：
 - 每个 Task 伴生一个 Judge Agent
@@ -198,7 +198,7 @@ sequenceDiagram
     rect rgba(46, 125, 50, 0.1)
         Note over Agent,JA: Tier 0 每轮次结束后由系统自动触发（不属于业务流）
         System->>JA: Tier 0 约束检查（自动）
-        JA-->>System: 检验结果
+        JA-->>System: 检验结果（违反事实报告）
 
         Note over Agent,JA: Agent 主动决策（业务流）
         Agent->>PA: get_status_plane()

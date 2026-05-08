@@ -132,7 +132,7 @@ Task 创建 → spawn Judge Agent (id: {task_id}-judge)
 
 **exit (After Turn)：**
 - 宿主系统自动触发 Session 快照（`snapshot_session`），追加记录至 session.md。
-- 若检测到 Tier 0 约束违反，触发 Judge Agent 的约束越界检查。
+- 若检测到 Tier 0 约束违反，触发 Judge Agent 的约束越界检查，结果返回给主 Agent，由主 Agent 决定是否修复及如何修复。
 - Tool Interface 的写操作（`update_todo`、`complete_task` 等）由 Agent 在轮次内主动调用，不在此处自动执行。
 
 `CognitiveContext` 只负责生命周期钩子的编排，不做业务决策。
@@ -141,11 +141,12 @@ Task 创建 → spawn Judge Agent (id: {task_id}-judge)
 
 Judge Agent 执行 Tier 0/1/2/3 检验。Tier 0 和 Tier 1/2/3 职责不同：
 
-**Tier 0 — Constraints 约束检查：**
-每轮次结束后由系统自动触发。若约束违反：
-1. 尝试自动修复
-2. 若无法修复，发起让度请求并等待外部响应，同时记录 Gotcha
-3. 绝不隐式自动修复后继续
+**Tier 0 — Constraints 约束检查（纯检验）：**
+每轮次结束后由系统自动触发。若有违反：
+1. 检测并报告违反事实
+2. 主 Agent 根据报告决定是否修复及如何修复
+3. 若主 Agent 无法修复，发起让度请求并等待外部响应，同时记录 Gotcha
+4. Judge Agent 只读不写，不参与任何数据修复
 
 **Tier 1 — Todo 完成度 + 子任务关闭检查：**
 - 所有 Todo 步是否已完成
@@ -223,7 +224,7 @@ sequenceDiagram
     PA-->>Host: 状态平面快照
 ```
 
-让度的持有点：Tier 0 不可修复失败时，Agent 发起让度请求并同步等待外部响应。此处 Agent 暂停执行，直至宿主持有响应。
+让度的持有点：Tier 0 检测到约束违反且主 Agent 无法自行修复时，Agent 发起让度请求并同步等待外部响应。此处 Agent 暂停执行，直至宿主持有响应。
 
 ---
 
