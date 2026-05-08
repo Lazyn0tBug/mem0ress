@@ -252,27 +252,15 @@ mem0ress 使用文件树表达认知的从属关系与上下文边界，对应 s
 
 ### 6.2 Session 快照
 
-**触发时机：** 每轮次结束时系统自动追加。
-
-**触发链路：** 宿主系统在每轮次结束时自动调用 mem0ress 接口，追加记录到 session.md。
-
-**写入内容：** code_progress / data_plane / todos / status。不含 Picture/Requirements/Constraints（从 Manifest 获取）。
+**触发链路：** 宿主系统在每轮次结束时自动调用 mem0ress 的 Session 快照接口，追加记录到 session.md。写入内容由 spec.md B.1 Session 模板定义。
 
 ### 6.3 Gotcha 偏差记录
 
-**触发时机：** Agent 确认偏差后调用写入。
-
-**触发链路：** 通过 Tool Interface 的 `add_gotcha()` 写入 `gotchas/{timestamp}.md`。
-
-**写入约束：** 不影响任务状态，不阻断 Agent 继续执行。
+**触发链路：** Agent 确认偏差后，通过 Tool Interface 的 `add_gotcha()` 写入 `gotchas/{timestamp}.md`。写入内容由 spec.md B.2 Gotcha 模板定义。
 
 ### 6.4 Data Plane 引用
 
-**触发时机：** 仓库 commit ID 变更时按需更新。
-
-**触发链路：** 通过 `link_data_plane()` 关联仓库 commit ID 时维护 `data-plane/refs.md`。
-
-**维护内容：** repositories 字段（当前 commit ID 快照）+ Change Log（历史追加）。
+**触发链路：** 仓库 commit ID 变更时，Agent 通过 Tool Interface 的 `link_data_plane()` 更新 `data-plane/refs.md`。字段结构由 spec.md B.3 Data Plane 模板定义。
 
 ---
 
