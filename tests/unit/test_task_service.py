@@ -186,3 +186,37 @@ class TestTaskServiceImpl:
 
         with pytest.raises(FileNotFoundError):
             service.remove_todo("nonexistent", 0)
+
+    def test_complete_task(self, tmp_path):
+        service = TaskServiceImpl(substrate_root=tmp_path)
+        service.create_task("auth_module", "用户顺畅登录")
+
+        updated = service.complete_task("auth_module")
+
+        assert updated.status == TaskStatus.COMPLETED
+        # Verify persistence
+        retrieved = service.get_task("auth_module")
+        assert retrieved.status == TaskStatus.COMPLETED
+
+    def test_complete_task_nonexistent_raises(self, tmp_path):
+        service = TaskServiceImpl(substrate_root=tmp_path)
+
+        with pytest.raises(FileNotFoundError):
+            service.complete_task("nonexistent")
+
+    def test_abandon_task(self, tmp_path):
+        service = TaskServiceImpl(substrate_root=tmp_path)
+        service.create_task("auth_module", "用户顺畅登录")
+
+        updated = service.abandon_task("auth_module")
+
+        assert updated.status == TaskStatus.ABANDONED
+        # Verify persistence
+        retrieved = service.get_task("auth_module")
+        assert retrieved.status == TaskStatus.ABANDONED
+
+    def test_abandon_task_nonexistent_raises(self, tmp_path):
+        service = TaskServiceImpl(substrate_root=tmp_path)
+
+        with pytest.raises(FileNotFoundError):
+            service.abandon_task("nonexistent")
