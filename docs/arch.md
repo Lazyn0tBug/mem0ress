@@ -78,14 +78,7 @@ graph TB
 
 ### 2.4 Harness Engine（约束检验引擎）
 
-**职责：** 封装 Tier 0 的约束越界检查。
-
-**行为：**
-- 每轮次结束后（after turn），系统自动触发
-- 检查本轮次所有动作是否违反 Constraints
-- 若有违反：可修复 → 自动修复后重跑 Tier 0 → 通过后继续
-- 若无法修复：按权限发起让度请求并同步等待外部响应（L1/L2 立即让度，L3/L4 失败后让度）
-- **Tier 0 可能涉及数据修复**（与 Tier 1/2/3 纯检验性质不同）
+**职责：** 封装 Tier 0 的约束越界检查。Tier 0 在每轮次结束后由系统自动触发，与 Tier 1/2/3 的纯检验性质不同，**可能涉及数据修复**。
 
 ### 2.5 任务完成度检查（Tier 1/2/3）
 
@@ -154,30 +147,14 @@ sequenceDiagram
     participant Agent
     participant PA as Plane Assembler
     participant TI as Tool Interface
-    participant HE as Harness Engine (Tier 0)
     participant VC as 任务完成度检查 (Tier 1/2/3)
-    participant System
 
     rect rgba(46, 125, 50, 0.1)
-        Note over Agent,System: Agent 主动决策（业务流）
+        Note over Agent,VC: Agent 主动决策（业务流）
         Agent->>PA: get_status_plane()
         PA-->>Agent: 状态平面快照<br/>(任务树 | TODO进度 | 状态 | Gotchas | Session指针)
 
         Agent->>TI: do(执行动作)
-
-        Note over Agent,System: 每轮次结束后（after turn）
-        rect rgba(239, 154, 154, 0.2)
-            Note over Agent,System: Harness 约束越界检查（自动触发）
-            System->>HE: Tier 0 约束检查
-            alt Constraints 满足
-                HE-->>System: Tier 0 通过
-            else Constraints 违反（可修复）
-                System->>HE: 自动修复
-                HE-->>System: Tier 0 修复后通过
-            else Constraints 违反（不可修复）
-                System->>System: 记录 Gotcha<br/>Agent 发起让度请求并同步等待外部响应
-            end
-        end
 
         Agent->>VC: verify_task(tier1=true) Todo 完成检查
         VC-->>Agent: Tier 1 结果
@@ -195,11 +172,8 @@ sequenceDiagram
         TI-->>Agent: 状态更新确认
     end
 
-    rect rgba(100, 100, 100, 0.1)
-        Note over Agent,System: 系统自动机制
-        System->>System: 每轮次结束
-        System->>System: Session 快照（自动）
-    end
+    Note over Agent: 系统自动机制（不属于业务流）
+    Note over Agent: 每轮次结束后：Harness Tier 0 自动触发<br/>Session 快照自动追加
 ```
 
 ---
