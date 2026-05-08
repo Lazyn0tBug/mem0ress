@@ -117,19 +117,17 @@ graph LR
 
 **洞察二：目标需要一个可判断的完成标准，否则执行无法被检验。**
 
+Picture 是目标的核心语义锚，Requirements 和 Constraints 是从 Picture 具象化出来的两个维度——前者回答"达成目标需要满足哪些条件"，后者回答"任务由实施到完成，哪些约束和禁则必须满足"。三者共同构成判断未来动作是否偏离的标准，其中 **Picture 是绝对的锚**。
+
 仅有目标是不够的。目标"实现一个安全认证模块"无法回答三个关键问题：什么样的成果算成功？需要满足什么可验证的条件？什么是绝对不能做的？
 
 这三个问题分别对应三个认知要素：
 
 **Picture（图景）** 是语义层面的终极成功状态，由利益相关者定义，回答"做成什么样"。它不是功能清单，而是利益相关者眼中可感知的结果——即使所有代码都写完了、测试都通过了，只要用户感知到"还是不能登录"，Picture 即未达成。
 
-**Requirements（需求）** 是 Picture 的客观可达条件，回答"怎么证明成功了"。每一个 Requirement 都必须可独立验证：要么通过，要么不通过，没有灰色地带。例如"支持 Google Workspace SSO"、"登录失败错误提示不超过 3 秒"，这些是可自动化检验的指标。Requirements 是 Picture 的必要条件——达成 Picture 必须首先满足所有 Requirements。
+**Requirements（需求）** 是从 Picture 推导出的具体条件，回答"达成目标需要满足哪些条件"。每一个 Requirement 都必须可独立验证：要么通过，要么不通过，没有灰色地带。Requirements 是 Picture 的必要条件——达成 Picture 必须首先满足所有 Requirements。
 
-**Constraints（约束）** 是执行时绝对不可逾越的底线，回答"什么绝对不能做"。Constraints 不是"尽量遵守"，而是"一旦违反系统必须阻断"。例如"不许存储明文密码"、"Access Token 有效期不得超过 1 小时"。Constraints 与 Requirements 可能产生冲突——"需支持离线使用"与"数据不得离开设备"在某些场景下不可兼得。这种冲突必须在任务构建阶段被发现并标记，而非等到执行阶段才暴露。
-
-三个要素的构建顺序是：**先定义 Requirements，再定义 Constraints，最后由 Requirements 和 Constraints 共同约束和推导出 Picture**。这是因为 Picture 处于最高层，是目标的核心语义表达；Requirements 是 Picture 的客观化路径；Constraints 则是这条路径上的红线。三者共同构成判断未来动作是否偏离的绝对标准。
-
-PRC 框架的认知科学来源是目标导向行为理论（Goal-Directed Behavior）和约束满足网络（Constraint Satisfaction Networks）——两者的共同点在于：目标的达成不是路径上所有步骤的累加，而是同时满足目标状态、可验证条件和不可违反边界的多重约束解。
+**Constraints（约束）** 是从 Picture 和执行上下文推导出的具体规则，回答"任务由实施到完成，哪些约束和禁则必须满足"。Constraints 不是"尽量遵守"，而是"一旦违反系统必须阻断"。例如"不许存储明文密码"、"Access Token 有效期不得超过 1 小时"。Constraints 与 Requirements 可能产生冲突——"需支持离线使用"与"数据不得离开设备"在某些场景下不可兼得。这种冲突必须在任务构建阶段被发现并标记，而非等到执行阶段才暴露。
 
 **为什么 Picture 不可缺席**
 
@@ -138,6 +136,8 @@ PRC 框架的认知科学来源是目标导向行为理论（Goal-Directed Behav
 AI Agent 具备语义理解能力，能够理解自然语言描绘的图景。这意味着可以用少量检验点配合语义理解来判定任务是否完成，不必为每个细节编写测试用例。Picture 提供了语义判断的锚点——它允许 AI 或人做出高阶的、整体性的完成判断，而不仅仅依赖于可枚举的检验项。
 
 因此，所有任务都需要 Picture，只是模糊程度不同。传统软件开发认为"测试用例通过即合格"，这只说明符合预定需求，不能认为是达到了目标。即使所有 Requirements 满足，Picture 未对齐则任务未完成。
+
+PRC 框架的认知科学来源是目标导向行为理论（Goal-Directed Behavior）和约束满足网络（Constraint Satisfaction Networks）——两者的共同点在于：目标的达成不是路径上所有步骤的累加，而是同时满足目标状态、可验证条件和不可违反边界的多重约束解。
 
 ### 2.3 锚点：任务作为认知单元 (Anchor: Task as Cognitive Unit)
 
@@ -185,7 +185,7 @@ mem0ress 的诞生，源于对当前 AI Agent 发展路径的底层反思。我�
 
 **源自洞察一（2.1）：记忆的目标属性决定了认知应以任务为中心，只记录与目标相关的状态变化。**
 
-人类的大脑之所以高效，是因为它懂得遗忘过程，只铭记结果。系统不记录 Agent 执行过程中的所有流水账，仅记录导致目标推进或路径修正的"状态突变（Delta）"。通过记录状态突变而非过程录像，有效控制上下文规模。
+人类的大脑之所以高效，是因为它懂得遗忘过程，只铭记结果。系统不记录 Agent 执行过程中的所有流水账，仅记录导致目标推进或路径修正的**状态变更**。通过记录状态变更而非过程录像，有效控制上下文规模。
 
 ### 3.3 同构的认知单元：分形树状结构
 
@@ -356,17 +356,18 @@ mem0ress 的解法是**零中介**：系统完全建立在"目录树 + 纯文本
 
 **什么时候定义：**
 
-三要素的填写时机有严格顺序。先定义 Requirements，再定义 Constraints，最后由前两者共同推导出 Picture。这个顺序不是随意的——它是冲突检测的关键：若 Requirements 与 Constraints 在定义阶段就相互矛盾，系统立即标记任务为"不可行"，而非等到执行阶段才发现。
+三要素的定义应从 Picture 开始。Picture 是目标的语义锚，是利益相关者认可的终极成功状态；Requirements 是从 Picture 推导出的可验证条件，Constraints 是从 Picture 和上下文推导出的执行底线。没有 Picture，Requirements 和 Constraints 就失去了存在的意义——因此应先定义 Picture，再从中推导出 Requirements 和 Constraints。
 
-Picture 定义于最后，因为它是前两者约束下的语义综合，而非先入为主的愿景。
+冲突检测在三者全部定义后进行——若 Requirements 与 Constraints 相互矛盾，系统立即标记任务为"不可行"。
 
 ```mermaid
-%% label：PRC 三要素构建顺序
+%% label：PRC 三要素定义（建议顺序）
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#2e7d32', 'lineColor': '#616161' } } }%%
 flowchart LR
-    A["1. 定义 Requirements\n（可验证条件）"] --> B["2. 定义 Constraints\n（不可逾越底线）"]
-    B --> C["3. 推导出 Picture\n（语义成功状态）"]
-    C -.->|冲突检测| D{"Req ∩ Cst\n相互矛盾？"}
+    A["1. 定义 Picture\n（语义成功状态）"] --> B["2. 从 Picture 推导 Requirements\n（可验证条件）"]
+    A --> C["3. 从 Picture + 上下文推导 Constraints\n（不可逾越底线）"]
+    B --> D{"Req ∩ Cst\n相互矛盾？"}
+    C --> D
     D -->|是| E["标记「不可行」\n任务创建失败"]
     D -->|否| F["任务进入执行阶段"]
     style E fill:#ffcdd2,stroke:#c62828
@@ -437,12 +438,15 @@ graph LR
     end
 ```
 
-## 6. 物理文档模型 (Document Model)
+## 6. 文档数据模型 (Document Model)
+
+### 6.1 文档结构
+
 系统使用文件树表达认知的从属关系与上下文边界。
 
 ```mermaid
 %% label：.mem0ress 文件树与概念映射
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#fff3e0' } }%%
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#fff3e0' } } }%%
 graph TD
     ROOT[".mem0ress/"]
     TASKS["tasks/"]
@@ -479,7 +483,7 @@ graph TD
         └── gotchas/         # 该任务独享的认知增量与偏差修正记录
 ```
 
-`index.md`扮演了声明式清单（Manifest）。Session 记录每个轮次的执行进度，Picture/Requirements/Constraints 从 Manifest 获取，不重复记录。
+`index.md` 扮演了声明式清单（Manifest）。Session 记录每个轮次的执行进度，Picture/Requirements/Constraints 从 Manifest 获取，不重复记录。
 
 **Data Plane 关联表：**
 
@@ -494,7 +498,7 @@ data_plane:
 
 每个 Turn 的 Session 快照中包含当时的 data_plane 状态，用于追踪多仓库开发环境。
 
-### 6.1 Task 模板
+### 6.2 Task 模板
 
 **index.md 模板：**
 
@@ -537,7 +541,7 @@ todos:
 ### 7.1 任务创建
 任务的创建是确立认知边界的起点。系统通过声明式的方式，逐步逼近任务的核心。
 
-逐步完善三要素： Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 Picture、Requirements 和 Constraints。这三个要素的填写有严格顺序——**先定义 Requirements，再定义 Constraints，最后由前两者共同推导出 Picture**。这个顺序是冲突检测的关键：若 Requirements 与 Constraints 在定义阶段就相互矛盾，系统立即标记任务为"不可行"，而非等到执行阶段才发现。
+逐步完善三要素： Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 Picture、Requirements 和 Constraints。三要素的定义应从 Picture 开始——先定义 Picture 作为目标锚，再从中推导出 Requirements 和 Constraints。冲突检测在三者全部定义后进行——若 Requirements 与 Constraints 相互矛盾，系统立即标记任务为"不可行"，而非等到执行阶段才发现。
 
 Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的机械步（Todo）。这些 Todo 构成了后续检验进度的基准线。
 
@@ -575,27 +579,27 @@ flowchart TB
     style PASS fill:#c8e6c9,stroke:#2e7d32
 ```
 
-**关卡通过关系：** Tier 1 失败不阻断 Tier 2（因为 Todo 完成与 Requirements 满足可能不同步），但 Tier 2 失败阻断 Tier 3。Tier 3 是最后一关，Tier 1 + Tier 2 全部通过才进入。
+**关卡通过关系：** Tier 1 失败直接阻断，不进入 Tier 2；但 Tier 2 失败阻断 Tier 3。Tier 3 是最后一关，Tier 1 + Tier 2 全部通过才进入。
 
 **Tier 0 与 Tier 1/2/3 的本质区别：** Tier 1/2/3 是纯检验，不做数据变更；Tier 0 的约束检查可能涉及数据修复。两者分属不同性质，因此不合并为同一关卡。
 
 **Tier 3 的触发条件：**
 
-Tier 3 不是每次 `verify_task()` 都自动进入的常规关卡。它由 Agent 根据任务属性主动决定是否触发。触发条件包括：
+Tier 3 不是每次检验都自动进入的常规关卡。它由 Agent 根据任务属性主动决定是否触发。触发条件包括：
 
 - **Picture 涉及主观判断或利益相关者感知**：若 Picture 包含"用户感到满意"、"界面美观"等无法自动化验证的指标，Tier 1/2 无法覆盖，需要 Tier 3 的语义对齐。
 - **Constraints 与 Picture 之间存在语义歧义**：Tier 2 验证了"功能可用"，但 Tier 1/2 无法判断"是否做了不该做的事"——这属于 Constraints 与 Picture 的跨平面对齐。
 - **任务风险等级为 L1/L2（高危）**：权限分级中高危任务（L1/L2）的完成检验强制触发 Tier 3，无论 Tier 1/2 结果如何。
-- **Agent 或利益相关者显式请求**：在任务 Manifest 中预设 `require_tier3_verification: true`，或在任务执行过程中 Agent 主动调用 `verify_task(tier3=true)`。
+- **Agent 或利益相关者显式请求**：在任务 Manifest 中预设 `require_tier3_verification: true`，或在任务执行过程中 Agent 主动触发 Tier 3 检验。
 
 **决策执行规则：**
 
-检验结果（aligned / deviation）由 Agent 接收。任务完成后是否调用 `complete_task()`，由 Agent 基于危险性判断自主决定，或按权限设定让度给人。ABANDONED 由 Agent 主动调用 `abandon_task()` 标记，与检验结果无关。
+检验结果（aligned / deviation）由 Agent 接收。任务完成后是否标记完成，由 Agent 基于危险性判断自主决定，或按权限设定让度给人。ABANDONED 由 Agent 主动标记，与检验结果无关。
 
 **任务状态与检验的关系：**
 
-- Tier 1/2/3 全部通过 → 检验通过，Agent 可调用 `complete_task()` 标记完成
-- Tier 1/2/3 任一未通过或未检验 → `complete_task()` 调用无效
+- Tier 1/2/3 全部通过 → 检验通过，Agent 可标记任务完成
+- Tier 1/2/3 任一未通过或未检验 → 标记完成无效
 - 检验未通过 → 偏差记录写入 gotcha_refs，Agent 决定下一步（修正、重试或废弃）
 
 ### 7.3 认知构建
@@ -637,20 +641,20 @@ mem0ress 中，人和 Agent 不存在分工——本质上都以 Agent 形态存
 %% label：Task 生命周期状态机
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae' } } }%%
 stateDiagram-v2
-    [*] --> CREATED : create_task()
-    CREATED --> IN_PROGRESS : update_task() / first todo
-    IN_PROGRESS --> COMPLETED : complete_task()
-    IN_PROGRESS --> ABANDONED : abandon_task()
-    IN_PROGRESS --> CREATED : update_task()\n(回退？不常见)
+    [*] --> CREATED
+    CREATED --> IN_PROGRESS : 任意 Todo 被标记为完成
+    CREATED --> ABANDONED : 任务废弃
+    IN_PROGRESS --> COMPLETED : 任务完成
+    IN_PROGRESS --> ABANDONED : 任务废弃
     COMPLETED --> [*]
     ABANDONED --> [*]
 
     note right of CREATED
         三要素已定义
-        等待开始执行
+        所有 Todo 均未开始执行（done: false）
     end note
     note right of IN_PROGRESS
-        Tier 0 前置处理
+        至少有一个 Todo 已完成（done: true）
         执行中 / 检验中
     end note
     note right of COMPLETED
@@ -666,8 +670,8 @@ stateDiagram-v2
 **Agent 负责的决策：**
 - 任务创建时三要素的定义与完善
 - 是否触发 Tier 1/2 检验，以及按需触发 Tier 3（Tier 0 为自动前置处理，不在决策范围内）
-- 检验通过后是否调用 `complete_task()`
-- 是否调用 `abandon_task()` 标记废弃
+- 检验通过后是否标记任务为完成
+- 是否标记任务为废弃
 - 下一步行动（修正、重试、或推进其他任务）
 
 **决策让度的触发条件：**
@@ -692,8 +696,8 @@ Agent 通过 spawn 人机协作任务实现让度——在任务 TODO 中标记"
 | 权限等级 | 适用场景 | 可自主决策 | 需让度给人 |
 |----------|----------|------------|------------|
 | **L4 完全自主** | 探索性任务 | 全部 | 无 |
-| **L3 检验后自主** | 一般开发任务 | Tier 1/2/3 通过后自主完成标记 | `complete_task` |
-| **L2 高危审批** | 生产环境变更 | `add_todo`、`update_todo` | `complete_task`、`abandon_task` |
+| **L3 检验后自主** | 一般开发任务 | Tier 1/2/3 通过后自主完成标记 | 任务完成标记 |
+| **L2 高危审批** | 生产环境变更 | 添加/更新 Todo | 任务完成标记、任务废弃标记 |
 | **L1 完全让度** | 高风险操作 | 无 | 所有状态变更 |
 
 ```mermaid
@@ -735,253 +739,28 @@ graph LR
 
 权限等级在任务创建时由 Agent 判定，或由人工在任务 Manifest 中预设。
 
-## 8. 技术方案 (Technical Implementation)
-
-
-mem0ress 是认知对齐平面, 并非独立运行的任务引擎，而是以 **“认知中间件”** 的形式注入到 Agent 的执行循环中。
-
-* **非编排原则：** mem0ress 不决定 Agent 下一步该调用哪个 API，也不负责复杂的 ReAct 推理逻辑。
-* **生命周期挂钩 (Lifecycle Hook)：** mem0ress 必须参与 Event Loop 的关键节点。通过“拦截”每轮会话的输入与输出，实现自动化的：
-1. **投射 (Before Turn)：** 在 Agent 思考前，将最新的状态平面注入上下文。
-2. **快照 (After Turn)：** 在 Agent 响应后，自动对比数据平面变化并记录 Session 序列。
-    
-### 8.1 系统架构设计
-
-它专注于认知状态管理，不执行工具或做决策。其内部划分为三个职责分明的模块：
-
-**Plane Assembler（平面组装器）：认知构建的执行单元。**
-
-职责是**实时编译**当前任务的状态平面。每次 Agent 调用 `get_status_plane()` 时，Plane Assembler 直接扫描文件系统，聚合所有 Task 节点的 Manifest 和 Session，写入状态平面输出。设计上它是纯展示层——不缓存、不诊断、不决策，只做文件系统扫描和文本聚合。
-
-**Tool Interface（工具接口）：认知操作的写入入口。**
-mem0ress 暴露给 Agent 的不是一套通用编程接口，而是一组有限的任务操作工具（`create_task`、`complete_task`、`abandon_task`、`update_todo` 等）。Tool Interface **只管理认知状态的写入**，不执行业务逻辑。
-
-**Harness Engine（约束检验引擎）：仅封装 Tier 0 的约束越界检查。**
-
-每轮次结束后（after turn），系统自动触发 Harness Engine 执行 Tier 0 约束越界检查：检查本轮次所有动作是否违反 Constraints。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。Tier 0 可能涉及数据修复。
-
-**任务完成度检查（Tier 1/2/3）：独立于 Harness Engine，不属于约束机制。Tier 1/2/3 描述见 7.2。
-
-**三个模块的边界：** Plane Assembler 是只读的，Tool Interface 是写的入口，Harness Engine 是验证出口。三者共同构成认知网关，无跨越自身职责范围的操作。
-
-```mermaid
-%% label：三模块边界
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae', 'fontFamily': 'arial' } } }%%
-graph TB
-    Agent(["Agent Context"])
-
-    PA["Plane Assembler<br>只读出口"]
-    TI["Tool Interface<br>写操作入口"]
-    HE["Harness Engine<br>约束越界检查（Tier 0）"]
-    VC["任务完成度检查<br>（Tier 1/2/3）"]
-
-    Agent --> PA
-    Agent --> TI
-    Agent --> HE
-    Agent --> VC
-
-    classDef mod fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
-    classDef agent fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
-    classDef harness fill:#ffcdd2,stroke:#b71c1c,stroke-width:2px;
-    classDef verify fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px;
-    class PA,TI mod;
-    class Agent agent;
-    class HE harness;
-    class VC verify;
-```
-
-
-
-### 8.2 核心机制设计
-
-* 引用展开机制: 解析清单时，ref: 指针不默认加载。Agent 需主动调用工具将其展开并挂载到 Data Plane 中。
-* 原生 Git 数据回溯 (Git-Native Revert): 检验失败且路径报废时，Agent 调用工具回退数据平面，同时在状态平面生成 Gotcha 记录偏差经验，保持时间向前。
-  * 带外约束检验 (Out-of-Band Verification): Tier 3 的语义对齐与执行态 Agent 上下文隔离，避免检验过程污染任务执行。
-
-### 8.3 技术流程：Agent 驱动的业务闭环
-
-mem0ress 的核心业务流由 Agent 的三个主动决策构成：
-
-  1. 认知构建: Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 Manifest 按需读取，不在状态平面中展开。
-  2. 任务检验: Agent 调用 `verify_task()`，驱动任务完成度检查（Tier 1/2/3）。Tier 0 在每轮次结束后由系统自动触发，独立于 `verify_task()`
-  3. 状态更新: Agent 根据检验结果决策后续行动——更新 Todo、调用 `complete_task()` 标记完成、`abandon_task()` 标记废弃、或继续执行。状态更新通过 Tool Interface 执行写操作，支持 `complete_task`、`abandon_task`、`update_todo` 等。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
-
-**系统自动机制（不属于业务流）：**
-
-每轮次结束时，系统自动触发 Session 快照，记录本轮状态变化，供后续追溯使用。Agent 无需显式调用 `snapshot_session()`。
-
-```mermaid
-%% label：Agent 驱动的业务闭环
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'noteBkgColor': '#f1f8e9', 'noteTextColor': '#1b5e20' } } }%%
-sequenceDiagram
-    autonumber
-    participant Agent
-    participant PA as Plane Assembler
-    participant TI as Tool Interface
-    participant HE as Harness Engine (Tier 0)
-    participant VC as 任务完成度检查 (Tier 1/2/3)
-    participant System
-
-    rect rgba(46, 125, 50, 0.1)
-        Note over Agent,System: Agent 主动决策（业务流）
-        Agent->>PA: get_status_plane()
-        PA-->>Agent: 状态平面快照<br/>(任务树 | TODO进度 | 状态 | Gotchas | Session指针)
-
-        Agent->>TI: do(执行动作)
-
-        Note over Agent,System: 每轮次结束后（after turn）
-        rect rgba(239, 154, 154, 0.2)
-            Note over Agent,System: Harness 约束越界检查（自动触发）
-            System->>HE: Tier 0 约束检查
-            alt Constraints 满足
-                HE-->>System: Tier 0 通过
-            else Constraints 违反（可修复）
-                System->>HE: 自动修复
-                HE-->>System: Tier 0 修复后通过
-            else Constraints 违反（不可修复）
-                System->>System: 记录 Gotcha<br/>等待人工介入
-            end
-        end
-
-        Agent->>VC: verify_task(tier1=true) Todo 完成检查
-        VC-->>Agent: Tier 1 结果
-
-        Agent->>VC: verify_task(tier2=true) Requirements 满足检查
-        VC-->>Agent: Tier 2 结果
-
-        Note over Agent: Tier 3: 按条件触发<br/>(触发条件见 7.2)
-        alt Tier 3 触发条件满足
-            Agent->>VC: verify_task(tier3=true) 语义对齐检查
-            VC-->>Agent: Tier 3 语义对齐结果
-        end
-
-        Agent->>TI: complete_task() / abandon_task() / update_todo()
-        TI-->>Agent: 状态更新确认
-    end
-
-    rect rgba(100, 100, 100, 0.1)
-        Note over Agent,System: 系统自动机制
-        System->>System: 每轮次结束
-        System->>System: Session 快照（自动）
-    end
-```
-
-## 附录 A: 动作、状态与节点表
-
-> **说明：** 本附录记录所有认知操作动作，按职责分为五类，彼此正交。系统自动机制标注"**（系统自动）**"，Agent 无需显式调用。
-
-#### 动作表 (Action Table)
-
-##### 一、任务操作（Task Operations）
-
-| Action | 说明 |
-|--------|------|
-| `create_task` | 创建新任务。定义三要素（Picture/Requirements/Constraints）、Todo 步、权限等级。Constraints 检查在每轮次结束后由 Tier 0 自动触发，create_task 本身不执行约束检查 |
-| `get_task` | 读取任务详情，返回 Manifest 中的完整三要素、执行进度和当前状态 |
-| `update_task` | 更新任务属性（三要素、Todo、权限等级等）。Upsert 语义：任务不存在时自动创建 |
-| `complete_task` | 标记任务完成。防御性检查：调用时验证 Tier 1/2/3 是否全部通过——若全部通过则完成状态变更；若任一未通过或未检验，则直接忽略。注：错误调用（如传入不存在的 task_id）不属于防御范畴 |
-| `abandon_task` | 标记任务废弃。无前置条件校验。由 Agent 主动触发（与检验结果无关） |
-
-##### 二、Todo 操作（Todo Operations）
-
-| Action | 说明 |
-|--------|------|
-| `add_todo` | 添加执行步骤到任务清单 |
-| `update_todo` | 更新步骤状态（done: true/false） |
-| `remove_todo` | 删除执行步骤 |
-
-##### 三、偏差记录（Gotcha Operations）
-
-| Action | 说明 |
-|--------|------|
-| `add_gotcha` | 记录检验中发现的偏差。带外写入 gotchas/ 目录，不影响任务状态，不阻断 Agent 执行 |
-
-##### 四、检验操作（Verify Operations）
-
-| Action | 说明 |
-|--------|------|
-| `verify_task(tier1_only=true)` | Tier 1：Todo 完成检查 + 直接子任务完成检查。见 7.2 |
-| `verify_task(tier2_only=true)` | Tier 2：Requirements 满足检查。见 7.2 |
-| `verify_task(tier3=true)` | Tier 3：语义对齐检查。读取 Picture 与实际产出做语义判断，与执行态 Agent 上下文隔离。触发条件见 7.2 |
-| `verify_task()` | 触发任务完成度检查（Tier 1 → Tier 2 → Tier 3）。Tier 1/2/3 由 Agent 按需调用。注：`verify_task()` 不触发 Tier 0——Tier 0 在每轮次结束后由系统自动触发，独立于此接口 |
-
-> **Tier 0 Guard（after-turn 自动触发）：**
->
-> Tier 0 不是 Agent 可调用的 verify_task 变体，而是每轮次结束后由系统自动触发的约束越界检查。检查本轮次所有动作是否违反 Constraints：
-> - 检查当前 Task 的所有 Constraints 是否满足
-> - 若违反：可修复 → 自动修复后重跑 Tier 0 → 通过后继续；不可修复 → 按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）
-> - Tier 0 可能涉及数据修复（与 Tier 1/2/3 纯检验性质不同）
->
-> **Tier 1 与 Tier 2 的关系：** 两者独立递进。Tier 1 失败不阻断 Tier 2（Todo 完成与 Requirements 满足可能不同步），但 Tier 2 失败阻断 Tier 3。
-
-> **Tier 3 触发条件（任一满足即触发）：触发条件见 7.2**
-
-##### 五、查询操作（Query Operations）
-
-| Action | 说明 |
-|--------|------|
-| `get_status_plane` | 获取状态平面快照。纯展示，不做诊断，只呈现任务树/TODO 进度/状态/Gotchas/Session 指针，不展开 Picture/Requirements/Constraints |
-| `get_session` | 按需获取指定任务的 Session 历史快照序列（Turn 列表） |
-| `link_data_plane` | 关联仓库 commit ID 到数据平面，建立/更新 data-plane/refs.md 中的 commit 映射 |
-
-##### 系统自动机制（无需 Agent 调用）
-
-| Action | 触发时机 | 说明 |
-|--------|----------|------|
-| `snapshot_session` | 每轮次结束时自动触发 | 系统自动计算 Delta，追加记录到 session.md。记录内容：code_progress/docs_progress/todos/status。不含 Picture/Requirements/Constraints（从 Manifest 获取，不重复记录）。采用版本快照模型，只追加不覆盖 |
+## 附录 A: 状态与节点
 
 #### 状态表 (State Table)
 
 | State | 说明 |
 |-------|------|
-| `CREATED` | 任务已创建 |
-| `IN_PROGRESS` | 任务进行中 |
-| `COMPLETED` | 任务完成 |
-| `ABANDONED` | 任务废弃 |
+| `CREATED` | 任务已创建，三要素已定义，所有 Todo 均未开始 |
+| `IN_PROGRESS` | 任务进行中，至少有一个 Todo 已完成 |
+| `COMPLETED` | 目标达成，认知生命周期结束 |
+| `ABANDONED` | 目标放弃，记录 Gotcha 经验 |
 
 #### 节点表 (Node Table)
 
 | Node | 说明 |
 |------|------|
-| `Turn N` | 轮次节点（1.1, 1.2, 2.1...），每个轮次记录状态快照（code_progress/docs_progress/todos/status）。**不含 Picture/Requirements/Constraints**（从 Manifest 获取）。轮次快照由系统在每轮次结束时自动追加记录 |
-| `Task` | 任务节点，代表一个独立的认知单元。包含 Manifest（index.md）、Session（session.md）、Data Plane（data-plane/refs.md）、Gotchas（gotchas/）四个物理子节点 |
-| `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以其所有子任务完成为绝对前提 |
-
-#### 轮次与动作对应关系
-
-````markdown
-Turn N 的典型流程：
-
-1. 开始轮次
-   └── get_status_plane() → 了解当前状态（纯展示，不展开 PRC 三要素）
-
-2. 执行动作（可能多个）
-   ├── create_task(...)       # 新任务（含三要素定义）
-   │                          # 注：Tier 0 在本轮次结束后由系统自动触发
-   ├── get_task(...)         # 读取任务详情
-   ├── update_task(...)       # 更新任务属性（含 Upsert 语义）
-   ├── add_todo(...)         # 添加步骤
-   ├── update_todo(...)      # 更新步骤状态
-   ├── remove_todo(...)      # 删除步骤
-   ├── add_gotcha(...)       # 记录偏差（带外）
-   ├── verify_task(...)      # 触发任务完成度检查（Tier 1/2/3）
-   │                          # 注：Tier 0 在本轮次结束后由系统自动触发
-   ├── complete_task(...)    # 标记完成
-   ├── abandon_task(...)     # 标记废弃
-   ├── get_session(...)      # 按需获取 Session 历史
-   └── link_data_plane(...)  # 关联数据平面 commit ID
-
-3. 结束轮次
-   └── （系统自动）snapshot_session → Delta 追加到 session.md
-       记录内容：code_progress / docs_progress / todos / status
-       不含 Picture / Requirements / Constraints
-````
+| `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 Manifest 获取） |
+| `Task` | 认知单元，包含 Manifest（index.md）、Session（session.md）、Data Plane（data-plane/refs.md）、Gotchas（gotchas/）四个物理子节点 |
+| `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以所有子任务完成为前提 |
 
 ## 附录 B: 模板参考
 
 ### B.1 Session 模板 (session.md)
-
-Session 在每轮次结束时由系统自动追加写入 session.md。Agent 无需手动调用写入。
 
 **模板格式：**
 
@@ -1012,7 +791,7 @@ status: {CREATED|IN_PROGRESS}
 - 每轮次结束时**追加**写入，不覆盖历史快照（版本快照模型）
 - **不记录 Picture / Requirements / Constraints**（这些从 Manifest 获取，不重复记录）
 
-**触发时机：** 每轮次结束时系统自动计算 Delta 并追加，无需 Agent 显式调用 `snapshot_session()`。
+**触发时机：** 每轮次结束时追加状态快照。
 
 ---
 
@@ -1041,7 +820,7 @@ Gotcha 是带外偏差记录，写入路径为 `gotchas/{timestamp}.md`（文件
 ````
 
 **写入约定：**
-- 由 Agent 调用 `add_gotcha()` 时写入 gotchas/ 目录
+- 在偏差确认后写入 gotchas/ 目录
 - 不参与主流程，不影响任务状态，不阻断 Agent 继续执行
 - 属于带外记录，供后续复盘和追溯使用
 
@@ -1086,7 +865,7 @@ repositories:
 | Description | 该仓库在当前任务中的用途说明 |
 
 **维护约定：**
-- 由 `link_data_plane()` 工具关联仓库时写入或更新
+- 当仓库 commit ID 变更时按需更新
 - 每个 Task 目录下维护独立的 `data-plane/refs.md`
 - Change Log 自动追加，记录版本变迁原因，供 Agent 按需回溯
 - Data Plane 是**时间切片**，`repositories` 字段记录某一时刻的 commit ID 快照，Change Log 提供历史追溯通道
