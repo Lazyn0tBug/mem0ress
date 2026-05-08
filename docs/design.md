@@ -146,7 +146,7 @@ Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告写入 `report.md`
 - **Tier 0：** 每轮次结束后由系统自动触发。只读 Constraints 和当前代码状态，检测违反事实并写入报告。
 - **Tier 1：** 由主 Agent 按需调用。检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。
 - **Tier 2：** 由主 Agent 按需调用。验证每个 Requirement 是否达标。
-- **Tier 3：** 由 Agent 按需触发（Picture 涉及主观判断 / 宿主判定高危 / Agent 显式请求）。Judge Agent 准备判断所需信息，实际判断由主 Agent 执行。
+- **Tier 3：** 由主 Agent 按需触发（Picture 涉及主观判断 / 宿主判定高危 / Agent 显式请求）。Judge Agent 准备判断所需信息，实际判断由主 Agent 执行。
 
 **报告生成规则：**
 - 检验结束时一次性生成，写入 `report.md`

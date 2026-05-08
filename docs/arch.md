@@ -125,6 +125,7 @@ created → ready → verifying → ready → ... → destroyed
 | `created` | 刚创建，三要素未加载 |
 | `ready` | 三要素已加载，等待检验 |
 | `verifying` | 执行检验中 |
+| `error` | 检验执行异常 |
 | `destroyed` | Task 结束，Judge Agent 销毁 |
 
 **Tier 执行内容**：
@@ -179,7 +180,7 @@ Tier 3 的语义对齐与执行态 Agent 上下文隔离，避免检验过程污
 mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
 1. **认知构建：** Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 Manifest 按需读取，不在状态平面中展开。
-2. **任务检验：** Agent 调用 `verify_task()`，驱动任务完成度检查（Tier 1/2/3）。Tier 0 在每轮次结束后由系统自动触发，独立于 `verify_task()`
+2. **任务检验：** Agent 调用 `verify()`，驱动 Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告。Tier 0 在每轮次结束后由系统自动触发，独立于 `verify()`
 3. **状态更新：** Agent 根据检验结果决策后续行动——更新 Todo、调用 `complete_task()` 标记完成、`abandon_task()` 标记废弃、或继续执行。状态更新通过 Tool Interface 执行写操作，支持 `complete_task`、`abandon_task`、`update_todo` 等。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
 **系统自动机制（不属于业务流）：**
@@ -198,30 +199,25 @@ sequenceDiagram
 
     rect rgba(46, 125, 50, 0.1)
         Note over Agent,JA: Tier 0 每轮次结束后由系统自动触发（不属于业务流）
-        System->>JA: Tier 0 约束检查（自动）
-        JA-->>System: 检验结果（违反事实报告）
-
-        Note over Agent,JA: Agent 主动决策（业务流）
-        Agent->>PA: get_status_plane()
-        PA-->>Agent: 状态平面快照
-
-        Agent->>TI: do(执行动作)
-
-        Agent->>JA: verify_task(tier1=true) Tier 1 Todo 检查
-        JA-->>Agent: Tier 1 结果
-
-        Agent->>JA: verify_task(tier2=true) Tier 2 Requirements 检查
-        JA-->>Agent: Tier 2 结果
-
-        Note over Agent: Tier 3: 按条件触发<br/>(触发条件见 spec.md 7.2)
-        alt Tier 3 触发条件满足
-            Agent->>JA: verify_task(tier3=true) 语义对齐检查
-            JA-->>Agent: Tier 3 结果
-        end
-
-        Agent->>TI: complete_task() / abandon_task() / update_todo()
-        TI-->>Agent: 状态更新确认
+        System->>JA: verify() Tier 0 约束检查
+        JA-->>System: 写入 report.md（Tier 0 结果）
     end
+
+    Note over Agent,JA: Agent 主动决策（业务流）
+    Agent->>PA: get_status_plane()
+    PA-->>Agent: 状态平面快照
+
+    Agent->>TI: do(执行动作)
+
+    Note over Agent,JA: Tier 1/2 由主 Agent 按需调用
+    Agent->>JA: verify()
+    JA-->>Agent: hook 返回值（report_ready: true）
+
+    Note over Agent: 主 Agent 唤醒后读取 report.md 获取检验结果
+    Agent->>Agent: 读取 report.md
+
+    Agent->>TI: complete_task() / abandon_task() / update_todo()
+    TI-->>Agent: 状态更新确认
 ```
 
 ---
@@ -236,7 +232,7 @@ sequenceDiagram
 | `create_task` / `update_task` / `complete_task` / `abandon_task` | Tool Interface | 认知状态写操作 |
 | `add_todo` / `update_todo` / `remove_todo` | Tool Interface | Todo 写操作 |
 | `add_gotcha` | Tool Interface | 偏差记录写操作 |
-| `verify_task()` | Judge Agent | 统一执行 Tier 0/1/2/3 检验 |
+|| `verify()` | Judge Agent | 执行 Tier 0/1/2/3 完整链路检验，写入 report.md |
 | Tier 0 自动检查 | Judge Agent | after-turn 系统自动触发 |
 | Tier 1/2/3 检查 | Judge Agent | Agent 按需调用 |
 | `snapshot_session` | — | after-turn 宿主调用触发，mem0ress 内部自动追加 |
