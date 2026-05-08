@@ -103,13 +103,14 @@ pythonpath = ["src"]
 
 每个 Task 伴生一个 Judge Agent（`{task_id}-judge.md`），其生命周期与 Task 同步：
 
-**状态机：** `created → ready → verifying → ready → ... → destroyed`
+**状态机：** `created → ready → verifying → completed → destroyed`
 
 | 状态 | 含义 |
 |------|------|
 | `created` | 刚创建，三要素未加载 |
 | `ready` | 三要素已加载，等待检验调用 |
 | `verifying` | 执行检验中 |
+| `completed` | 本轮检验完成 |
 | `destroyed` | Task 结束，Judge Agent 销毁 |
 
 **初始化流程：**

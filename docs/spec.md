@@ -594,7 +594,7 @@ Judge Agent 与 Task 是**伴生关系**，不是从属关系。Judge Agent 的�
 id: {task_id}-judge
 type: judge
 parent_task: {task_id}
-status: ready|verifying|completed|error
+status: ready|verifying|error|destroyed
 
 cognitive_triad:
   picture: "验证 {task_id} 的目标对齐状态"

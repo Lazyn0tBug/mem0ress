@@ -117,7 +117,7 @@ flowchart TB
 **状态变化**：
 
 ```
-created → ready → verifying → ready → ... → destroyed
+created → ready → verifying → completed → destroyed
 ```
 
 | 状态 | 含义 |
