@@ -84,7 +84,7 @@ graph TB
 - 每轮次结束后（after turn），系统自动触发
 - 检查本轮次所有动作是否违反 Constraints
 - 若有违反：可修复 → 自动修复后重跑 Tier 0 → 通过后继续
-- 若无法修复：按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）
+- 若无法修复：按权限发起让度请求并同步等待外部响应（L1/L2 立即让度，L3/L4 失败后让度）
 - **Tier 0 可能涉及数据修复**（与 Tier 1/2/3 纯检验性质不同）
 
 ### 2.5 任务完成度检查（Tier 1/2/3）
@@ -175,7 +175,7 @@ sequenceDiagram
                 System->>HE: 自动修复
                 HE-->>System: Tier 0 修复后通过
             else Constraints 违反（不可修复）
-                System->>System: 记录 Gotcha<br/>等待人工介入
+                System->>System: 记录 Gotcha<br/>Agent 发起让度请求并同步等待外部响应
             end
         end
 
@@ -246,7 +246,7 @@ mem0ress 使用文件树表达认知的从属关系与上下文边界，对应 s
 | 物理组件 | 维护模块 |
 |----------|----------|
 | `index.md` | Tool Interface |
-| `session.md` | 拦截器自动写入 |
+| `session.md` | 宿主系统自动调用 mem0ress 接口写入 |
 | `data-plane/refs.md` | Tool Interface（`link_data_plane`） |
 | `gotchas/` | Tool Interface（`add_gotcha`） |
 
@@ -254,7 +254,7 @@ mem0ress 使用文件树表达认知的从属关系与上下文边界，对应 s
 
 **触发时机：** 每轮次结束时系统自动追加。
 
-**触发链路：** 拦截器（`gateway/intercept.py`）的 `__exit__` 中自动计算 Delta，追加记录到 session.md。
+**触发链路：** 宿主系统在每轮次结束时自动调用 mem0ress 接口，追加记录到 session.md。
 
 **写入内容：** code_progress / data_plane / todos / status。不含 Picture/Requirements/Constraints（从 Manifest 获取）。
 
