@@ -399,7 +399,7 @@ mem0ress 的认知系统由两个核心平面构成，它们都是**时间切片
 - 偏差记录（Gotchas，指针）
 - Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）
 
-Agent 唤醒时强制挂载，**纯展示，不做诊断**。
+Agent 唤醒时强制挂载，只输出当前状态，不做偏差判断。
 
 **数据平面 (Data Plane)：** 所有相关数据的 commit ID 快照。包括：
 - 各仓库当前 commit ID 映射
@@ -586,7 +586,7 @@ flowchart TB
 
 **关卡通过关系：** Tier 1 失败直接阻断，不进入 Tier 2；但 Tier 2 失败阻断 Tier 3。Tier 3 是最后一关，Tier 1 + Tier 2 全部通过才进入。
 
-**Tier 0 与 Tier 1/2/3 的区别在于触发方式：Tier 0 每轮次结束后由系统自动触发，是强制前置检查；Tier 1/2/3 由主 Agent 按需调用。四者均为纯检验——只读数据，报告结果，不修改任何状态。**
+**Tier 0 与 Tier 1/2/3 的区别在于触发方式：Tier 0 每轮次结束后由系统自动触发，是强制前置检查；Tier 1/2/3 由主 Agent 按需调用。四者均为检验——只读数据，报告结果。**
 
 **Tier 3 的触发条件：**
 
@@ -688,10 +688,10 @@ Judge Agent 读取 Task 文件系统（Manifest、Session、代码/文档），�
 
 **状态平面（状态平面快照）：**
 
-* 纯展示，无诊断：只呈现当前状态，不做偏差判断
+* 只输出当前状态，不做偏差判断：只呈现当前状态，不做偏差判断
 * 实时扫描：每次调用直接读文件系统，不缓存
 * 全面覆盖：显示所有任务，不隐藏任何节点
-* 非侵入：只读不写，不修改任何状态
+* 非侵入：只读不写，不改变任何状态
 
 **状态平面显示内容：**
 
@@ -701,7 +701,7 @@ Judge Agent 读取 Task 文件系统（Manifest、Session、代码/文档），�
 - 偏差记录（Gotchas）
 - Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）
 
-状态平面**纯展示**，不展开 Session 详情。Picture/Requirements/Constraints 从 TaskManifest 获取，不显示在状态平面中。
+状态平面只输出当前状态，不展开 Session 详情。Picture/Requirements/Constraints 从 TaskManifest 获取，不显示在状态平面中。
 
 **Session 触发规则：**
 

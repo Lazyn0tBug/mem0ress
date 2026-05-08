@@ -26,7 +26,7 @@ mem0ress/
         │   └── schema.py     # 基于 Pydantic 的强类型模型 (PRC 三要素、Task、Judge Agent)
         ├── gateway/            # [认知网关] 认知对齐平面的逻辑中枢
         │   ├── __init__.py
-        │   ├── plane.py       # Plane Assembler（状态平面组装，纯展示）
+        │   ├── plane.py       # Plane Assembler（状态平面组装）
         │   ├── actions.py     # Tool Interface（create_task, complete_task, abandon_task 等）
         │   └── intercept.py   # CognitiveContext 上下文管理器（Before Turn / After Turn 钩子）
         ├── substrate/         # [认知基座操作]
@@ -43,7 +43,7 @@ mem0ress/
 
 | 模块 | 类型 | 职责 |
 |------|------|------|
-| Plane Assembler | 只读出口 | 实时编译当前任务的状态平面快照，纯展示不缓存 |
+| Plane Assembler | 只读出口 | 实时编译当前任务的状态平面快照，只读不缓存 |
 | Tool Interface | 写操作入口 | 认知状态写入，暴露 `create_task`、`update_todo`、`complete_task` 等工具 |
 | Judge Agent | 验证执行器 | 执行 Tier 0/1/2/3 检验，返回 verdict + tier_results |
 
@@ -141,7 +141,7 @@ Task 创建 → spawn Judge Agent (id: {task_id}-judge)
 
 Judge Agent 执行 Tier 0/1/2/3 检验。Tier 0 和 Tier 1/2/3 职责不同：
 
-**Tier 0 — Constraints 约束检查（纯检验）：**
+**Tier 0 — Constraints 约束检查：**
 每轮次结束后由系统自动触发。若有违反：
 1. 检测并报告违反事实
 2. 主 Agent 根据报告决定是否修复及如何修复

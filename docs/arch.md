@@ -60,7 +60,7 @@ graph TB
 **行为：**
 - 每次 Agent 调用 `get_status_plane()` 时，直接扫描文件系统
 - 聚合所有 Task 节点的 Manifest 和 Session，写入状态平面输出
-- 纯展示层——不缓存、不诊断、不决策
+- 只输出当前状态——不缓存、不诊断、不决策
 - 只做文件系统扫描和文本聚合
 
 ### 2.3 Tool Interface（工具接口）
@@ -74,7 +74,7 @@ graph TB
 
 ### 2.4 Judge Agent（Tier 0/1/2/3 执行器）
 
-**职责**：执行 Tier 0/1/2/3 检验，只读数据，返回检验结果。Judge Agent 不修改任何状态，不参与任何数据修复。
+**职责**：执行 Tier 0/1/2/3 检验，只读数据，返回检验结果。Judge Agent 不参与任何数据修复。
 
 **与 Task 的关系**：
 - 每个 Task 伴生一个 Judge Agent
