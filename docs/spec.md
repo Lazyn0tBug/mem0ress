@@ -547,10 +547,10 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 
 **四层关卡（Tiers）：**
 
-* **Tier 0: Constraints 约束检查：** 检查当前 Task 的所有 Constraints 是否满足。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。修复成功后重跑 Tier 0 确认，通过后进入 Tier 1。
+* **Tier 0: Constraints 约束检查：** Tier 0 在每轮次结束后由系统自动触发。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。
 * **Tier 1: Todo 完成检查 + 直接子任务完成检查：** 检查两个前置条件——(1) 所有 Todo 步是否已完成；(2) 所有直接子任务是否已关闭。若存在未完成项，直接阻断，不进入 Tier 2。
 * **Tier 2: Requirements 满足检查 (Requirements Check)：** 验证每个 Requirement 是否达标。若存在未满足项，直接阻断，不进入 Tier 3。
-* **Tier 3: 语义对齐检查 (Semantic Alignment Check)：** Judge Agent 读取任务的 Picture 与实际产出，执行语义对齐判断。只有当 Picture 中包含无法自动化验证的指标（如"用户感到满意"）时才需要触发。
+* **Tier 3: 语义对齐检查 (Semantic Alignment Check)：** 读取任务的 Picture 与实际产出，执行语义对齐判断。触发条件见 7.2。
 
 ```mermaid
 %% label：四层检验递进关系
@@ -576,8 +576,6 @@ flowchart TB
 ```
 
 **关卡通过关系：** Tier 1 失败不阻断 Tier 2（因为 Todo 完成与 Requirements 满足可能不同步），但 Tier 2 失败阻断 Tier 3。Tier 3 是最后一关，Tier 1 + Tier 2 全部通过才进入。
-
-**Tier 2 的验证模式：** Tier 2 根据 Tier 1 的状态决定验证范围：若 Tier 1 未完成，则只检查所有未通过的 Requirements（效率优先）；若 Tier 1 完成，则重新全部检查所有 Requirements（最终确认）。Tier 1 与 Tier 2 之间不存在 Todo 与 Requirements 的映射关系。
 
 **Tier 0 与 Tier 1/2/3 的本质区别：** Tier 1/2/3 是纯检验，不做数据变更；Tier 0 的约束检查可能涉及数据修复。两者分属不同性质，因此不合并为同一关卡。
 
@@ -641,8 +639,8 @@ mem0ress 中，人和 Agent 不存在分工——本质上都以 Agent 形态存
 stateDiagram-v2
     [*] --> CREATED : create_task()
     CREATED --> IN_PROGRESS : update_task() / first todo
-    IN_PROGRESS --> COMPLETED : complete_task()\n(防御性检查：Tier 1/2/3 全过\n则状态变更；否则 no-op)
-    IN_PROGRESS --> ABANDONED : abandon_task()\n(Agent 主动触发)
+    IN_PROGRESS --> COMPLETED : complete_task()
+    IN_PROGRESS --> ABANDONED : abandon_task()
     IN_PROGRESS --> CREATED : update_task()\n(回退？不常见)
     COMPLETED --> [*]
     ABANDONED --> [*]
@@ -762,10 +760,7 @@ mem0ress 暴露给 Agent 的不是一套通用编程接口，而是一组有限�
 
 每轮次结束后（after turn），系统自动触发 Harness Engine 执行 Tier 0 约束越界检查：检查本轮次所有动作是否违反 Constraints。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。Tier 0 可能涉及数据修复。
 
-**任务完成度检查（Tier 1/2/3）：独立于 Harness Engine，不属于约束机制。**
-- **Tier 1：** Todo 完成检查 + 直接子任务完成检查。检查两个前置条件——(1) 所有 Todo 步是否已完成；(2) 所有直接子任务是否已关闭。
-- **Tier 2：** Requirements 满足检查。验证每个 Requirement 是否达标。
-- **Tier 3：** 语义对齐检查。Judge Agent 读取任务的 Picture 与实际产出，执行语义对齐判断。只有当 Picture 中包含无法自动化验证的指标时才触发。
+**任务完成度检查（Tier 1/2/3）：独立于 Harness Engine，不属于约束机制。Tier 1/2/3 描述见 7.2。
 
 **三个模块的边界：** Plane Assembler 是只读的，Tool Interface 是写的入口，Harness Engine 是验证出口。三者共同构成认知网关，无跨越自身职责范围的操作。
 
@@ -801,7 +796,7 @@ graph TB
 
 * 引用展开机制: 解析清单时，ref: 指针不默认加载。Agent 需主动调用工具将其展开并挂载到 Data Plane 中。
 * 原生 Git 数据回溯 (Git-Native Revert): 检验失败且路径报废时，Agent 调用工具回退数据平面，同时在状态平面生成 Gotcha 记录偏差经验，保持时间向前。
-  * 带外约束检验 (Out-of-Band Verification): Tier 3 的语义对齐在独立沙箱中执行，通过 Judge Agent 调用 LLM-as-a-Judge，杜绝与执行态 Agent 发生上下文污染。
+  * 带外约束检验 (Out-of-Band Verification): Tier 3 的语义对齐与执行态 Agent 上下文隔离，避免检验过程污染任务执行。
 
 ### 8.3 技术流程：Agent 驱动的业务闭环
 
@@ -854,7 +849,7 @@ sequenceDiagram
         Agent->>VC: verify_task(tier2=true) Requirements 满足检查
         VC-->>Agent: Tier 2 结果
 
-        Note over Agent: Tier 3: 按条件触发<br/>(主观指标 | 语义歧义 | L1/L2高危 | 显式请求)
+        Note over Agent: Tier 3: 按条件触发<br/>(触发条件见 7.2)
         alt Tier 3 触发条件满足
             Agent->>VC: verify_task(tier3=true) 语义对齐检查
             VC-->>Agent: Tier 3 语义对齐结果
@@ -879,37 +874,36 @@ sequenceDiagram
 
 ##### 一、任务操作（Task Operations）
 
-| Action | 模块 | 说明 |
-|--------|------|------|
-| `create_task` | gateway/actions.py | 创建新任务。定义三要素（Picture/Requirements/Constraints）、Todo 步、权限等级。Constraints 检查在**每轮次结束后**由 Tier 0 自动触发，create_task 本身不执行约束检查 |
-| `get_task` | gateway/actions.py | 读取任务详情，返回 Manifest 中的完整三要素、执行进度和当前状态 |
-| `update_task` | gateway/actions.py | 更新任务属性（三要素、Todo、权限等级等）。**Upsert 语义**：任务不存在时自动创建 |
-| `complete_task` | gateway/actions.py | 标记任务完成。底层调用 `mark_task(task_id, COMPLETED)`。防御性检查：调用时验证 Tier 1/2/3 是否全部通过——若全部通过则完成状态变更；若任一未通过或未检验，则直接忽略（no-op）。注：错误调用（如传入不存在的 task_id）不属于防御范畴 |
-| `abandon_task` | gateway/actions.py | 标记任务废弃。底层调用 `mark_task(task_id, ABANDONED)`。无前置条件校验。由 Agent 主动触发（与检验结果无关） |
-| `mark_task` | gateway/actions.py | 底层状态标记原语。`mark_task(task_id, status)` 直接修改任务状态，不做任何前置校验。`complete_task` / `abandon_task` / `pause_task` 均基于此封装 |
+| Action | 说明 |
+|--------|------|
+| `create_task` | 创建新任务。定义三要素（Picture/Requirements/Constraints）、Todo 步、权限等级。Constraints 检查在每轮次结束后由 Tier 0 自动触发，create_task 本身不执行约束检查 |
+| `get_task` | 读取任务详情，返回 Manifest 中的完整三要素、执行进度和当前状态 |
+| `update_task` | 更新任务属性（三要素、Todo、权限等级等）。Upsert 语义：任务不存在时自动创建 |
+| `complete_task` | 标记任务完成。防御性检查：调用时验证 Tier 1/2/3 是否全部通过——若全部通过则完成状态变更；若任一未通过或未检验，则直接忽略。注：错误调用（如传入不存在的 task_id）不属于防御范畴 |
+| `abandon_task` | 标记任务废弃。无前置条件校验。由 Agent 主动触发（与检验结果无关） |
 
 ##### 二、Todo 操作（Todo Operations）
 
-| Action | 模块 | 说明 |
-|--------|------|------|
-| `add_todo` | gateway/actions.py | 添加执行步骤到任务清单 |
-| `update_todo` | gateway/actions.py | 更新步骤状态（done: true/false） |
-| `remove_todo` | gateway/actions.py | 删除执行步骤 |
+| Action | 说明 |
+|--------|------|
+| `add_todo` | 添加执行步骤到任务清单 |
+| `update_todo` | 更新步骤状态（done: true/false） |
+| `remove_todo` | 删除执行步骤 |
 
 ##### 三、偏差记录（Gotcha Operations）
 
-| Action | 模块 | 说明 |
-|--------|------|------|
-| `add_gotcha` | gateway/actions.py | 记录检验中发现的偏差。带外写入 gotchas/ 目录，不影响任务状态，不阻断 Agent 执行 |
+| Action | 说明 |
+|--------|------|
+| `add_gotcha` | 记录检验中发现的偏差。带外写入 gotchas/ 目录，不影响任务状态，不阻断 Agent 执行 |
 
 ##### 四、检验操作（Verify Operations）
 
-| Action | 模块 | 说明 |
-|--------|------|------|
-| `verify_task(tier1_only=true)` | harness/runner.py | **Tier 1**：Todo 完成检查 + 直接子任务完成检查。两个前置条件须同时满足——(1) 所有 Todo 步已完成；(2) 所有直接子任务已关闭。若存在未完成项，直接阻断 |
-| `verify_task(tier2_only=true)` | harness/runner.py | **Tier 2**：Requirements 满足检查。验证每个 Requirement 是否达标。若存在未满足项，直接阻断，不进入 Tier 3 |
-| `verify_task(tier3=true)` | harness/judge.py | **Tier 3**：语义对齐检查。通过独立 Judge Agent 执行，读取 Picture 与实际产出做语义判断。与执行态 Agent 上下文隔离。**按需触发**，触发条件见下方"Tier 3 触发条件" |
-| `verify_task()` | harness/ | 触发任务完成度检查（Tier 1 → Tier 2 → Tier 3）。Tier 1/2/3 由 Agent 按需调用。**注意**：`verify_task()` 不触发 Tier 0——Tier 0 在每轮次结束后由系统自动触发，独立于此接口 |
+| Action | 说明 |
+|--------|------|
+| `verify_task(tier1_only=true)` | Tier 1：Todo 完成检查 + 直接子任务完成检查。见 7.2 |
+| `verify_task(tier2_only=true)` | Tier 2：Requirements 满足检查。见 7.2 |
+| `verify_task(tier3=true)` | Tier 3：语义对齐检查。读取 Picture 与实际产出做语义判断，与执行态 Agent 上下文隔离。触发条件见 7.2 |
+| `verify_task()` | 触发任务完成度检查（Tier 1 → Tier 2 → Tier 3）。Tier 1/2/3 由 Agent 按需调用。注：`verify_task()` 不触发 Tier 0——Tier 0 在每轮次结束后由系统自动触发，独立于此接口 |
 
 > **Tier 0 Guard（after-turn 自动触发）：**
 >
@@ -920,26 +914,21 @@ sequenceDiagram
 >
 > **Tier 1 与 Tier 2 的关系：** 两者独立递进。Tier 1 失败不阻断 Tier 2（Todo 完成与 Requirements 满足可能不同步），但 Tier 2 失败阻断 Tier 3。
 
-> **Tier 3 触发条件（任一满足即触发）：**
->
-> 1. **Picture 涉及主观判断**：包含"用户感到满意"、"界面美观"等无法自动化验证的指标
-> 2. **Constraints 与 Picture 存在语义歧义**：Tier 1/2 无法判断"是否做了不该做的事"
-> 3. **任务风险等级 L1/L2**：Manifest 中预设 `risk_level: L1` 或 `L2`，强制触发 Tier 3
-> 4. **Agent 或利益相关者显式请求**：Manifest 中预设 `require_tier3_verification: true`，或 Agent 主动调用 `verify_task(tier3=true)`
+> **Tier 3 触发条件（任一满足即触发）：触发条件见 7.2**
 
 ##### 五、查询操作（Query Operations）
 
-| Action | 模块 | 说明 |
-|--------|------|------|
-| `get_status_plane` | gateway/plane.py | 获取状态平面快照。**纯展示，不做诊断**，只呈现任务树/TODO 进度/状态/Gotchas/Session 指针，**不展开 Picture/Requirements/Constraints** |
-| `get_session` | gateway/plane.py | 按需获取指定任务的 Session 历史快照序列（Turn 列表） |
-| `link_data_plane` | substrate/git_ops.py | 关联仓库 commit ID 到数据平面，建立/更新 data-plane/refs.md 中的 commit 映射 |
+| Action | 说明 |
+|--------|------|
+| `get_status_plane` | 获取状态平面快照。纯展示，不做诊断，只呈现任务树/TODO 进度/状态/Gotchas/Session 指针，不展开 Picture/Requirements/Constraints |
+| `get_session` | 按需获取指定任务的 Session 历史快照序列（Turn 列表） |
+| `link_data_plane` | 关联仓库 commit ID 到数据平面，建立/更新 data-plane/refs.md 中的 commit 映射 |
 
 ##### 系统自动机制（无需 Agent 调用）
 
 | Action | 触发时机 | 说明 |
 |--------|----------|------|
-| `snapshot_session` | **每轮次结束时自动触发** | 拦截器（`gateway/intercept.py`）的 `__exit__` 中自动计算 Delta，追加记录到 session.md。记录内容：code_progress/docs_progress/todos/status。**不含 Picture/Requirements/Constraints**（从 Manifest 获取，不重复记录）。采用版本快照模型，只追加不覆盖 |
+| `snapshot_session` | 每轮次结束时自动触发 | 系统自动计算 Delta，追加记录到 session.md。记录内容：code_progress/docs_progress/todos/status。不含 Picture/Requirements/Constraints（从 Manifest 获取，不重复记录）。采用版本快照模型，只追加不覆盖 |
 
 #### 状态表 (State Table)
 
@@ -968,7 +957,7 @@ Turn N 的典型流程：
 
 2. 执行动作（可能多个）
    ├── create_task(...)       # 新任务（含三要素定义）
-   │                          # ⚠️ Tier 0 在本轮次结束后由系统自动触发，非此处触发
+   │                          # 注：Tier 0 在本轮次结束后由系统自动触发
    ├── get_task(...)         # 读取任务详情
    ├── update_task(...)       # 更新任务属性（含 Upsert 语义）
    ├── add_todo(...)         # 添加步骤
@@ -976,10 +965,9 @@ Turn N 的典型流程：
    ├── remove_todo(...)      # 删除步骤
    ├── add_gotcha(...)       # 记录偏差（带外）
    ├── verify_task(...)      # 触发任务完成度检查（Tier 1/2/3）
-   │                          # ⚠️ Tier 0 在本轮次结束后由系统自动触发，非此处触发
-   │                          # Tier 1/2/3 由 Agent 按需调用
-   ├── complete_task(...)    # 标记完成（底层 mark_task(task_id, COMPLETED)）
-   ├── abandon_task(...)    # 标记废弃（底层 mark_task(task_id, ABANDONED)）
+   │                          # 注：Tier 0 在本轮次结束后由系统自动触发
+   ├── complete_task(...)    # 标记完成
+   ├── abandon_task(...)     # 标记废弃
    ├── get_session(...)      # 按需获取 Session 历史
    └── link_data_plane(...)  # 关联数据平面 commit ID
 
@@ -993,7 +981,7 @@ Turn N 的典型流程：
 
 ### B.1 Session 模板 (session.md)
 
-Session 由拦截器（`gateway/intercept.py`）的 `__exit__` 在每轮次结束时**自动写入**，`substrate/fs.py` 负责 Markdown ↔ Pydantic 双向解析。Agent 无需手动调用写入。
+Session 在每轮次结束时由系统自动追加写入 session.md。Agent 无需手动调用写入。
 
 **模板格式：**
 
@@ -1015,7 +1003,7 @@ status: {CREATED|IN_PROGRESS}
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `code_progress` | string | 本轮次代码产出摘要，描述性文本 |
-| `data_plane` | map | 仓库名 → commit ID 映射，由 `substrate/git_ops.py` 维护 |
+| `data_plane` | map | 仓库名 → commit ID 映射 |
 | `todos` | list | `{text, done}` 结构，done 为 boolean |
 | `status` | enum | CREATED / IN_PROGRESS / COMPLETED / ABANDONED |
 
@@ -1024,7 +1012,7 @@ status: {CREATED|IN_PROGRESS}
 - 每轮次结束时**追加**写入，不覆盖历史快照（版本快照模型）
 - **不记录 Picture / Requirements / Constraints**（这些从 Manifest 获取，不重复记录）
 
-**触发时机：** 系统在每轮次 `__exit__` 时自动计算 Delta 并追加，无需 Agent 显式调用 `snapshot_session()`。
+**触发时机：** 每轮次结束时系统自动计算 Delta 并追加，无需 Agent 显式调用 `snapshot_session()`。
 
 ---
 
@@ -1053,7 +1041,7 @@ Gotcha 是带外偏差记录，写入路径为 `gotchas/{timestamp}.md`（文件
 ````
 
 **写入约定：**
-- 由 Agent 调用 `add_gotcha()` 时写入，`gateway/actions.py` 处理写入逻辑
+- 由 Agent 调用 `add_gotcha()` 时写入 gotchas/ 目录
 - 不参与主流程，不影响任务状态，不阻断 Agent 继续执行
 - 属于带外记录，供后续复盘和追溯使用
 
@@ -1061,7 +1049,7 @@ Gotcha 是带外偏差记录，写入路径为 `gotchas/{timestamp}.md`（文件
 
 ### B.3 Data Plane 模板 (data-plane/refs.md)
 
-Data Plane 由 `substrate/git_ops.py` 管理，记录当前任务关联的仓库 commit ID 快照。Session 快照中的 `data_plane` 字段引用此处维护的映射。
+Data Plane 记录当前任务关联的仓库 commit ID 快照。Session 快照中的 `data_plane` 字段引用此处维护的映射。
 
 **模板格式：**
 
@@ -1100,7 +1088,7 @@ repositories:
 **维护约定：**
 - 由 `link_data_plane()` 工具关联仓库时写入或更新
 - 每个 Task 目录下维护独立的 `data-plane/refs.md`
-- Change Log 由 `git_ops.py` 自动追加，记录版本变迁原因，供 Agent 按需回溯
+- Change Log 自动追加，记录版本变迁原因，供 Agent 按需回溯
 - Data Plane 是**时间切片**，`repositories` 字段记录某一时刻的 commit ID 快照，Change Log 提供历史追溯通道
 
 **与 Session 的关系：**
