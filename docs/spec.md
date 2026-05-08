@@ -548,8 +548,8 @@ Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的�
 **四层关卡（Tiers）：**
 
 * **Tier 0: Constraints 约束检查：** 检查当前 Task 的所有 Constraints 是否满足。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。修复成功后重跑 Tier 0 确认，通过后进入 Tier 1。
-* **Tier 1: Todo 完成检查 + 直接子任务完成检查：** 检查两个独立的前置条件——(1) 所有 Todo 步是否已被标记为完成；(2) 所有直接子任务是否状态为 COMPLETED。若存在未完成的 Todo 或未关闭的子任务，直接阻断，不进入 Tier 2。
-* **Tier 2: Requirements 满足检查 (Requirements Check)：** 在沙箱中执行 Requirements 对应的脚本或测试，验证每个 Requirement 是否达标。若存在未满足的 Requirement，直接阻断，不进入 Tier 3。
+* **Tier 1: Todo 完成检查 + 直接子任务完成检查：** 检查两个前置条件——(1) 所有 Todo 步是否已完成；(2) 所有直接子任务是否已关闭。若存在未完成项，直接阻断，不进入 Tier 2。
+* **Tier 2: Requirements 满足检查 (Requirements Check)：** 验证每个 Requirement 是否达标。若存在未满足项，直接阻断，不进入 Tier 3。
 * **Tier 3: 语义对齐检查 (Semantic Alignment Check)：** Judge Agent 读取任务的 Picture 与实际产出，执行语义对齐判断。只有当 Picture 中包含无法自动化验证的指标（如"用户感到满意"）时才需要触发。
 
 ```mermaid
@@ -596,9 +596,9 @@ Tier 3 不是每次 `verify_task()` 都自动进入的常规关卡。它由 Agen
 
 **任务状态与检验的关系：**
 
-- Tier 1/2/3 全部通过 → 检验通过，任务状态保持不变，Agent 自行决定是否调用 `complete_task()`
-- 检验未通过 → 偏差记录写入 gotcha_refs，Agent 决定下一步（修正、重试或标记 ABANDONED）
-- `complete_task()` 的调用权属于决策权，可由 AI Agent 自主行使，或按权限分级让度给人
+- Tier 1/2/3 全部通过 → 检验通过，Agent 可调用 `complete_task()` 标记完成
+- Tier 1/2/3 任一未通过或未检验 → `complete_task()` 调用无效
+- 检验未通过 → 偏差记录写入 gotcha_refs，Agent 决定下一步（修正、重试或废弃）
 
 ### 7.3 认知构建
 
@@ -763,8 +763,8 @@ mem0ress 暴露给 Agent 的不是一套通用编程接口，而是一组有限�
 每轮次结束后（after turn），系统自动触发 Harness Engine 执行 Tier 0 约束越界检查：检查本轮次所有动作是否违反 Constraints。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。Tier 0 可能涉及数据修复。
 
 **任务完成度检查（Tier 1/2/3）：独立于 Harness Engine，不属于约束机制。**
-- **Tier 1：** Todo 完成检查 + 直接子任务完成检查。检查两个独立的前置条件——(1) 所有 Todo 步是否已被标记为完成；(2) 所有直接子任务是否状态为 COMPLETED。
-- **Tier 2：** Requirements 满足检查。在沙箱中执行 Requirements 对应的脚本或测试，验证每个 Requirement 是否达标。
+- **Tier 1：** Todo 完成检查 + 直接子任务完成检查。检查两个前置条件——(1) 所有 Todo 步是否已完成；(2) 所有直接子任务是否已关闭。
+- **Tier 2：** Requirements 满足检查。验证每个 Requirement 是否达标。
 - **Tier 3：** 语义对齐检查。Judge Agent 读取任务的 Picture 与实际产出，执行语义对齐判断。只有当 Picture 中包含无法自动化验证的指标时才触发。
 
 **三个模块的边界：** Plane Assembler 是只读的，Tool Interface 是写的入口，Harness Engine 是验证出口。三者共同构成认知网关，无跨越自身职责范围的操作。
@@ -906,8 +906,8 @@ sequenceDiagram
 
 | Action | 模块 | 说明 |
 |--------|------|------|
-| `verify_task(tier1_only=true)` | harness/runner.py | **Tier 1**：Todo 完成检查 + 直接子任务完成检查。两个前置条件须同时满足——(1) 所有 Todo 步 done=true；(2) 所有直接子任务状态=COMPLETED。若存在未完成项，直接阻断 |
-| `verify_task(tier2_only=true)` | harness/runner.py | **Tier 2**：Requirements 满足检查。在沙箱中执行脚本或测试，验证每个 Requirement 是否达标。若存在未满足项，直接阻断，不进入 Tier 3 |
+| `verify_task(tier1_only=true)` | harness/runner.py | **Tier 1**：Todo 完成检查 + 直接子任务完成检查。两个前置条件须同时满足——(1) 所有 Todo 步已完成；(2) 所有直接子任务已关闭。若存在未完成项，直接阻断 |
+| `verify_task(tier2_only=true)` | harness/runner.py | **Tier 2**：Requirements 满足检查。验证每个 Requirement 是否达标。若存在未满足项，直接阻断，不进入 Tier 3 |
 | `verify_task(tier3=true)` | harness/judge.py | **Tier 3**：语义对齐检查。通过独立 Judge Agent 执行，读取 Picture 与实际产出做语义判断。与执行态 Agent 上下文隔离。**按需触发**，触发条件见下方"Tier 3 触发条件" |
 | `verify_task()` | harness/ | 触发任务完成度检查（Tier 1 → Tier 2 → Tier 3）。Tier 1/2/3 由 Agent 按需调用。**注意**：`verify_task()` 不触发 Tier 0——Tier 0 在每轮次结束后由系统自动触发，独立于此接口 |
 
@@ -975,8 +975,8 @@ Turn N 的典型流程：
    ├── update_todo(...)      # 更新步骤状态
    ├── remove_todo(...)      # 删除步骤
    ├── add_gotcha(...)       # 记录偏差（带外）
-   ├── verify_task(...)      # 触发 Harness 验证流程
-   │                          # Tier 0 由 create/update_task 自动触发
+   ├── verify_task(...)      # 触发任务完成度检查（Tier 1/2/3）
+   │                          # ⚠️ Tier 0 在本轮次结束后由系统自动触发，非此处触发
    │                          # Tier 1/2/3 由 Agent 按需调用
    ├── complete_task(...)    # 标记完成（底层 mark_task(task_id, COMPLETED)）
    ├── abandon_task(...)    # 标记废弃（底层 mark_task(task_id, ABANDONED)）
