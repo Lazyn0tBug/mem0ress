@@ -78,7 +78,7 @@ graph TB
 
 ### 2.4 Harness Engine（约束检验引擎）
 
-**职责：** 封装 Tier 0 的约束越界检查。Tier 0 在每轮次结束后由系统自动触发。若约束违反且无法修复，mem0ress 持有让度请求的发起点并等待恢复信号。
+**职责：** 封装 Tier 0 的约束越界检查。Tier 0 在每轮次结束后由系统自动触发。若约束违反且无法修复，mem0ress 持有让度请求的发起点并等待恢复信号；恢复信号触达后，mem0ress 解除暂停状态并继续或终止。
 
 ### 2.5 任务完成度检查（Tier 1/2/3）
 
@@ -173,7 +173,13 @@ sequenceDiagram
     end
 
     Note over Agent: 系统自动机制（不属于业务流）
-    Note over Agent: 每轮次结束后：Harness Tier 0 自动触发<br/>Session 快照自动追加
+    par Tier 0 自动触发
+        System->>HE: Tier 0 约束检查
+        HE-->>System: 检验结果
+    and Session 快照自动追加
+        System->>TI: snapshot_session()
+        TI-->>System: 快照已追加
+    end
 ```
 
 ---
@@ -191,7 +197,7 @@ sequenceDiagram
 | `verify_task()` | Harness Engine + 任务完成度检查 | Tier 0 自动触发，Tier 1/2/3 按需调用 |
 | Tier 0 自动检查 | Harness Engine | after-turn 系统自动触发 |
 | Tier 1/2/3 检查 | 任务完成度检查组件 | Agent 按需调用 |
-| `snapshot_session` | — | 外部调用触发，mem0ress 内部自动追加 |
+| `snapshot_session` | — | after-turn 宿主调用触发，mem0ress 内部自动追加 |
 
 ---
 
@@ -220,7 +226,7 @@ mem0ress 使用文件树表达认知的从属关系与上下文边界，对应 s
 | 物理组件 | 维护模块 |
 |----------|----------|
 | `index.md` | Tool Interface |
-| `session.md` | 宿主系统自动调用 mem0ress 接口写入 |
+| `session.md` | mem0ress 暴露接口，被调用时自动写入 |
 | `data-plane/refs.md` | Tool Interface（`link_data_plane`） |
 | `gotchas/` | Tool Interface（`add_gotcha`） |
 
