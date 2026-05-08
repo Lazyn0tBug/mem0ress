@@ -641,7 +641,7 @@ mem0ress 中，人和 Agent 不存在分工——本质上都以 Agent 形态存
 stateDiagram-v2
     [*] --> CREATED : create_task()
     CREATED --> IN_PROGRESS : update_task() / first todo
-    IN_PROGRESS --> COMPLETED : complete_task()\n(Tier 1+2+3 全部通过)
+    IN_PROGRESS --> COMPLETED : complete_task()\n(防御性检查：Tier 1/2/3 全过\n则状态变更；否则 no-op)
     IN_PROGRESS --> ABANDONED : abandon_task()\n(Agent 主动触发)
     IN_PROGRESS --> CREATED : update_task()\n(回退？不常见)
     COMPLETED --> [*]
@@ -760,9 +760,7 @@ mem0ress 暴露给 Agent 的不是一套通用编程接口，而是一组有限�
 
 **Harness Engine（约束检验引擎）：仅封装 Tier 0 的约束越界检查。**
 
-当 Agent 调用 `verify_task()` 时，Harness Engine 执行约束越界检查（Tier 0）：检查当前 Task 的所有 Constraints 是否满足。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。
-
-Harness Engine 本身**不是自主进程**——它没有主动触发能力，只能响应 Agent 的 `verify_task()` 调用。
+每轮次结束后（after turn），系统自动触发 Harness Engine 执行 Tier 0 约束越界检查：检查本轮次所有动作是否违反 Constraints。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。Tier 0 可能涉及数据修复。
 
 **任务完成度检查（Tier 1/2/3）：独立于 Harness Engine，不属于约束机制。**
 - **Tier 1：** Todo 完成检查 + 直接子任务完成检查。检查两个独立的前置条件——(1) 所有 Todo 步是否已被标记为完成；(2) 所有直接子任务是否状态为 COMPLETED。
@@ -797,7 +795,7 @@ graph TB
     class VC verify;
 ```
 
-> **Tier 0 触发时机：** 每轮次结束后（after turn）自动触发，属于 Harness Engine 的约束越界检查。Tier 1/2/3 为任务完成度检查，独立于 Harness。Harness 保证任务不偏离目标（业务外约束），Tier 1/2/3 保证任务本身完成（业务内检查）。
+
 
 ### 8.2 核心机制设计
 
@@ -810,7 +808,7 @@ graph TB
 mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
   1. 认知构建: Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 Manifest 按需读取，不在状态平面中展开。
-  2. 任务检验: Agent 调用 `verify_task()`，驱动 Harness 约束越界检查（Tier 0）+ 任务完成度检查（Tier 1/2/3）
+  2. 任务检验: Agent 调用 `verify_task()`，驱动任务完成度检查（Tier 1/2/3）。Tier 0 在每轮次结束后由系统自动触发，独立于 `verify_task()`
   3. 状态更新: Agent 根据检验结果决策后续行动——更新 Todo、调用 `complete_task()` 标记完成、`abandon_task()` 标记废弃、或继续执行。状态更新通过 Tool Interface 执行写操作，支持 `complete_task`、`abandon_task`、`update_todo` 等。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
 **系统自动机制（不属于业务流）：**
@@ -886,7 +884,7 @@ sequenceDiagram
 | `create_task` | gateway/actions.py | 创建新任务。定义三要素（Picture/Requirements/Constraints）、Todo 步、权限等级。Constraints 检查在**每轮次结束后**由 Tier 0 自动触发，create_task 本身不执行约束检查 |
 | `get_task` | gateway/actions.py | 读取任务详情，返回 Manifest 中的完整三要素、执行进度和当前状态 |
 | `update_task` | gateway/actions.py | 更新任务属性（三要素、Todo、权限等级等）。**Upsert 语义**：任务不存在时自动创建 |
-| `complete_task` | gateway/actions.py | 标记任务完成。底层调用 `mark_task(task_id, COMPLETED)`。无前置条件校验——Agent 应在确认 Tier 3 通过后再调用。若 Tier 3 未通过而调用，则直接忽略（no-op）。调用权归属决策权，Agent 可自主行使或按权限让度给人 |
+| `complete_task` | gateway/actions.py | 标记任务完成。底层调用 `mark_task(task_id, COMPLETED)`。防御性检查：调用时验证 Tier 1/2/3 是否全部通过——若全部通过则完成状态变更；若任一未通过或未检验，则直接忽略（no-op）。注：错误调用（如传入不存在的 task_id）不属于防御范畴 |
 | `abandon_task` | gateway/actions.py | 标记任务废弃。底层调用 `mark_task(task_id, ABANDONED)`。无前置条件校验。由 Agent 主动触发（与检验结果无关） |
 | `mark_task` | gateway/actions.py | 底层状态标记原语。`mark_task(task_id, status)` 直接修改任务状态，不做任何前置校验。`complete_task` / `abandon_task` / `pause_task` 均基于此封装 |
 
@@ -911,7 +909,7 @@ sequenceDiagram
 | `verify_task(tier1_only=true)` | harness/runner.py | **Tier 1**：Todo 完成检查 + 直接子任务完成检查。两个前置条件须同时满足——(1) 所有 Todo 步 done=true；(2) 所有直接子任务状态=COMPLETED。若存在未完成项，直接阻断 |
 | `verify_task(tier2_only=true)` | harness/runner.py | **Tier 2**：Requirements 满足检查。在沙箱中执行脚本或测试，验证每个 Requirement 是否达标。若存在未满足项，直接阻断，不进入 Tier 3 |
 | `verify_task(tier3=true)` | harness/judge.py | **Tier 3**：语义对齐检查。通过独立 Judge Agent 执行，读取 Picture 与实际产出做语义判断。与执行态 Agent 上下文隔离。**按需触发**，触发条件见下方"Tier 3 触发条件" |
-| `verify_task()` | harness/ | 触发 Harness 约束越界检查（Tier 0）+ 任务完成度检查（Tier 1 → Tier 2 → Tier 3）。Tier 0 由系统自动触发，Tier 1/2/3 由 Agent 按需调用 |
+| `verify_task()` | harness/ | 触发任务完成度检查（Tier 1 → Tier 2 → Tier 3）。Tier 1/2/3 由 Agent 按需调用。**注意**：`verify_task()` 不触发 Tier 0——Tier 0 在每轮次结束后由系统自动触发，独立于此接口 |
 
 > **Tier 0 Guard（after-turn 自动触发）：**
 >
@@ -970,7 +968,7 @@ Turn N 的典型流程：
 
 2. 执行动作（可能多个）
    ├── create_task(...)       # 新任务（含三要素定义）
-   │                          # 自动触发 Tier 0 前置 Guard（Constraints 检查）
+   │                          # ⚠️ Tier 0 在本轮次结束后由系统自动触发，非此处触发
    ├── get_task(...)         # 读取任务详情
    ├── update_task(...)       # 更新任务属性（含 Upsert 语义）
    ├── add_todo(...)         # 添加步骤
