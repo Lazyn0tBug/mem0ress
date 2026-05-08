@@ -39,22 +39,18 @@ graph TB
 
     PA["Plane Assembler\n只读出口"]
     TI["Tool Interface\n写操作入口"]
-    HE["Harness Engine\n约束越界检查（Tier 0）"]
-    VC["任务完成度检查\n（Tier 1/2/3）"]
+    JA["Judge Agent\nTier 0/1/2/3 执行器"]
 
     Agent --> PA
     Agent --> TI
-    Agent --> HE
-    Agent --> VC
+    Agent --> JA
 
     classDef mod fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
     classDef agent fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
-    classDef harness fill:#ffcdd2,stroke:#b71c1c,stroke-width:2px;
-    classDef verify fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px;
+    classDef judge fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
     class PA,TI mod;
     class Agent agent;
-    class HE harness;
-    class VC verify;
+    class JA judge;
 ```
 
 ### 2.2 Plane Assembler（平面组装器）
@@ -76,28 +72,78 @@ graph TB
 - 只管理认知状态的写入，不执行业务逻辑
 - **Upsert 语义：** `update_task` 在任务不存在时自动创建
 
-### 2.4 Harness Engine（约束检验引擎）
+### 2.4 Judge Agent（Tier 0/1/2/3 执行器）
 
-**职责：** 封装 Tier 0 的约束越界检查。Tier 0 在每轮次结束后由系统自动触发。若约束违反且无法修复，mem0ress 持有让度请求的发起点并等待恢复信号；恢复信号触达后，mem0ress 解除暂停状态并继续或终止。
+**职责**：执行 Tier 0/1/2/3 检验，返回对齐结果。
 
-### 2.5 任务完成度检查（Tier 1/2/3）
+**与 Task 的关系**：
+- 每个 Task 伴生一个 Judge Agent
+- 生命周期同步：Task 创建 → Judge Agent 创建；Task 完成/废弃 → Judge Agent 销毁
+- Judge Agent 读取 Task 文件系统，不依赖主 Agent 的上下文
 
-**职责：** 独立于 Harness Engine 的验证组件。
+**文件存储**：
 
-**行为：**
-- Tier 1：Todo 完成检查 + 直接子任务完成检查
-- Tier 2：Requirements 满足检查
-- Tier 3：语义对齐检查（与执行态 Agent 上下文隔离）
-- Tier 1/2/3 详细语义见规范 spec.md 7.2
+```
+.mem0ress/tasks/{task_id}/
+├── index.md                    # Task Manifest
+├── session.md                  # Task Session
+├── data-plane/refs.md          # Data Plane
+├── gotchas/{timestamp}.md      # Gotcha 记录
+└── {task_id}-judge.md         # Judge Agent Manifest（平铺）
+```
 
-### 2.6 模块边界
+Judge Agent 不创建独立目录。Manifest 和 Session（验证历史追加到 Manifest 的 `verification_history` 字段）都平铺在 Task 目录下。
+
+**初始化流程**：
+
+```mermaid
+%% label：Judge Agent 初始化
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae' } } }%%
+flowchart TB
+    TaskCreate["Task 创建"] --> SpawnJudge["spawn Judge Agent\nid: {task_id}-judge"]
+    SpawnJudge --> LoadManifest["加载 Picture/Requirements/Constraints"]
+    LoadManifest --> BuildMapping["建立 Todo → Requirements 映射"]
+    BuildMapping --> Ready["status: ready"]
+```
+
+**交互接口**：
+
+| 接口 | 说明 |
+|------|------|
+| `verify(tiers: ["tier0", "tier1", "tier2", "tier3"])` | 执行指定 Tier 检验 |
+| 返回 `{verdict, tier_results}` | 对齐结果和详细报告 |
+
+**状态变化**：
+
+```
+created → ready → verifying → ready → ... → destroyed
+```
+
+| 状态 | 含义 |
+|------|------|
+| `created` | 刚创建，三要素未加载 |
+| `ready` | 三要素已加载，等待检验 |
+| `verifying` | 执行检验中 |
+| `destroyed` | Task 结束，Judge Agent 销毁 |
+
+**Tier 执行内容**：
+
+| Tier | 检查内容 | 输入来源 |
+|------|---------|---------|
+| Tier 0 | Constraints 违反检查 | Constraints（Manifest）、当前代码状态（文件系统） |
+| Tier 1 | Todo 完成 + 子任务关闭 | todos（Manifest）、Session 当前快照、子任务 Manifest |
+| Tier 2 | Requirements 满足检查 | Requirements（Manifest）、实际产出（文件系统） |
+| Tier 3 | 语义对齐判断 | Picture（Manifest）、实际产出（文件系统） |
+
+Judge Agent 在每次检验时实时读取上述信息，不在内存中维护中间状态。`verification_history` 字段记录检验历史摘要，供追溯使用。
+
+### 2.5 模块边界
 
 | 模块 | 类型 | 职责 |
 |------|------|------|
 | Plane Assembler | 只读出口 | 状态平面编译与展示 |
 | Tool Interface | 写操作入口 | 认知状态写入 |
-| Harness Engine | 验证出口 | Tier 0 约束越界检查 |
-| 任务完成度检查 | 验证组件 | Tier 1/2/3 完成度检查 |
+| Judge Agent | 验证执行器 | Tier 0/1/2/3 检验执行 |
 
 三者共同构成认知网关，无跨越自身职责范围的操作。
 
@@ -147,38 +193,33 @@ sequenceDiagram
     participant Agent
     participant PA as Plane Assembler
     participant TI as Tool Interface
-    participant VC as 任务完成度检查 (Tier 1/2/3)
+    participant JA as Judge Agent
 
     rect rgba(46, 125, 50, 0.1)
-        Note over Agent,VC: Agent 主动决策（业务流）
+        Note over Agent,JA: Tier 0 每轮次结束后由系统自动触发（不属于业务流）
+        System->>JA: Tier 0 约束检查（自动）
+        JA-->>System: 检验结果
+
+        Note over Agent,JA: Agent 主动决策（业务流）
         Agent->>PA: get_status_plane()
-        PA-->>Agent: 状态平面快照<br/>(任务树 | TODO进度 | 状态 | Gotchas | Session指针)
+        PA-->>Agent: 状态平面快照
 
         Agent->>TI: do(执行动作)
 
-        Agent->>VC: verify_task(tier1=true) Todo 完成检查
-        VC-->>Agent: Tier 1 结果
+        Agent->>JA: verify_task(tier1=true) Tier 1 Todo 检查
+        JA-->>Agent: Tier 1 结果
 
-        Agent->>VC: verify_task(tier2=true) Requirements 满足检查
-        VC-->>Agent: Tier 2 结果
+        Agent->>JA: verify_task(tier2=true) Tier 2 Requirements 检查
+        JA-->>Agent: Tier 2 结果
 
         Note over Agent: Tier 3: 按条件触发<br/>(触发条件见 spec.md 7.2)
         alt Tier 3 触发条件满足
-            Agent->>VC: verify_task(tier3=true) 语义对齐检查
-            VC-->>Agent: Tier 3 语义对齐结果
+            Agent->>JA: verify_task(tier3=true) 语义对齐检查
+            JA-->>Agent: Tier 3 结果
         end
 
         Agent->>TI: complete_task() / abandon_task() / update_todo()
         TI-->>Agent: 状态更新确认
-    end
-
-    Note over Agent: 系统自动机制（不属于业务流）
-    par Tier 0 自动触发
-        System->>HE: Tier 0 约束检查
-        HE-->>System: 检验结果
-    and Session 快照自动追加
-        System->>TI: snapshot_session()
-        TI-->>System: 快照已追加
     end
 ```
 
@@ -194,9 +235,9 @@ sequenceDiagram
 | `create_task` / `update_task` / `complete_task` / `abandon_task` | Tool Interface | 认知状态写操作 |
 | `add_todo` / `update_todo` / `remove_todo` | Tool Interface | Todo 写操作 |
 | `add_gotcha` | Tool Interface | 偏差记录写操作 |
-| `verify_task()` | Harness Engine + 任务完成度检查 | Tier 0 自动触发，Tier 1/2/3 按需调用 |
-| Tier 0 自动检查 | Harness Engine | after-turn 系统自动触发 |
-| Tier 1/2/3 检查 | 任务完成度检查组件 | Agent 按需调用 |
+| `verify_task()` | Judge Agent | 统一执行 Tier 0/1/2/3 检验 |
+| Tier 0 自动检查 | Judge Agent | after-turn 系统自动触发 |
+| Tier 1/2/3 检查 | Judge Agent | Agent 按需调用 |
 | `snapshot_session` | — | after-turn 宿主调用触发，mem0ress 内部自动追加 |
 
 ---
@@ -213,12 +254,13 @@ mem0ress 使用文件树表达认知的从属关系与上下文边界，对应 s
 .mem0ress/
 └── tasks/
     └── {task_id}/
-        ├── index.md         # Manifest（Picture/Requirements/Constraints/Todo）
-        ├── session.md       # 轮次快照序列
+        ├── index.md              # Manifest（Picture/Requirements/Constraints/Todo）
+        ├── session.md            # 轮次快照序列
         ├── data-plane/
-        │   └── refs.md      # 仓库 → commit ID 映射
-        └── gotchas/
-            └── {timestamp}.md  # 偏差记录
+        │   └── refs.md         # 仓库 → commit ID 映射
+        ├── gotchas/
+        │   └── {timestamp}.md   # 偏差记录
+        └── {task_id}-judge.md  # Judge Agent Manifest（平铺）
 ```
 
 **模块职责映射：**
@@ -229,6 +271,7 @@ mem0ress 使用文件树表达认知的从属关系与上下文边界，对应 s
 | `session.md` | mem0ress 暴露接口，被调用时自动写入 |
 | `data-plane/refs.md` | Tool Interface（`link_data_plane`） |
 | `gotchas/` | Tool Interface（`add_gotcha`） |
+| `{task_id}-judge.md` | Judge Agent（验证历史追加） |
 
 ### 6.2 Session 快照
 

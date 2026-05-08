@@ -58,7 +58,8 @@ graph TB
         DP["数据平面\n（当前代码版本）"]
     end
 
-    subgraph TIERS["四层检验（Harness）"]
+    subgraph TIERS["四层检验（Judge Agent）"]
+        J["Judge Agent\nTier 0/1/2/3 执行器"]
         T0["Tier 0\nConstraints 检查"]
         T1["Tier 1\nTodo + 子任务"]
         T2["Tier 2\nRequirements"]
@@ -68,18 +69,21 @@ graph TB
     PRC --> TASK
     TASK --> SP
     TASK --> DP
-    SP --> T0
-    T0 --> T1
-    T1 --> T2
-    T2 -.->|按需触发| T3
+    J --> T0
+    J --> T1
+    J --> T2
+    J -.->|按需触发| T3
+    SP --> J
 
     classDef prc fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef task fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
     classDef plane fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
     classDef tier fill:#fce4ec,stroke:#c62828,stroke-width:2px;
+    classDef judge fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
     class PRC,task,TR prc;
     class SP,DP plane;
     class T0,T1,T2,T3 tier;
+    class J judge;
 ```
 
 ## 2. 核心洞察 (Core Insights)
@@ -477,13 +481,14 @@ graph TD
 .mem0ress/
 └── tasks/
     └── auth_module/
-        ├── index.md         # The Manifest (包含图景、需求与 Todo)
-        ├── session.md       # 每个轮次的状态快照（Session 历史）
-        ├── data-plane/      # Data Plane 引用（仓库 → commit ID 映射）
-        └── gotchas/         # 该任务独享的认知增量与偏差修正记录
+        ├── index.md           # The Manifest (包含图景、需求与 Todo)
+        ├── session.md         # 每个轮次的状态快照（Session 历史）
+        ├── data-plane/        # Data Plane 引用（仓库 → commit ID 映射）
+        ├── gotchas/           # 该任务独享的认知增量与偏差修正记录
+        └── auth_module-judge.md # Judge Agent Manifest（平铺）
 ```
 
-`index.md` 扮演了声明式清单（Manifest）。Session 记录每个轮次的执行进度，Picture/Requirements/Constraints 从 Manifest 获取，不重复记录。
+`index.md` 扮演了声明式清单（Manifest）。Session 记录每个轮次的执行进度，Picture/Requirements/Constraints 从 Manifest 获取，不重复记录。Judge Agent Manifest 存储在 Task 目录下，文件名为 `{task_id}-judge.md`，验证历史追加到其 `verification_history` 字段，不单独存储 Session。
 
 **Data Plane 关联表：**
 
@@ -602,6 +607,81 @@ Tier 3 不是每次检验都自动进入的常规关卡。它由 Agent 根据任
 - Tier 1/2/3 任一未通过或未检验 → 标记完成无效
 - 检验未通过 → 偏差记录写入 gotcha_refs，Agent 决定下一步（修正、重试或废弃）
 
+### 7.2.1 Judge Agent
+
+Judge Agent 是执行 Tier 0/1/2/3 检验的专用组件，每个 Task 伴生一个 Judge Agent。
+
+**与 Task 的关系**：
+
+Judge Agent 与 Task 是**伴生关系**，不是从属关系。Judge Agent 的生命周期与 Task 同步——Task 创建时创建，Task 完成/废弃时销毁。
+
+**Manifest 模板**：
+
+```markdown
+---
+id: {task_id}-judge
+type: judge
+parent_task: {task_id}
+status: ready|verifying|completed|error
+
+cognitive_triad:
+  picture: "验证 {task_id} 的目标对齐状态"
+  requirements:
+    - "读取 Picture 和实际产出"
+    - "执行 Tier 0~3 检验"
+    - "返回对齐结果"
+  constraints:
+    - "只读取 Task 文件，不修改"
+    - "独立判断，不受主 Agent 影响"
+
+todos:
+  - [ ] Tier 0: Constraints 约束检查
+  - [ ] Tier 1: Todo + 子任务完成检查
+  - [ ] Tier 2: Requirements 满足检查
+  - [ ] Tier 3: 语义对齐检查
+
+verification_history: []
+---
+```
+
+**验证接口**：
+
+| 字段 | 说明 |
+|------|------|
+| `verification_history` | 检验历史摘要，只追加不覆盖 |
+
+**验证结果格式**：
+
+| 字段 | 说明 |
+|------|------|
+| `verdict` | aligned / deviation / uncertain |
+| `tier_results` | 每个 Tier 的详细结果 |
+
+**文件存储**：
+
+Judge Agent Manifest 存储在 Task 目录下，文件名为 `{task_id}-judge.md`。
+
+```
+.mem0ress/tasks/{task_id}/
+├── index.md              # Task Manifest
+├── session.md            # Task Session
+├── data-plane/
+├── gotchas/
+└── {task_id}-judge.md   # Judge Agent Manifest（平铺）
+```
+
+Judge Agent 不创建独立目录，其 Manifest 和 Session（验证历史追加到 Manifest 的 `verification_history` 字段）都平铺在 Task 目录下。
+
+**验证触发时机**：
+
+- Tier 0：每轮次结束后由系统自动触发
+- Tier 1/2：主 Agent 按需调用
+- Tier 3：按需触发（见 7.2 Tier 3 触发条件）
+
+**Judge Agent 与主 Agent 的交互**：
+
+Judge Agent 读取 Task 文件系统（Manifest、Session、代码/文档），不读取主 Agent 的执行上下文。验证结果返回给主 Agent，由主 Agent 决策下一步。
+
 ### 7.3 认知构建
 
 这是贯穿生命周期始终的核心动作。在任何节点（刚启动时、执行中、或检验失败后），系统都需要为 Agent 构建当前任务的状态平面。
@@ -718,6 +798,7 @@ mem0ress 不预设权限等级，"高危"的判断算法由宿主系统自行定
 | `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 Manifest 获取） |
 | `Task` | 认知单元，包含 Manifest（index.md）、Session（session.md）、Data Plane（data-plane/refs.md）、Gotchas（gotchas/）四个物理子节点 |
 | `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以所有子任务完成为前提 |
+| `Judge Agent` | 伴生组件，执行 Tier 0/1/2/3 检验，Manifest 存储在 {task_id}-judge.md，与 Task 生命周期同步 |
 
 ## 附录 B: 模板参考
 
