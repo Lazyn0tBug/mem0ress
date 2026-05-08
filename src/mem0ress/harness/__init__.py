@@ -11,6 +11,8 @@ Judge Task Design:
 - Judge is spawned on-demand, completes when todos done
 - Briefing is embedded in Judge's cognitive_triad
 - Result is written to the original task's gotcha_refs
+
+Tier 3 judge logic has been moved to harness/judge.py.
 """
 
 import subprocess
@@ -18,6 +20,8 @@ import subprocess
 from pydantic import BaseModel, Field
 
 from mem0ress.core.schema import TaskManifest, TaskStatus
+from mem0ress.harness.judge import JudgeResult as JudgeResult
+from mem0ress.harness.judge import judge as judge
 
 
 class HarnessResult(BaseModel):
