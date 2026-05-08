@@ -868,24 +868,44 @@ sequenceDiagram
 
 ## 附录 A: 动作、状态与节点表
 
+> **说明：** 本附录记录所有认知操作动作。其中"**（系统自动）**"标注的动作由系统在生命周期中自动触发，Agent 无需显式调用；其余动作为 Agent 可调用的工具接口。
+
 #### 动作表 (Action Table)
 
-| Action | 类型 | 说明 |
+##### Agent 可调用动作（Tool Interface）
+
+| Action | 模块 | 说明 |
 |--------|------|------|
-| `create_task` | 任务节点 | 创建新任务 |
-| `get_task` | 任务节点 | 读取任务详情 |
-| `update_task` | 任务节点 | 更新任务属性 |
-| `complete_task` | 任务节点 | 标记任务完成 |
-| `abandon_task` | 任务节点 | 标记任务废弃 |
-| `add_todo` | 执行步骤 | 添加步骤 |
-| `update_todo` | 执行步骤 | 更新步骤状态 |
-| `remove_todo` | 执行步骤 | 删除步骤 |
-| `add_gotcha` | 偏差记录 | 记录偏差 |
-| `snapshot_session` | 轮次 | **（系统自动触发）** 每轮次结束时记录，无需 Agent 调用 |
-| `get_status_plane` | 轮次 | 获取状态平面 |
-| `get_session` | 轮次 | 获取会话历史 |
-| `verify_task` | 验证 | 触发 Harness 四层验证 |
-| `link_data_plane` | 数据平面 | 关联仓库 commit ID |
+| `create_task` | gateway/actions.py | 创建新任务，定义三要素（Picture/Requirements/Constraints）和 Todo 步 |
+| `get_task` | gateway/actions.py | 读取任务详情，返回 Manifest 中的完整三要素和执行状态 |
+| `update_task` | gateway/actions.py | 更新任务属性（三要素、权限等级等），校验状态转换合法性 |
+| `complete_task` | gateway/actions.py | 标记任务完成。调用权归属决策权，Agent 可自主行使或按权限让度给人 |
+| `abandon_task` | gateway/actions.py | 标记任务废弃，由 Agent 主动触发（与检验结果无关） |
+| `add_todo` | gateway/actions.py | 添加执行步骤到任务清单 |
+| `update_todo` | gateway/actions.py | 更新步骤状态（done: true/false） |
+| `remove_todo` | gateway/actions.py | 删除执行步骤 |
+| `add_gotcha` | gateway/actions.py | 记录检验中发现的偏差，带外写入 gotchas/ 目录，不影响任务状态 |
+| `get_status_plane` | gateway/plane.py | 获取状态平面快照（任务树/TODO 进度/状态/Gotchas/Session 指针）。**纯展示，不做诊断**，不展开 Picture/Requirements/Constraints |
+| `get_session` | gateway/plane.py | 按需获取指定任务的 Session 历史快照序列 |
+| `verify_task` | harness/ | 触发 Harness 验证流程 |
+| `link_data_plane` | substrate/git_ops.py | 关联仓库 commit ID 到数据平面，建立数据版本指针 |
+
+##### Agent 可调用动作（Tiers 验证）
+
+| Action | 模块 | 说明 |
+|--------|------|------|
+| `verify_task(tier0_only=true)` | harness/runner.py | **Tier 0 前置处理**：Constraints 约束检查。自动触发，不在 Agent 决策范围内。若违反：可修复 → 自动修复后重跑；不可修复 → 按权限让度给人 |
+| `verify_task(tier1_only=true)` | harness/runner.py | **Tier 1**：Todo 完成检查 + 直接子任务完成检查。Agent 按需调用 |
+| `verify_task(tier2_only=true)` | harness/runner.py | **Tier 2**：Requirements 满足检查。在沙箱中执行脚本或测试。Agent 按需调用 |
+| `verify_task(tier3=true)` | harness/judge.py | **Tier 3**：语义对齐检查。通过独立 Judge LLM 执行，与执行态 Agent 上下文隔离。**按需触发**（Picture 涉及主观判断 / Constraints 与 Picture 存在语义歧义 / L1/L2 高危任务 / 显式请求） |
+
+##### 系统自动机制（无需 Agent 调用）
+
+| Action | 触发时机 | 说明 |
+|--------|----------|------|
+| `snapshot_session` | **每轮次结束时自动触发** | 拦截器（gateway/intercept.py）的 `__exit__` 中自动计算 Delta，追加记录到 session.md。记录内容：code_progress/docs_progress/todos/status。**不含 Picture/Requirements/Constraints**（从 Manifest 获取，不重复记录） |
+
+> **注意：** Tier 0 虽由 `harness/runner.py` 承载，但作为独立于 Harness Engine 的前置处理器，其触发逻辑与 Tier 1/2/3 不同。Tier 1/2/3 属纯检验，Tier 0 可能涉及数据修复。详见第 7.2 节"四层关卡"和第 8.1 节"系统架构设计"中 Tier 0 的定位说明。
 
 #### 状态表 (State Table)
 
@@ -900,9 +920,9 @@ sequenceDiagram
 
 | Node | 说明 |
 |------|------|
-| `Turn N` | 轮次节点（1.1, 1.2, 2.1...），记录每个轮次的状态快照 |
-| `Task` | 任务节点，代表一个独立的认知单元 |
-| `Subtask` | 子任务节点，嵌套于父任务目录下 |
+| `Turn N` | 轮次节点（1.1, 1.2, 2.1...），每个轮次记录状态快照（code_progress/docs_progress/todos/status）。**不含 Picture/Requirements/Constraints**（从 Manifest 获取）。轮次快照由系统在每轮次结束时自动追加记录 |
+| `Task` | 任务节点，代表一个独立的认知单元。包含 Manifest（index.md）、Session（session.md）、Data Plane（data-plane/refs.md）、Gotchas（gotchas/）四个物理子节点 |
+| `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以其所有子任务完成为绝对前提 |
 
 #### 轮次与动作对应关系
 
@@ -910,52 +930,75 @@ sequenceDiagram
 Turn N 的典型流程：
 
 1. 开始轮次
-   └── get_status_plane() → 了解当前状态
+   └── get_status_plane() → 了解当前状态（纯展示，不展开 PRC 三要素）
 
 2. 执行动作（可能多个）
-   ├── create_task(...)     # 新任务
+   ├── create_task(...)     # 新任务（含三要素定义）
+   ├── get_task(...)        # 读取任务详情
+   ├── update_task(...)     # 更新任务属性
    ├── update_todo(...)     # 推进步骤
+   ├── add_todo(...)        # 添加步骤
+   ├── remove_todo(...)     # 删除步骤
    ├── add_gotcha(...)      # 记录偏差
-   └── verify_task(...)     # 验证
+   ├── verify_task(...)     # 触发 Harness 验证（Tier 0 自动前置，Tier 1/2/3 按需）
+   ├── complete_task(...)   # 标记完成（决策权）
+   ├── abandon_task(...)    # 标记废弃（Agent 主动触发）
+   ├── get_session(...)     # 按需获取 Session 历史
+   └── link_data_plane(...) # 关联数据平面 commit ID
 
 3. 结束轮次
-   └── （系统自动）Session 快照 → 无需 Agent 调用
+   └── （系统自动）snapshot_session → Delta 追加到 session.md
+       记录内容：code_progress / docs_progress / todos / status
+       不含 Picture / Requirements / Constraints
 ````
 
 ## 附录 B: 模板参考
 
 ### B.1 Session 模板 (session.md)
 
+Session 由拦截器（`gateway/intercept.py`）的 `__exit__` 在每轮次结束时**自动写入**，`substrate/fs.py` 负责 Markdown ↔ Pydantic 双向解析。Agent 无需手动调用写入。
+
+**模板格式：**
+
 ````markdown
 # Session: {task_id}
 
-## Turn 1.1
-date: YYYY-MM-DD
-code_progress: "..."
-data_plane: {}
-todos: [{text:"...", done:false}]
-status: CREATED
-
-## Turn 1.2
-date: YYYY-MM-DD
-code_progress: "..."
+## Turn {N.M}
+date: {YYYY-MM-DDTHH:MM:SS}
+code_progress: "{本轮代码产出摘要}"
 data_plane:
-  frontend-repo: abc123
-  backend-repo: def456
-todos: [{text:"...", done:true}, ...]
-status: IN_PROGRESS
+  {repository}: {commit_id}
+todos:
+  - {text: "...", done: true|false}
+status: {CREATED|IN_PROGRESS}
 ````
 
-每个 Turn 的 Session 快照中包含当时的数据平面快照（commit ID 映射），用于追踪多仓库开发环境的状态演进。
+**字段说明：**
 
-**触发规则：** 每交互轮次结束时，系统自动触发 Session 快照，自动填写时间戳和当前状态。Agent 无需显式调用 `snapshot_session()`。
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `code_progress` | string | 本轮次代码产出摘要，描述性文本 |
+| `data_plane` | map | 仓库名 → commit ID 映射，由 `substrate/git_ops.py` 维护 |
+| `todos` | list | `{text, done}` 结构，done 为 boolean |
+| `status` | enum | CREATED / IN_PROGRESS / COMPLETED / ABANDONED |
+
+**写入约定：**
+- Turn 编号格式为 `{parent_turn}.{child_turn}`，如 1.1、1.2、2.1，体现嵌套关系
+- 每轮次结束时**追加**写入，不覆盖历史快照（版本快照模型）
+- **不记录 Picture / Requirements / Constraints**（这些从 Manifest 获取，不重复记录）
+
+**触发时机：** 系统在每轮次 `__exit__` 时自动计算 Delta 并追加，无需 Agent 显式调用 `snapshot_session()`。
+
+---
 
 ### B.2 Gotcha 模板 (gotchas/{timestamp}.md)
 
-Gotcha 是带外偏差记录，记录检验中发现的偏离与经验，不参与主流程，不影响任务状态，不阻断 Agent 继续执行。
+Gotcha 是带外偏差记录，写入路径为 `gotchas/{timestamp}.md`（文件名即时间戳，隐含任务归属，无需在内容中重复标注 task_id）。
+
+**模板格式：**
 
 ````markdown
-# Gotcha: {task_id}
+# Gotcha
 
 ## 偏离描述
 {具体偏离了什么（Picture / Requirements / Constraints）}
@@ -967,28 +1010,65 @@ Gotcha 是带外偏差记录，记录检验中发现的偏离与经验，不参�
 {下次如何避免}
 
 ## 关联检验
-- 任务: {task_id}
 - 时间: {timestamp}
 - 检验 Tier: {Tier 0/1/2/3}
+- 任务: {task_id}
 ````
 
+**写入约定：**
+- 由 Agent 调用 `add_gotcha()` 时写入，`gateway/actions.py` 处理写入逻辑
+- 不参与主流程，不影响任务状态，不阻断 Agent 继续执行
+- 属于带外记录，供后续复盘和追溯使用
+
+---
+
 ### B.3 Data Plane 模板 (data-plane/refs.md)
+
+Data Plane 由 `substrate/git_ops.py` 管理，记录当前任务关联的仓库 commit ID 快照。Session 快照中的 `data_plane` 字段引用此处维护的映射。
+
+**模板格式：**
 
 ````markdown
 # Data Plane: {task_id}
 
 ## Repositories
 
-| Repository | Commit ID | Description |
-|------------|-----------|-------------|
-| frontend-repo | abc123 | 登录页面实现 |
-| backend-repo | def456 | Auth API 完成 |
+| Repository | Commit ID | Last Updated | Description |
+|------------|-----------|-------------|-------------|
+| {repo-name} | {commit-id} | {YYYY-MM-DD} | {简要说明} |
 
-## 最新引用
+## Latest Commit Map
 
-- frontend-repo: abc123
-- backend-repo: def456
+```yaml
+repositories:
+  {repo-name}: {commit-id}
+```
+
+## Change Log
+
+| Date | Repository | From → To | Reason |
+|------|------------|-----------|--------|
+| {YYYY-MM-DD} | {repo-name} | {old-id} → {new-id} | {原因} |
 ````
+
+**字段说明：**
+
+| 字段 | 说明 |
+|------|------|
+| Repository | 仓库名称标识 |
+| Commit ID | 当前指向的 commit SHA |
+| Last Updated | 最近一次变更时间 |
+| Description | 该仓库在当前任务中的用途说明 |
+
+**维护约定：**
+- 由 `link_data_plane()` 工具关联仓库时写入或更新
+- 每个 Task 目录下维护独立的 `data-plane/refs.md`
+- Change Log 由 `git_ops.py` 自动追加，记录版本变迁原因，供 Agent 按需回溯
+- Data Plane 是**时间切片**，`repositories` 字段记录某一时刻的 commit ID 快照，Change Log 提供历史追溯通道
+
+**与 Session 的关系：**
+- 每轮 Session 快照中的 `data_plane` 字段引用当前 `data-plane/refs.md` 中的 commit map
+- 不在 Session 中重复记录完整的 Data Plane 内容，只记录快照指针
 
 ## 9. FAQ
 
