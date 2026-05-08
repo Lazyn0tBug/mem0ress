@@ -763,15 +763,16 @@ mem0ress 暴露给 Agent 的不是一套通用编程接口，而是一组有限�
 - **乐观锁比对（文件哈希）：** 执行写操作时比对文件快照哈希。若遭外部修改，抛出 ConflictError，强制 Agent 重新获取状态平面后再决策。
 - **状态转换合法性：** 校验状态转换是否符合规范（如 IN_PROGRESS → CREATED 非法）。
 
-**Harness Engine（检验引擎）：任务检验逻辑的承载。**
+**Harness Engine（约束检验引擎）：仅封装 Tier 0 的约束越界检查。**
 
-当 Agent 调用 `verify_task()` 时，Harness Engine 驱动四层验证流程：
-- **Tier 0（前置处理）：** Constraints 约束检查，独立于 Harness 之外的前置处理器。检查当前 Task 的所有 Constraints 是否满足。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。修复成功后重跑 Tier 0 确认，通过后进入 Tier 1。
-- **Tier 1：** Todo 完成检查 + 直接子任务完成检查。检查两个独立的前置条件——(1) 所有 Todo 步是否已被标记为完成；(2) 所有直接子任务是否状态为 COMPLETED。若存在未完成的 Todo 或未关闭的子任务，直接阻断，不进入 Tier 2。
-- **Tier 2：** Requirements 满足检查。在沙箱中执行 Requirements 对应的脚本或测试，验证每个 Requirement 是否达标。若存在未满足的 Requirement，直接阻断，不进入 Tier 3。
+当 Agent 调用 `verify_task()` 时，Harness Engine 执行约束越界检查（Tier 0）：检查当前 Task 的所有 Constraints 是否满足。若有违反，尝试自动修复；若无法修复，按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）。
+
+Harness Engine 本身**不是自主进程**——它没有主动触发能力，只能响应 Agent 的 `verify_task()` 调用。
+
+**任务完成度检查（Tier 1/2/3）：独立于 Harness Engine，不属于约束机制。**
+- **Tier 1：** Todo 完成检查 + 直接子任务完成检查。检查两个独立的前置条件——(1) 所有 Todo 步是否已被标记为完成；(2) 所有直接子任务是否状态为 COMPLETED。
+- **Tier 2：** Requirements 满足检查。在沙箱中执行 Requirements 对应的脚本或测试，验证每个 Requirement 是否达标。
 - **Tier 3：** 语义对齐检查。Judge Agent 读取任务的 Picture 与实际产出，执行语义对齐判断。只有当 Picture 中包含无法自动化验证的指标时才触发。
-
-Harness Engine 本身**不是自主进程**——它没有主动触发能力，只能响应 Agent 的 `verify_task()` 调用。它是检验逻辑的**承载层**，而非检验决策者。
 
 **三个模块的边界：** Plane Assembler 是只读的，Tool Interface 是写的入口，Harness Engine 是验证出口。三者共同构成认知网关，无跨越自身职责范围的操作。
 
@@ -783,21 +784,25 @@ graph TB
 
     PA["Plane Assembler<br>只读出口"]
     TI["Tool Interface<br>写操作入口"]
-    HE["Harness Engine<br>验证出口（Tiers 1-3）"]
-    T0["Tier 0 前置处理器<br>（独立于 Harness 之外）"]
+    HE["Harness Engine<br>约束越界检查（Tier 0）"]
+    VC["任务完成度检查<br>（Tier 1/2/3）"]
 
     Agent --> PA
     Agent --> TI
-    Agent --> T0
     Agent --> HE
+    Agent --> VC
 
     classDef mod fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
     classDef agent fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
-    classDef t0 fill:#fff9c4,stroke:#f9a825,stroke-width:2px;
-    class PA,TI,HE mod;
+    classDef harness fill:#ffcdd2,stroke:#b71c1c,stroke-width:2px;
+    classDef verify fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px;
+    class PA,TI mod;
     class Agent agent;
-    class T0 t0;
+    class HE harness;
+    class VC verify;
 ```
+
+> **Tier 0 触发时机：** 每轮次结束后（after turn）自动触发，属于 Harness Engine 的约束越界检查。Tier 1/2/3 为任务完成度检查，独立于 Harness。Harness 保证任务不偏离目标（业务外约束），Tier 1/2/3 保证任务本身完成（业务内检查）。
 
 ### 8.2 核心机制设计
 
@@ -811,7 +816,7 @@ graph TB
 mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
   1. 认知构建: Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 Manifest 按需读取，不在状态平面中展开。
-  2. 任务检验: Agent 调用 `verify_task()`，驱动 Harness 四层验证（约束检查 → 机械状态 → 客观规律 → 语义对齐）
+  2. 任务检验: Agent 调用 `verify_task()`，驱动 Harness 约束越界检查（Tier 0）+ 任务完成度检查（Tier 1/2/3）
   3. 状态更新: Agent 根据检验结果决策后续行动——更新 Todo、调用 `complete_task()`、标记 ABANDONED、或继续执行。状态更新通过 Tool Interface 执行写操作，支持 `update_todo`、`complete_task`、`abandon_task` 等。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
 **系统自动机制（不属于业务流）：**
@@ -826,8 +831,8 @@ sequenceDiagram
     participant Agent
     participant PA as Plane Assembler
     participant TI as Tool Interface
-    participant T0 as Tier 0 前置处理器
-    participant HE as Harness Engine
+    participant HE as Harness Engine (Tier 0)
+    participant VC as 任务完成度检查 (Tier 1/2/3)
     participant System
 
     rect rgba(46, 125, 50, 0.1)
@@ -835,24 +840,32 @@ sequenceDiagram
         Agent->>PA: get_status_plane()
         PA-->>Agent: 状态平面快照<br/>(任务树 | TODO进度 | 状态 | Gotchas | Session指针)
 
-        Note over Agent: Tier 0: 前置处理<br/>(独立于 Harness 之外)
-        Agent->>T0: verify_task(tier0_only=true)
-        alt Constraints 满足
-            T0-->>Agent: Tier 0 通过
-        else Constraints 违反（可修复）
-            T0-->>Agent: Tier 0 违反 → 自动修复
-            Agent->>T0: verify_task(tier0_only=true) 重跑
-        else Constraints 违反（不可修复）
-            T0-->>Agent: Tier 0 违反 → 让度给人
+        Agent->>TI: do(执行动作)
+
+        Note over Agent,System: 每轮次结束后（after turn）
+        rect rgba(239, 154, 154, 0.2)
+            Note over Agent,System: Harness 约束越界检查（自动触发）
+            System->>HE: Tier 0 约束检查
+            alt Constraints 满足
+                HE-->>System: Tier 0 通过
+            else Constraints 违反（可修复）
+                System->>HE: 自动修复
+                HE-->>System: Tier 0 修复后通过
+            else Constraints 违反（不可修复）
+                System->>System: 记录 Gotcha<br/>等待人工介入
+            end
         end
 
-        Agent->>HE: verify_task() 完整验证
-        HE-->>Agent: Tier 1/2 结果
+        Agent->>VC: verify_task(tier1=true) Todo 完成检查
+        VC-->>Agent: Tier 1 结果
+
+        Agent->>VC: verify_task(tier2=true) Requirements 满足检查
+        VC-->>Agent: Tier 2 结果
 
         Note over Agent: Tier 3: 按条件触发<br/>(主观指标 | 语义歧义 | L1/L2高危 | 显式请求)
         alt Tier 3 触发条件满足
-            Agent->>HE: verify_task(tier3=true)
-            HE-->>Agent: Tier 3 语义对齐结果
+            Agent->>VC: verify_task(tier3=true) 语义对齐检查
+            VC-->>Agent: Tier 3 语义对齐结果
         end
 
         Agent->>TI: complete_task() / update_todo() / abandon_task()
@@ -876,7 +889,7 @@ sequenceDiagram
 
 | Action | 模块 | 说明 |
 |--------|------|------|
-| `create_task` | gateway/actions.py | 创建新任务。定义三要素（Picture/Requirements/Constraints）、Todo 步、权限等级。**创建时自动触发 Tier 0 检查**（见下方"Tier 0 前置Guard"），Constraints 冲突立即标记「不可行」 |
+| `create_task` | gateway/actions.py | 创建新任务。定义三要素（Picture/Requirements/Constraints）、Todo 步、权限等级。Tier 0 在**每轮次结束后**由系统自动触发，不在此处检查 Constraints 冲突 |
 | `get_task` | gateway/actions.py | 读取任务详情，返回 Manifest 中的完整三要素、执行进度和当前状态 |
 | `update_task` | gateway/actions.py | 更新任务属性（三要素、Todo、权限等级等）。执行写操作前比对文件哈希（乐观锁），若遭外部修改抛出 409 Conflict，**强制 Agent 重新 get_status_plane 后再决策** |
 | `complete_task` | gateway/actions.py | 标记任务完成。调用权归属决策权，Agent 可自主行使或按权限让度给人 |
@@ -903,11 +916,11 @@ sequenceDiagram
 | `verify_task(tier1_only=true)` | harness/runner.py | **Tier 1**：Todo 完成检查 + 直接子任务完成检查。两个前置条件须同时满足——(1) 所有 Todo 步 done=true；(2) 所有直接子任务状态=COMPLETED。若存在未完成项，直接阻断 |
 | `verify_task(tier2_only=true)` | harness/runner.py | **Tier 2**：Requirements 满足检查。在沙箱中执行脚本或测试，验证每个 Requirement 是否达标。若存在未满足项，直接阻断，不进入 Tier 3 |
 | `verify_task(tier3=true)` | harness/judge.py | **Tier 3**：语义对齐检查。通过独立 Judge LLM 执行，读取 Picture 与实际产出做语义判断。与执行态 Agent 上下文隔离。**按需触发**，触发条件见下方"Tier 3 触发条件" |
-| `verify_task()` | harness/ | 触发完整 Harness 验证流程（Tier 1 → Tier 2 → Tier 3）。各层依次递进：Tier 1 阻断 → Tier 2 阻断 → Tier 3 通过/不通过 |
+| `verify_task()` | harness/ | 触发 Harness 约束越界检查（Tier 0）+ 任务完成度检查（Tier 1 → Tier 2 → Tier 3）。Tier 0 由系统自动触发，Tier 1/2/3 由 Agent 按需调用 |
 
-> **Tier 0 前置 Guard（非 verify_task 变体）：**
+> **Tier 0 Guard（after-turn 自动触发）：**
 >
-> Tier 0 不是 Agent 可调用的 verify_task 变体，而是 `create_task` / `update_task` 调用链上的**自动前置处理器**。它在任务创建或更新时自动触发：
+> Tier 0 不是 Agent 可调用的 verify_task 变体，而是每轮次结束后由系统自动触发的约束越界检查。检查本轮次所有动作是否违反 Constraints：
 > - 检查当前 Task 的所有 Constraints 是否满足
 > - 若违反：可修复 → 自动修复后重跑 Tier 0 → 通过后继续；不可修复 → 按权限让度给人（L1/L2 立即让度，L3/L4 失败后让度）
 > - Tier 0 可能涉及数据修复（与 Tier 1/2/3 纯检验性质不同）
