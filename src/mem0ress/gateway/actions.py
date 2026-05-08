@@ -9,8 +9,8 @@ from mem0ress.core.schema import (
     TaskStatus,
     TodoItem,
 )
-from mem0ress.storage.fs import get_file_hash, safe_write
-from mem0ress.storage.parser import SubstrateParser
+from mem0ress.substrate.fs import get_file_hash, safe_write
+from mem0ress.substrate.parser import SubstrateParser
 
 
 class TaskExistsError(Exception):

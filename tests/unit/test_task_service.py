@@ -4,9 +4,9 @@
 import pytest
 
 from mem0ress.core.schema import TaskManifest, TaskStatus, TodoItem
-from mem0ress.service.impl.task_service import TaskExistsError, TaskServiceImpl
-from mem0ress.storage.fs import ConflictError, get_file_hash, safe_write
-from mem0ress.storage.parser import SubstrateParser
+from mem0ress.gateway.actions import TaskExistsError, TaskServiceImpl
+from mem0ress.substrate.fs import ConflictError, get_file_hash, safe_write
+from mem0ress.substrate.parser import SubstrateParser
 
 
 class TestTaskServiceImpl:

@@ -3,8 +3,8 @@
 import pytest
 from pathlib import Path
 
-from mem0ress.service.impl.task_service import TaskServiceImpl
-from mem0ress.plane import PlaneAssembler
+from mem0ress.gateway.actions import TaskServiceImpl
+from mem0ress.gateway.plane import PlaneAssembler
 from mem0ress.harness import HarnessRunner
 
 
@@ -70,7 +70,7 @@ class TestTaskCognitionPersistence:
         # Simulate adding a Gotcha - write deviation to gotcha_refs
         manifest = service.get_task("auth_module")
         index_path = tmp_path / "tasks" / "auth_module" / "index.md"
-        from mem0ress.storage.parser import SubstrateParser
+        from mem0ress.substrate.parser import SubstrateParser
         from mem0ress.core.schema import TaskManifest
 
         updated_manifest = TaskManifest(
@@ -82,9 +82,9 @@ class TestTaskCognitionPersistence:
             todos=manifest.todos,
         )
         content = SubstrateParser.serialize_manifest(updated_manifest, index_path)
-        from mem0ress.storage.fs import get_file_hash
+        from mem0ress.substrate.fs import get_file_hash
         expected_hash = get_file_hash(index_path)
-        from mem0ress.storage.fs import safe_write
+        from mem0ress.substrate.fs import safe_write
         safe_write(index_path, content, expected_hash)
 
         # === Phase 6: Create batch noise tasks (task_000 ~ task_009) ===

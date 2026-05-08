@@ -43,7 +43,7 @@ from mem0ress.core.schema import (
     StatusPlaneEntry,
     TaskManifest,
 )
-from mem0ress.storage.parser import SubstrateParser
+from mem0ress.substrate.parser import SubstrateParser
 
 
 class PlaneAssembler:

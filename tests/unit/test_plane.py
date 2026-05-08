@@ -1,7 +1,7 @@
 """Tests for PlaneAssembler."""
 
-from mem0ress.plane import PlaneAssembler
-from mem0ress.service.impl.task_service import TaskServiceImpl
+from mem0ress.gateway.plane import PlaneAssembler
+from mem0ress.gateway.actions import TaskServiceImpl
 
 
 class TestPlaneAssembler:
