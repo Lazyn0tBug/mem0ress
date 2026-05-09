@@ -549,7 +549,7 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 
 **决策执行规则：**
 
-检验完成后结果写入 `report.md`，由主 Agent 从 `report.md` 读取并决策下一步。任务完成后是否标记完成，由 Agent 自主决定。ABANDONED 由 Agent 主动标记，与检验结果无关。
+检验完成后结果写入 `judge.md`，由主 Agent 从 `judge.md` 读取并决策下一步。任务完成后是否标记完成，由 Agent 自主决定。ABANDONED 由 Agent 主动标记，与检验结果无关。
 
 检验通过 → Agent 可标记任务完成；检验未通过 → Agent 决定下一步（修正、重试或废弃）。
 
