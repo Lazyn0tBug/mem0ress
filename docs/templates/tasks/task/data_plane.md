@@ -64,6 +64,6 @@ note: "完成 Google OAuth 路由搭建"
 Judge Agent 执行 Tier 1/2 检验时：
 - 读取 Session 中记录的 `commit_id`
 - 在该 commit 下运行测试或静态检查
-- 将结果写入 `report.md`
+- 将结果写入 `judge.md`
 
 不依赖 Data Plane 的实时状态，只读快照。

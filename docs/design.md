@@ -138,7 +138,7 @@ Task 创建 → spawn Judge Agent
 
 ### 3.3 任务检验逻辑 (Judge Agent)
 
-Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告写入 `report.md`。
+Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告写入 `judge.md`。
 
 **各层层级：**
 
@@ -146,7 +146,7 @@ Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告写入 `report.md`
 - **Tier 3：** 语义对齐关卡。需要 Agent 主动判断是否启用，适用于 Picture 涉及主观判断、约束存在语义歧义、任务被判定为高危、或 Agent 显式请求等场景。
 
 **报告生成规则：**
-- 检验结束时一次性生成，写入 `report.md`
+- 检验结束时一次性生成，写入 `judge.md`
 - 每轮覆写，不追加
 - 主 Agent 通过 hook 返回值感知报告已生成，唤醒时读取
 
@@ -154,12 +154,12 @@ Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告写入 `report.md`
 
 | 接口 | 说明 |
 |------|------|
-| `verify()` | 执行 Tier 0 → 1 → 2 → 3 完整链路检验，写入 `report.md` |
-| 返回 | 通过 hook 返回值通知主 Agent，主 Agent 唤醒时读取 `report.md` |
+| `verify()` | 执行 Tier 0 → 1 → 2 → 3 完整链路检验，写入 `judge.md` |
+| 返回 | 通过 hook 返回值通知主 Agent，主 Agent 唤醒时读取 `judge.md` |
 
 **Judge Agent 与主 Agent 的交互原则：**
 - Judge Agent 读取 Task 文件系统，不读取主 Agent 的执行上下文（带外）
-- 检验结果写入 `report.md`，不直接返回给主 Agent
+- 检验结果写入 `judge.md`，不直接返回给主 Agent
 
 ### 3.4 乐观锁机制 (Optimistic Locking)
 

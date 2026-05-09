@@ -74,7 +74,7 @@ graph TB
 
 ### 2.4 Judge Agent（Tier 0/1/2/3 执行器）
 
-**职责**：执行 Tier 0/1/2/3 检验，只读数据。检验完成后，将结果写入 `report.md`，通过 hook 返回值通知主 Agent。
+**职责**：执行 Tier 0/1/2/3 检验，只读数据。检验完成后，将结果写入 `judge.md`，通过 hook 返回值通知主 Agent。
 
 **与 Task 的关系**：
 - 每个 Task 伴生一个 Judge Agent
@@ -88,8 +88,7 @@ graph TB
 ├── task.md                    # Task 定义
 ├── session.md                  # Task Session（含 data_plane 快照）
 ├── gotchas.md                  # Gotcha 记录（追加式）
-├── report.md                   # 本轮次检验报告（每轮覆写）
-└── judge.md         # Judge Agent task 文件（平铺）
+└── judge.md                  # Judge Agent 任务文件兼检验报告（每轮覆写）
 ```
 
 Judge Agent 不创建独立目录。task 文件和 Session（验证历史追加到 task 文件的 `verification_history` 字段）都平铺在 Task 目录下。
@@ -110,8 +109,8 @@ flowchart TB
 
 | 接口 | 说明 |
 |------|------|
-| `verify()` | 执行 Tier 0 → 1 → 2 → 3 完整检验链路，写入 `report.md` |
-| 返回 | 写入 `report.md`，通过 hook 返回值通知主 Agent |
+| `verify()` | 执行 Tier 0 → 1 → 2 → 3 完整检验链路，写入 `judge.md` |
+| 返回 | 写入 `judge.md`，通过 hook 返回值通知主 Agent |
 
 **状态变化**：
 
@@ -140,14 +139,14 @@ created → ready → verifying → completed → destroyed
 
 Judge Agent 在每次检验时实时读取上述信息，不在内存中维护中间状态。`verification_history` 字段记录检验历史摘要，供追溯使用。
 
-#### 2.4.1 Report 文件 (`report.md`)
+#### 2.4.1 Judge 报告文件 (`judge.md`)
 
-检验完成后，结果写入 `report.md`，每轮覆写。主 Agent 唤醒时读取该文件获取本轮次检验结果。
+检验完成后，结果写入 `judge.md`，每轮覆写。主 Agent 唤醒时读取该文件获取本轮次检验结果。
 
 **模板格式：**
 
 ```markdown
-# Verification Report: {task_id}
+# Judge Agent: {task_id}
 
 ## Timestamp
 {YYYY-MM-DDTHH:MM:SS}
@@ -187,7 +186,7 @@ Judge Agent 在每次检验时实时读取上述信息，不在内存中维护�
 | Next Action | 主 Agent 的下一步建议，由 Judge Agent 根据检验结果给出 |
 
 **写入约定：**
-- 检验结束时一次性生成，写入 `report.md`
+- 检验结束时一次性生成，写入 `judge.md`
 - 每轮覆写，不追加
 - 主 Agent 通过 hook 返回值感知报告已生成，唤醒时读取
 
@@ -252,7 +251,7 @@ sequenceDiagram
     rect rgba(46, 125, 50, 0.1)
         Note over Agent,JA: Tier 0 由 Judge Agent 在 verify() 链路内部自动执行
         System->>JA: verify() Tier 0 约束检查
-        JA-->>System: 写入 report.md（Tier 0 结果）
+        JA-->>System: 写入 judge.md（Tier 0 结果）
     end
 
     Note over Agent,JA: Agent 主动决策（业务流）
@@ -265,8 +264,8 @@ sequenceDiagram
     Agent->>JA: verify()
     JA-->>Agent: hook 返回值（report_ready: true）
 
-    Note over Agent: 主 Agent 唤醒后读取 report.md 获取检验结果
-    Agent->>Agent: 读取 report.md
+    Note over Agent: 主 Agent 唤醒后读取 judge.md 获取检验结果
+    Agent->>Agent: 读取 judge.md
 
     Note over Agent: Task 进入 VERIFYING 状态（检验中）
     Agent->>TI: complete_task() / abandon_task() / update_todo()
@@ -286,7 +285,7 @@ sequenceDiagram
 | `create_task` / `update_task` / `complete_task` / `abandon_task` | Tool Interface | 认知状态写操作 |
 | `add_todo` / `update_todo` / `remove_todo` | Tool Interface | Todo 写操作 |
 | `add_gotcha` | Tool Interface | 偏差记录写操作 |
-| `verify()` | Judge Agent | 执行 Tier 0/1/2/3 完整链路检验，写入 report.md |
+| `verify()` | Judge Agent | 执行 Tier 0/1/2/3 完整链路检验，写入 judge.md |
 | Tier 0/1/2/3 检查 | Judge Agent | verify() 调用时统一执行，Tier 0 自动执行，Tier 3 按需启用 |
 | `snapshot_session` | — | after-turn 宿主调用触发，mem0ress 内部自动追加 |
 
