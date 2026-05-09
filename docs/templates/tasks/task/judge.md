@@ -1,0 +1,28 @@
+# Judge Agent Verification Logic
+
+## Turn: {N,M}
+**Timestamp:** YYYY-MM-DDTHH:mm:ssZ
+
+### Tier 0: 约束检查 (Constraints Check)
+- [Constraint 1 验证手段]: [例如：执行静态代码扫描，正则匹配是否在 console.log 中输出凭证]
+- [Constraint 2 验证手段]: [例如：检查 package.json 的变动历史，比对安全白名单]
+
+### Tier 1: 机械状态检查 (Mechanical Check)
+- [ ] Check: 所有 `task.md` 中的 Todos 是否为 `[x]`
+- [ ] Check: 所有目录下直接子任务 (Subtasks) 的状态是否已处于 `COMPLETED` 或 `ABANDONED`
+
+### Tier 2: 需求验收 (Requirements Check)
+- **Req 1 Test Command:** `npm run test:auth_response_time`
+- **Req 2 Test Command:** `pytest tests/e2e/test_oauth_providers.py`
+
+### Tier 3: 语义对齐检查 (Semantic Alignment Check)
+**Trigger Condition:** [是否需要触发，例如：涉及用户登录无感知的体验评估时必须触发]
+
+
+**LLM-as-a-Judge Prompt Template:**
+```text
+请作为独立的裁判，比对以下目标图景 (Picture) 与基于最新 Data Plane commit 提取的实际代码产出。
+【目标图景】: "{task.md#Picture}"
+【实际产出】: [水化的代码切片/测试日志]
+
+请评估当前产出是否在语义和最终体验上完美达成了图景描述。如果不符合，请指出具体的偏差原因。如果符合，请返回 PASS
