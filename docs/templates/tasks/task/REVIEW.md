@@ -27,12 +27,10 @@
    - 但实际的 frontmatter（第1-5行）中只有 `task_id`、`status`、`created_at`，没有 `cognitive_triad`
    - 后果：模板自述与实际不符，Agent 写入时缺少占位符指引
 
-3. **[P1] Subtask 的定义和生命周期完全缺失**
-   - task.md 第31-32行引用了 subtask，但：
-     - subtask 目录结构是什么？
-     - subtask 的状态如何与主任务同步？
-     - subtask 被标记为 `ABANDONED` 时，主任务应如何响应？
-   - 后果：subtask 机制不可用，多层任务分解无法落地
+3. **[P1-2 ← 已解决] Subtask 定义缺失**
+   - **结论**：Subtask 与 Task 同构，层级关系由目录层级天然形成，不需要独立模板
+   - subtask 就是 `{subtask_id}/task.md`，与主 task.md 共用同一模板
+   - judge.md Tier 1 的检查逻辑是"递归检查子目录中的 task.md status"
 
 4. **[P1] Todo 格式在模板间不一致**
    - task.md 第27行使用 `- [ ] Todo 1:` 格式（无 id，无 done 字段）
@@ -153,9 +151,9 @@
 | # | 问题 | 建议 |
 |---|------|------|
 | P1-1 | `cognitive_triad` 字段声明与实际 frontmatter 不符 | 在 task.md frontmatter 中添加 `cognitive_triad` 占位字段结构 |
-| P1-2 | Subtask 的定义和生命周期完全缺失 | 新增 `docs/templates/tasks/task/subtask.md` 模板，或在 task.md 中补充 subtask 定义 |
-| P1-3 | Todo 格式在 task.md 和 session.md 中不一致，无法关联 | 统一 Todo 格式，建议都带 `{id, text, done}` 结构 |
-| P1-4 | Tier 3 的"水化"操作未定义 | 在 judge.md 或新增的 `docs/templates/tasks/task/hydration.md` 中定义水化操作 |
+| P1-2 | Subtask 的定义和生命周期缺失 | ✅ 已解决：Subtask 与 Task 同构，无需独立模板 |
+| P1-3 | Todo 格式不一致 | ✅ 已解决：统一为 {id, text, done} |
+| P1-4 | Tier 3 的水化操作未定义 | ✅ 已解决：judge.md 已移除 report.md 声明，水化操作不在模板层定义 |
 
 ### P2（降低规范可用性的缺口）
 
@@ -171,10 +169,10 @@
 
 | # | 问题 | 答案 | 来源 |
 |---|------|------|------|
-| Q1 | `data_plane` 的正确定义在哪里？是在 arch.md 还是需要新增模板？ | 待确认 | — |
-| Q2 | `cognitive_triad` 字段是否应该添加到 task.md frontmatter？ | 待确认 | — |
-| Q3 | Subtask 的生命周期由哪个模块管理？主任务如何感知 subtask 的 ABANDONED？ | 待确认 | — |
-| Q4 | "水化"操作的工具链是什么？ | 待确认 | — |
+| Q1 | `data_plane` 的正确定义在哪里？ | 经确认：新增 data_plane.md 模板定义其结构和用途 | 已解决（新增 data_plane.md） |
+| Q2 | `cognitive_triad` 字段是否应该添加到 task.md frontmatter？ | 经确认：保留声明，补全字段，与 body 格式保持一致 | 已解决 |
+| Q3 | Subtask 的生命周期由哪个模块管理？主任务如何感知 subtask 的 ABANDONED？ | 经确认：Subtask 与 Task 同构，层级关系由目录层级天然形成，状态同步不由模板层定义 | 用户确认 |
+| Q4 | "水化"操作的工具链是什么？ | 经确认：水化操作不在模板层定义，由 Judge Agent 的实现层决定 | 用户确认 |
 
 ---
 
@@ -189,7 +187,7 @@
 | 创新性 | 8/10 | 认知三要素和分层验证设计有价值 |
 | 一致性 | 5/10 | `data_plane` 和 `cognitive_triad` 存在严重不一致 |
 
-**核心结论：** 四个模板的设计思路（认知三要素、版本快照、分层验证）总体合理，但存在一个 P0 级缺口（`data_plane` 未定义）和多个 P1 级缺口（`cognitive_triad` 矛盾、subtask 缺失、Todo 格式不统一）。建议优先补足 P0 和 P1 缺口后再进行实现。
+**核心结论：** 四个模板的设计思路（认知三要素、版本快照、分层验证）总体合理。P0 和所有 P1 缺口均已解决：data_plane 已定义、cognitive_triad 已补全、subtask 无需独立模板（与 task 同构）、Todo 格式已统一、report.md 声明已移除。剩余 P2 为次要打磨项，不影响模板可用性。
 
 ---
 
