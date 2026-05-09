@@ -124,6 +124,8 @@ graph LR
 
 **洞察二：目标需要一个可判断的完成标准，否则执行无法被检验。**
 
+> **来源说明：** 洞察二否定了"存储优先"的记忆架构，确立了"目标锚定"的方向——这与洞察一（2.1）一脉相承。但洞察一回答的是"为什么要有目标"，洞察二回答的是"目标本身需要什么结构才能被检验"。两者共同构成 PRC 框架的认知基础。
+
 Picture 是目标的核心语义锚，Requirements 和 Constraints 是从 Picture 具象化出来的两个维度——前者回答"达成目标需要满足哪些条件"，后者回答"任务由实施到完成，哪些约束和禁则必须满足"。三者共同构成判断未来动作是否偏离的标准，其中 **Picture 是绝对的锚**。
 
 仅有目标是不够的。目标"实现一个安全认证模块"无法回答三个关键问题：什么样的成果算成功？需要满足什么可验证的条件？什么是绝对不能做的？
@@ -683,7 +685,7 @@ status: {CREATED|IN_PROGRESS}
 | `code_progress` | string | 本轮次代码产出摘要，描述性文本 |
 | `data_plane` | map | 仓库名 → commit ID 映射 |
 | `todos` | list | `{text, done}` 结构，done 为 boolean |
-| `status` | enum | CREATED / IN_PROGRESS / COMPLETED / ABANDONED |
+| `status` | enum | CREATED / IN_PROGRESS / COMPLETED / ABANDONED（VERIFYING 为检验瞬态，不属于生命周期状态，不记录于 Session） |
 
 **写入约定：**
 - Turn 编号格式为 `{parent_turn}.{child_turn}`，如 1.1、1.2、2.1，体现嵌套关系
@@ -777,8 +779,6 @@ repositories:
 ---
 
 ## 8. 暂无内容
-
-本规范未使用第8章编号，章节号顺延至此。
 
 ---
 
