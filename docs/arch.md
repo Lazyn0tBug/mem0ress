@@ -128,6 +128,8 @@ created → ready → verifying → completed → destroyed
 | `error` | 检验执行异常 |
 | `destroyed` | Task 结束，Judge Agent 销毁 |
 
+> **状态机区分：** Judge Agent 的 `verifying`（检验执行中）不等同于 Task 的 `VERIFYING` 状态。前者是 Judge Agent 内部执行态，后者是 Task 生命周期中的中间状态。Judge Agent 在 Task 进入 VERIFYING 时被唤起，检验完成后 Task 离开 VERIFYING，两者状态机独立但时序耦合。
+
 **Tier 执行内容**：
 
 | Tier | 检查内容 | 输入来源 |
@@ -138,6 +140,57 @@ created → ready → verifying → completed → destroyed
 | Tier 3 | 语义对齐判断 | Picture（Manifest）、实际产出（文件系统） |
 
 Judge Agent 在每次检验时实时读取上述信息，不在内存中维护中间状态。`verification_history` 字段记录检验历史摘要，供追溯使用。
+
+#### 2.4.1 Report 文件 (`report.md`)
+
+检验完成后，结果写入 `report.md`，每轮覆写。主 Agent 唤醒时读取该文件获取本轮次检验结果。
+
+**模板格式：**
+
+```markdown
+# Verification Report: {task_id}
+
+## Timestamp
+{YYYY-MM-DDTHH:MM:SS}
+
+## Tier Results
+
+### Tier 0: Constraints
+- **Result:** PASS / FAIL / NOT_RUN
+- **Findings:** {违反事实或通过说明}
+
+### Tier 1: Todo + Subtask Completion
+- **Result:** PASS / FAIL / NOT_RUN
+- **Findings:** {未完成的 Todo 或子任务}
+
+### Tier 2: Requirements
+- **Result:** PASS / FAIL / NOT_RUN
+- **Findings:** {未满足的 Requirements}
+
+### Tier 3: Semantic Alignment
+- **Result:** PASS / FAIL / NOT_TRIGGERED
+- **Findings:** {语义偏差描述}
+
+## Summary
+- **Highest Tier Reached:** Tier {0/1/2/3}
+- **Verdict:** aligned / deviation
+- **Next Action:** {主 Agent 的下一步建议}
+```
+
+**字段说明：**
+
+| 字段 | 说明 |
+|------|------|
+| Timestamp | 报告生成时间 |
+| Tier Results | 每一层的结果（PASS/FAIL/NOT_RUN），以及具体发现 |
+| Highest Tier Reached | 本轮次检验走到的最深层级 |
+| Verdict | aligned（全部通过）/ deviation（存在未通过项） |
+| Next Action | 主 Agent 的下一步建议，由 Judge Agent 根据检验结果给出 |
+
+**写入约定：**
+- 检验结束时一次性生成，写入 `report.md`
+- 每轮覆写，不追加
+- 主 Agent 通过 hook 返回值感知报告已生成，唤醒时读取
 
 ### 2.5 模块边界
 
@@ -216,8 +269,10 @@ sequenceDiagram
     Note over Agent: 主 Agent 唤醒后读取 report.md 获取检验结果
     Agent->>Agent: 读取 report.md
 
+    Note over Agent: Task 进入 VERIFYING 状态（检验中）
     Agent->>TI: complete_task() / abandon_task() / update_todo()
     TI-->>Agent: 状态更新确认
+    Note over Agent: Task 离开 VERIFYING（COMPLETED / IN_PROGRESS / ABANDONED）
 ```
 
 ---
@@ -232,7 +287,7 @@ sequenceDiagram
 | `create_task` / `update_task` / `complete_task` / `abandon_task` | Tool Interface | 认知状态写操作 |
 | `add_todo` / `update_todo` / `remove_todo` | Tool Interface | Todo 写操作 |
 | `add_gotcha` | Tool Interface | 偏差记录写操作 |
-|| `verify()` | Judge Agent | 执行 Tier 0/1/2/3 完整链路检验，写入 report.md |
+| `verify()` | Judge Agent | 执行 Tier 0/1/2/3 完整链路检验，写入 report.md |
 | Tier 0 自动检查 | Judge Agent | after-turn 系统自动触发 |
 | Tier 1/2/3 检查 | Judge Agent | Agent 按需调用 |
 | `snapshot_session` | — | after-turn 宿主调用触发，mem0ress 内部自动追加 |
