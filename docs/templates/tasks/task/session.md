@@ -1,8 +1,55 @@
+---
+description: "Session History — 记录任务执行过程中每个 Turn 的状态快照，按条目追加不覆盖"
+type: session
+relationships:
+  requires: ["task.md", "data_plane.md"]
+  provides: []
+fields:
+  turn:
+    type: string
+    description: "Turn 编号，格式 N.M，N 为 todo 序列号，M 为子序号，如 1.1、1.2"
+  timestamp:
+    type: string
+    description: "ISO 8601 时间戳"
+  todos:
+    type: list[object]
+    description: "Todo 状态列表"
+    children:
+      id:
+        type: string
+        description: "Todo ID，与 task.md 中的 todos[].id 对应"
+      text:
+        type: string
+        description: "动作描述"
+      done:
+        type: boolean
+        description: "完成状态"
+  status:
+    type: enum
+    description: "任务生命周期状态"
+    values: [CREATED, IN_PROGRESS, COMPLETED, ABANDONED]
+    note: "VERIFYING 为检验瞬态，不属于生命周期状态，不记录于 Session"
+  data_plane:
+    type: object
+    description: "数据平面快照，见 data_plane.md"
+    children:
+      commit_id:
+        type: string
+        description: "Git commit hash"
+      active_refs:
+        type: list[string]
+        description: "本轮涉及的文件路径列表"
+      note:
+        type: string
+        description: "可选：本轮简要说明"
+---
+
 # Session History
+
 ## Turn: {N,M}
 **Timestamp:** YYYY-MM-DDTHH:mm:ssZ
 todos:
-  - {text: "...", done: true|false}
+  - {id: "T-1", text: "...", done: true|false}
 status: {CREATED|IN_PROGRESS}
 
 ---
@@ -26,7 +73,7 @@ status: {CREATED|IN_PROGRESS}
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `todos` | list | `{text, done}` 结构，done 为 boolean |
+| `todos` | list | `{id, text, done}` 结构，id 对应 task.md 中的 todos[].id |
 | `status` | enum | CREATED / IN_PROGRESS / COMPLETED / ABANDONED（VERIFYING 为检验瞬态，不属于生命周期状态，不记录于 Session） |
 
 **写入约定：**

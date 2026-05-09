@@ -1,3 +1,21 @@
+---
+description: "Data Plane — 记录任务的代码产出快照，供回溯和检验使用"
+type: data_plane
+relationships:
+  requires: []
+  provides: ["session.md", "judge.md"]
+fields:
+  commit_id:
+    type: string
+    description: "当前 HEAD 的 Git commit hash"
+  active_refs:
+    type: list[string]
+    description: "本轮涉及的文件路径列表（相对路径）"
+  note:
+    type: string
+    description: "可选：本轮的简要说明"
+---
+
 # Data Plane
 
 记录任务的代码产出快照，供回溯和检验使用。
