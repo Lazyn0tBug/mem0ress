@@ -2,7 +2,7 @@
 
 本项目采用 **"认知中间件"** 模式设计。mem0ress 不再被视为一个独立的 OS，而是一个伴生式 SDK。它不接管业务编排逻辑，也不执行工具或做决策，只专注于认知状态的构建、检验与管理。
 
-每个 Task 伴生一个 Judge Agent，负责执行 Tier 0/1/2/3 检验，与 Task 生命周期同步。
+每个 Task 伴生一个 Judge Agent，负责执行任务检验，与 Task 生命周期同步。
 
 ```plaintext
 mem0ress/
@@ -44,7 +44,7 @@ mem0ress/
 |------|------|------|
 | Plane Assembler | 只读出口 | 实时编译当前任务的状态平面快照，只读不缓存 |
 | Tool Interface | 写操作入口 | 认知状态写入，暴露 `create_task`、`update_todo`、`complete_task` 等工具 |
-| Judge Agent | 验证执行器 | 执行 Tier 0/1/2/3 检验，返回 verdict + tier_results |
+| Judge Agent | 验证执行器 | 执行任务检验，返回 verdict + tier_results |
 
 三者共同构成认知网关，无跨越自身职责范围的操作。
 
@@ -138,7 +138,7 @@ Task 创建 → spawn Judge Agent
 
 ### 3.3 任务检验逻辑 (Judge Agent)
 
-Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告写入 `judge.md`。
+Judge Agent 执行任务检验，生成一次性报告写入 `judge.md`。
 
 **各层层级：**
 

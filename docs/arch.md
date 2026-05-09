@@ -39,7 +39,7 @@ graph TB
 
     PA["Plane Assembler\n只读出口"]
     TI["Tool Interface\n写操作入口"]
-    JA["Judge Agent\nTier 0/1/2/3 执行器"]
+    JA["Judge Agent\n任务检验执行器"]
 
     Agent --> PA
     Agent --> TI
@@ -72,9 +72,9 @@ graph TB
 - 只管理认知状态的写入，不执行业务逻辑
 - **Upsert 语义：** `update_task` 在任务不存在时自动创建
 
-### 2.4 Judge Agent（Tier 0/1/2/3 执行器）
+### 2.4 Judge Agent（任务检验执行器）
 
-**职责**：执行 Tier 0/1/2/3 检验，只读数据。检验完成后，将结果写入 `judge.md`，通过 hook 返回值通知主 Agent。
+**职责**：执行任务检验，只读数据。检验完成后，将结果写入 `judge.md`，通过 hook 返回值通知主 Agent。
 
 **与 Task 的关系**：
 - 每个 Task 伴生一个 Judge Agent
@@ -196,7 +196,7 @@ Judge Agent 在每次检验时实时读取上述信息，不在内存中维护�
 |------|------|------|
 | Plane Assembler | 只读出口 | 状态平面编译与展示 |
 | Tool Interface | 写操作入口 | 认知状态写入 |
-| Judge Agent | 验证执行器 | Tier 0/1/2/3 检验执行 |
+| Judge Agent | 验证执行器 | 任务检验执行 |
 
 三者共同构成认知网关，无跨越自身职责范围的操作。
 
@@ -231,7 +231,7 @@ Tier 3 的语义对齐与执行态 Agent 上下文隔离，避免检验过程污
 mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
 1. **认知构建：** Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 task.md 按需读取，不在状态平面中展开。
-2. **任务检验：** Agent 调用 `verify()`，驱动 Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告。Tier 0 在 verify() 链路内部由系统自动执行。
+2. **任务检验：** Agent 调用 `verify()`，驱动 Judge Agent 执行任务检验，生成一次性报告。Tier 0 在 verify() 链路内部由系统自动执行。
 3. **状态更新：** Agent 根据检验结果决策后续行动——更新 Todo、调用 `complete_task()` 标记完成、`abandon_task()` 标记废弃、或继续执行。状态更新通过 Tool Interface 执行写操作，支持 `complete_task`、`abandon_task`、`update_todo` 等。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
 **系统自动机制（不属于业务流）：**
@@ -285,8 +285,8 @@ sequenceDiagram
 | `create_task` / `update_task` / `complete_task` / `abandon_task` | Tool Interface | 认知状态写操作 |
 | `add_todo` / `update_todo` / `remove_todo` | Tool Interface | Todo 写操作 |
 | `add_gotcha` | Tool Interface | 偏差记录写操作 |
-| `verify()` | Judge Agent | 执行 Tier 0/1/2/3 完整链路检验，写入 judge.md |
-| Tier 0/1/2/3 检查 | Judge Agent | verify() 调用时统一执行，Tier 0 自动执行，Tier 3 按需启用 |
+| `verify()` | Judge Agent | 执行任务检验完整链路，写入 judge.md |
+| 任务检验 | Judge Agent | verify() 调用时统一执行，Tier 0 自动执行，Tier 3 按需启用 |
 | `snapshot_session` | — | after-turn 宿主调用触发，mem0ress 内部自动追加 |
 
 ---
