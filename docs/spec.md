@@ -51,6 +51,7 @@ graph TB
 
     subgraph TASK["Task 认知单元（洞察三）"]
         TR["三要素 + 执行进度\n= 可判断状态"]
+        ST["CREATED / IN_PROGRESS\n/ VERIFYING / COMPLETED\n/ ABANDONED"]
     end
 
     subgraph DUAL["双平面正交（洞察四）"]
@@ -80,10 +81,12 @@ graph TB
     classDef plane fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
     classDef tier fill:#fce4ec,stroke:#c62828,stroke-width:2px;
     classDef judge fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
-    class PRC,task,TR prc;
+    classDef state fill:#f3e5f5,stroke:#6a1b9a,stroke-width:1px;
+    class PRC,task,TR,ST prc;
     class SP,DP plane;
     class T0,T1,T2,T3 tier;
     class J judge;
+    class ST state;
 ```
 
 ## 2. 核心洞察 (Core Insights)
@@ -163,7 +166,7 @@ Task 锚点还解决了目标模糊性的问题。当一个目标过于宏观时
 
 **数据平面**（Data Plane）回答"当前操作的是什么版本的代码和文档"。它记录相关仓库的当前 commit ID 快照、长篇文档的版本指针。当 Agent 被重新唤醒时，它需要知道上次操作的是哪一行代码——而不是从会话历史中大海捞针。
 
-**状态平面**（Status Plane）回答"当前任务推进到什么阶段了"。它聚合任务树结构、每个 Task 的 TODO 完成度、任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）和偏差记录（Gotchas）。
+**状态平面**（Status Plane）回答"当前任务推进到什么阶段了"。它聚合任务树结构、每个 Task 的 TODO 完成度、任务状态（CREATED / IN_PROGRESS / VERIFYING / COMPLETED / ABANDONED）和偏差记录（Gotchas）。
 
 两个平面之所以必须正交互斥，有认知效率的原因：如果每次获取状态都要同时加载数据版本和执行进度，认知负载翻倍；如果混合在一起，Agent 无法独立判断"我现在应该看数据还是看进度"。
 
@@ -422,7 +425,7 @@ graph LR
     subgraph SP_Group["状态平面（执行快照）"]
         TID["Task ID"]
         TODO["TODO 进度"]
-        STS["Task Status"]
+        STS["Task Status\nCREATED / IN_PROGRESS\nVERIFYING / COMPLETED\n/ ABANDONED"]
         GTA["Gotchas<br/><指针>"]
     end
 
