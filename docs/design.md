@@ -38,15 +38,7 @@ mem0ress/
 
 ```
 
-### 模块边界一览
-
-| 模块 | 类型 | 职责 |
-|------|------|------|
-| Plane Assembler | 只读出口 | 实时编译当前任务的状态平面快照，只读不缓存 |
-| Tool Interface | 写操作入口 | 认知状态写入，暴露 `create_task`、`update_todo`、`complete_task` 等工具 |
-| Judge Agent | 验证执行器 | 执行任务检验，返回 verdict + tier_results |
-
-三者共同构成认知网关，无跨越自身职责范围的操作。
+> 模块边界定义详见 arch.md 2.5。
 
 ---
 
@@ -100,17 +92,7 @@ pythonpath = ["src"]
 
 ### 3.1 Judge Agent 生命周期
 
-每个 Task 伴生一个 Judge Agent（`judge.md`），其生命周期与 Task 同步：
-
-**状态机：** `created → ready → verifying → completed → destroyed`
-
-| 状态 | 含义 |
-|------|------|
-| `created` | 刚创建，三要素未加载 |
-| `ready` | 三要素已加载，等待检验调用 |
-| `verifying` | 执行检验中 |
-| `completed` | 本轮检验完成 |
-| `destroyed` | Task 结束，Judge Agent 销毁 |
+每个 Task 伴生一个 Judge Agent（`judge.md`），其生命周期与 Task 同步。
 
 **初始化流程：**
 ```
@@ -120,7 +102,7 @@ Task 创建 → spawn Judge Agent
          → status: ready
 ```
 
-**文件存储：** Judge Agent task 文件平铺在 Task 目录下，不创建独立子目录。验证历史追加到 task 文件的 `verification_history` 字段。
+> 状态机定义详见 arch.md 2.4。
 
 ### 3.2 认知拦截器 (Gateway Interceptor)
 
@@ -145,21 +127,7 @@ Judge Agent 执行任务检验，生成一次性报告写入 `judge.md`。
 - **Tier 0/1/2：** 客观检验条件。由 Judge Agent 自动执行并判断是否通过，无需主 Agent 主观决策。只读约束/Todo/Requirements，检测违反事实并写入报告，不阻塞执行。
 - **Tier 3：** 语义对齐关卡。需要 Agent 主动判断是否启用，适用于 Picture 涉及主观判断、约束存在语义歧义、任务被判定为高危、或 Agent 显式请求等场景。
 
-**报告生成规则：**
-- 检验结束时一次性生成，写入 `judge.md`
-- 每轮覆写，不追加
-- 主 Agent 通过 hook 返回值感知报告已生成，唤醒时读取
-
-**Judge Agent 交互接口：**
-
-| 接口 | 说明 |
-|------|------|
-| `verify()` | 执行 Tier 0 → 1 → 2 → 3 完整链路检验，写入 `judge.md` |
-| 返回 | 通过 hook 返回值通知主 Agent，主 Agent 唤醒时读取 `judge.md` |
-
-**Judge Agent 与主 Agent 的交互原则：**
-- Judge Agent 读取 Task 文件系统，不读取主 Agent 的执行上下文（带外）
-- 检验结果写入 `judge.md`，不直接返回给主 Agent
+> 详见 arch.md 2.4。
 
 ### 3.4 乐观锁机制 (Optimistic Locking)
 
