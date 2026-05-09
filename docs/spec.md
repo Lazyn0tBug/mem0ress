@@ -501,7 +501,7 @@ graph TD
         ├── task.md            # task.md（包含图景、需求与 Todo）
         ├── session.md         # 每个轮次的状态快照（Session 历史，含 data_plane 快照）
         ├── gotchas.md         # 该任务独享的偏差记录（追加式）
-        └── auth_module-judge.md # Judge Agent task 文件（平铺）
+        └── judge.md              # Judge Agent task 文件（平铺）
 ```
 
 Session 记录每个轮次的执行进度和 data_plane 快照，Picture/Requirements/Constraints 从 task.md 获取，不重复记录。
@@ -609,7 +609,7 @@ stateDiagram-v2
 | `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 task.md 获取） |
 | `Task` | 认知单元，包含 task.md、Session（session.md）、Gotchas（gotchas.md）三个物理子节点 |
 | `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以所有子任务完成为前提 |
-| `Judge Agent` | 伴生组件，执行 Tier 0/1/2/3 检验，task 文件存储在 {task_id}-judge.md，与 Task 生命周期同步 |
+| `Judge Agent` | 伴生组件，执行 Tier 0/1/2/3 检验，task 文件存储在 `judge.md`，与 Task 生命周期同步 |
 
 ## 附录 B: 模板参考
 

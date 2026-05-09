@@ -15,7 +15,7 @@ mem0ress/
 │           ├── task.md                # task.md（Picture/Requirements/Constraints/Todo）
 │           ├── session.md          # 轮次快照序列
 │           ├── gotchas.md         # 偏差记录
-│           └── {task_id}-judge.md # Judge Agent task 文件（平铺）
+│           └── judge.md # Judge Agent task 文件（平铺）
 └── src/
     └── mem0ress/
         ├── __init__.py
@@ -100,7 +100,7 @@ pythonpath = ["src"]
 
 ### 3.1 Judge Agent 生命周期
 
-每个 Task 伴生一个 Judge Agent（`{task_id}-judge.md`），其生命周期与 Task 同步：
+每个 Task 伴生一个 Judge Agent（`judge.md`），其生命周期与 Task 同步：
 
 **状态机：** `created → ready → verifying → completed → destroyed`
 
@@ -114,7 +114,7 @@ pythonpath = ["src"]
 
 **初始化流程：**
 ```
-Task 创建 → spawn Judge Agent (id: {task_id}-judge)
+Task 创建 → spawn Judge Agent
          → 加载 Picture/Requirements/Constraints
          → 建立 Todo → Requirements 映射
          → status: ready

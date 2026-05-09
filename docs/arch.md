@@ -89,7 +89,7 @@ graph TB
 ├── session.md                  # Task Session（含 data_plane 快照）
 ├── gotchas.md                  # Gotcha 记录（追加式）
 ├── report.md                   # 本轮次检验报告（每轮覆写）
-└── {task_id}-judge.md         # Judge Agent task 文件（平铺）
+└── judge.md         # Judge Agent task 文件（平铺）
 ```
 
 Judge Agent 不创建独立目录。task 文件和 Session（验证历史追加到 task 文件的 `verification_history` 字段）都平铺在 Task 目录下。
@@ -100,7 +100,7 @@ Judge Agent 不创建独立目录。task 文件和 Session（验证历史追加�
 %% label：Judge Agent 初始化
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae' } } }%%
 flowchart TB
-    TaskCreate["Task 创建"] --> SpawnJudge["spawn Judge Agent\nid: {task_id}-judge"]
+    TaskCreate["Task 创建"] --> SpawnJudge["spawn Judge Agent"]
     SpawnJudge --> LoadTaskDef["加载 Picture/Requirements/Constraints"]
     LoadTaskDef --> BuildMapping["建立 Todo → Requirements 映射"]
     BuildMapping --> Ready["status: ready"]
@@ -307,7 +307,7 @@ mem0ress 使用文件树表达认知的从属关系与上下文边界，对应 s
         ├── task.md              # task.md（Picture/Requirements/Constraints/Todo）
         ├── session.md            # 轮次快照序列（含 data_plane）
         ├── gotchas.md           # 偏差记录（追加式）
-        └── {task_id}-judge.md   # Judge Agent task 文件（平铺）
+        └── judge.md   # Judge Agent task 文件（平铺）
 ```
 
 **模块职责映射：**
@@ -317,7 +317,7 @@ mem0ress 使用文件树表达认知的从属关系与上下文边界，对应 s
 | `task.md` | Tool Interface |
 | `session.md` | mem0ress 暴露接口，被调用时自动写入 |
 | `gotchas.md` | Tool Interface（`add_gotcha`） |
-| `{task_id}-judge.md` | Judge Agent（验证历史追加） |
+| `judge.md` | Judge Agent（验证历史追加） |
 
 ### 6.2 Session 快照
 
