@@ -161,7 +161,7 @@
 |---|------|------|
 | P2-1 | task.md 第34行操作约定混入模板说明 | **已在 commit 180a165 移除**，原问题为双重格式说明段落 |
 | P2-2 | `ABANDONED` 状态的语义模糊 | **已在 spec.md 第568/603行定义**，无需在 task.md 重复 |
-| P2-3 | judge.md 与 mem0ress harness Tier 0/1/2/3 的对应关系不明确 | 在 judge.md 开头添加说明：judge.md 是 mem0ress Tier 验证的实例化模板 |
+| P2-3 | judge.md 与 mem0ress harness Tier 0/1/2/3 的对应关系不明确 | **已在 judge.md line 37 说明**，对应关系已在 frontmatter fields 中逐一对齐 |
 
 ---
 
@@ -185,7 +185,7 @@
 | 逻辑 | 8/10 | `cognitive_triad` 自述矛盾已修复，ABANDONED 语义可补充说明 |
 | 创新性 | 8/10 | 认知三要素和分层验证设计有价值 |
 
-**核心结论：** P0 和所有 P1 缺口均已解决。data_plane 已定义、cognitive_triad 已补全、subtask 无需独立模板（与 task 同构）、Todo 格式已统一、report.md 声明已移除。剩余 P2 为次要打磨项，不影响模板可用性。
+**核心结论：** P0、P1 和所有 P2 缺口均已解决。data_plane 已定义、cognitive_triad 已补全、subtask 无需独立模板（与 task 同构）、Todo 格式已统一、report.md 声明已移除、操作约定已移除、ABANDONED 语义已在 spec.md 定义、judge.md Tier 对应关系已对齐。
 
 ---
 
