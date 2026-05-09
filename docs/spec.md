@@ -59,12 +59,12 @@ graph TB
         DP["数据平面\n（当前代码版本）"]
     end
 
-    subgraph TIERS["四层检验（Judge Agent）"]
-        J["Judge Agent\nTier 0/1/2/3 执行器"]
-        T0["Tier 0\nConstraints 检查"]
-        T1["Tier 1\nTodo + 子任务"]
-        T2["Tier 2\nRequirements"]
-        T3["Tier 3\n语义对齐"]
+    subgraph TIERS["任务检验（Judge Agent）"]
+        J["Judge Agent\n任务检验执行器"]
+        T0["Constraints 检查"]
+        T1["Todo 完成检查"]
+        T2["Requirements 满足检查"]
+        T3["语义对齐检查"]
     end
 
     PRC --> TASK
@@ -472,7 +472,7 @@ mem0ress 的文档数据模型由四个核心文档组成，各自承担不同�
 | Gotchas（`gotchas.md`） | 偏差记录，带外追加，不阻塞主流程 | 偏差确认后追加 |
 | judge.md | Judge Agent task 文件，与 Task 生命周期同步；不属于 Task 的三个物理子节点 | 任务创建时生成，检验后更新 |
 
-四个文档的关系：task.md 是锚，三要素从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载 Tier 0/1/2/3 检验逻辑，与 Task 生命周期同步。
+四个文档的关系：task.md 是锚，三要素从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载任务检验逻辑，与 Task 生命周期同步。
 
 ```mermaid
 %% label：.mem0ress 文件树与概念映射
