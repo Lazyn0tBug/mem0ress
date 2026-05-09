@@ -133,7 +133,6 @@ Task 创建 → spawn Judge Agent (id: {task_id}-judge)
 
 **exit (After Turn)：**
 - 宿主系统自动触发 Session 快照（`snapshot_session`），追加记录至 session.md。
-- 若检测到 Tier 0 约束违反，触发 Judge Agent 的约束越界检查，结果返回给主 Agent，由主 Agent 决定是否修复及如何修复。
 - Tool Interface 的写操作（`update_todo`、`complete_task` 等）由 Agent 在轮次内主动调用，不在此处自动执行。
 
 `CognitiveContext` 只负责生命周期钩子的编排，不做业务决策。
@@ -142,12 +141,10 @@ Task 创建 → spawn Judge Agent (id: {task_id}-judge)
 
 Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告写入 `report.md`。
 
-**各层触发时机：**
+**各层层级：**
 
-- **Tier 0：** 每轮次结束后由系统自动触发。只读 Constraints 和当前代码状态，检测违反事实并写入报告。
-- **Tier 1：** 由主 Agent 按需调用。检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。
-- **Tier 2：** 由主 Agent 按需调用。验证每个 Requirement 是否达标。
-- **Tier 3：** 由主 Agent 按需触发（Picture 涉及主观判断 / 宿主判定高危 / Agent 显式请求）。Judge Agent 准备判断所需信息，实际判断由主 Agent 执行。
+- **Tier 0/1/2：** 自动通过条件。只读约束/Todo/Requirements，检测违反事实并写入报告，不阻塞执行。
+- **Tier 3：** 语义对齐关卡。需要 Agent 主动判断是否启用，适用于 Picture 涉及主观判断、约束存在语义歧义、任务被判定为高危、或 Agent 显式请求等场景。
 
 **报告生成规则：**
 - 检验结束时一次性生成，写入 `report.md`
@@ -174,13 +171,12 @@ Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告写入 `report.md`
 mem0ress 的核心业务闭环由 Agent 的三个主动决策构成：
 
 1. **认知构建：** Agent 调用 `get_status_plane()`，获取状态平面快照（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 Manifest 按需读取，不在状态平面中展开。
-2. **任务检验：** Agent 调用 `verify()`，驱动 Judge Agent 执行 Tier 0~3 检验。Tier 0 在每轮次结束后由系统自动触发。
+2. **任务检验：** Agent 调用 `verify()`，驱动 Judge Agent 执行 Tier 0~3 检验，生成一次性报告。Tier 0 在 verify() 链路内部由系统自动执行。
 3. **状态更新：** Agent 根据检验结果调用 Tool Interface 写操作（`complete_task`、`abandon_task`、`update_todo` 等）。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
 **系统自动机制（不属于业务流）：**
 
 - 每轮次结束时，宿主系统自动调用 `snapshot_session`，追加状态快照到 session.md。
-- 每轮次结束后，系统自动触发 Tier 0 约束检查。
 
 ### 3.6 宿主挂载方式
 
