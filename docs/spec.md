@@ -401,7 +401,9 @@ Constraints 的质量判断标准是"是否可阻断"：违反时系统能否检
 
 mem0ress 的认知系统由两个核心平面构成，它们都是**时间切片**（某一时刻的快照），不是组件。
 
-**状态平面 (Status Plane)：** 任务相关的所有执行状态的聚合快照。包括：
+**状态平面 (Status Plane)：** 任务相关的所有执行状态的聚合快照。状态平面是运行时快照，在 Agent 需要了解当前认知态势时（认知构建阶段）由认知数据模型按需组装，并在 Agent 唤醒时自动挂载到上下文。组装来源包括 Manifest（任务定义）、Session（历史切片）、Data Plane（版本指针）、Gotchas（偏差记录）。spec 定义组装的时机和职责边界，arch 定义具体的组装机制。
+
+状态平面包括：
 - 任务树结构（父子关系）
 - 每个任务的 todo 完成度（如 "2/3 Todos 完成"）
 - 任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）
@@ -586,10 +588,10 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 
 **四层关卡（Tiers）：**
 
-任务检验按顺序执行以下四层关卡。其中 Tier 0/1/2 为自动通过条件，Tier 3 为语义对齐关卡，由 Agent 根据任务属性决定是否启用。
+任务检验按顺序执行以下四层关卡。其中 Tier 0/1/2 为客观检验条件，由 Judge Agent 自动执行并判断是否通过，无需主 Agent 主观决策；Tier 3 为语义对齐关卡，由 Agent 根据任务属性决定是否启用。
 
 * **Tier 0: Constraints 约束检查。** 检查 Constraints 是否被违反，若有违反报告违反事实，由主 Agent 决定是否修复及如何修复。
-* **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。
+* **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭；处于 CREATED 或 IN_PROGRESS 状态则视为未完成。
 * **Tier 2: Requirements 满足检查。** 验证每个 Requirement 是否达标。
 * **Tier 3: 语义对齐检查。** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 需要 Agent 主动判断本次检验是否需要语义对齐，以下情况适用：Picture 涉及主观判断或利益相关者感知时；Constraints 与 Picture 之间存在语义歧义时；任务被宿主系统判定为高危时；Agent 或利益相关者显式请求时。
 
