@@ -38,7 +38,7 @@ mem0ress/
 
 ```
 
-> 模块边界定义详见 arch.md 2.5。
+> 模块边界定义详见本目录 `arch.md` 2.5。
 
 ---
 
@@ -102,7 +102,7 @@ Task 创建 → spawn Judge Agent
          → status: ready
 ```
 
-> 状态机定义详见 arch.md 2.4。
+> 状态机定义详见本目录 `arch.md` 2.4。
 
 ### 3.2 认知拦截器 (Gateway Interceptor)
 
@@ -127,7 +127,7 @@ Judge Agent 执行任务检验，生成一次性报告写入 `judge.md`。
 - **Tier 0/1/2：** 客观检验条件。由 Judge Agent 自动执行并判断是否通过，无需主 Agent 主观决策。只读约束/Todo/Requirements，检测违反事实并写入报告，不阻塞执行。
 - **Tier 3：** 语义对齐关卡。需要 Agent 主动判断是否启用，适用于 Picture 涉及主观判断、约束存在语义歧义、任务被判定为高危、或 Agent 显式请求等场景。
 
-> 详见 arch.md 2.4。
+> 详见本目录 `arch.md` 2.4。
 
 ### 3.4 乐观锁机制 (Optimistic Locking)
 

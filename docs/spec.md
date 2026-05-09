@@ -510,7 +510,7 @@ graph TD
     └── judge.md      # Judge Agent task 文件（平铺）
 ```
 
-具体各文档的内容格式和字段说明见附录 B 模板参考。
+具体各文档的内容格式和字段说明见 `docs/templates/`。
 
 ## 7. 逻辑与流程设计 (Logic & Workflow Design)
 
