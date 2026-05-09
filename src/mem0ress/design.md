@@ -163,7 +163,7 @@ graph TB
 ├── task.md                    # Task 定义
 ├── session.md                  # Task Session（含 data_plane 快照）
 ├── gotchas.md                  # Gotcha 记录（追加式）
-└── judge.md                  # Judge Agent 任务文件兼检验报告（每轮覆写）
+└── judge.md                  # Judge Agent task 文件（每轮追加）
 ```
 
 Judge Agent 不创建独立目录。task 文件和 Session（验证历史追加到 task 文件的 `verification_history` 字段）都平铺在 Task 目录下。
@@ -216,7 +216,7 @@ Judge Agent 在每次检验时实时读取上述信息，不在内存中维护�
 
 #### 3.4.1 Judge 报告文件 (`judge.md`)
 
-检验完成后，结果写入 `judge.md`，每轮覆写。主 Agent 唤醒时读取该文件获取本轮次检验结果。
+检验完成后，结果写入 `judge.md`，每轮追加。主 Agent 唤醒时读取该文件获取本轮次检验结果。
 
 **模板格式**：
 
@@ -261,8 +261,8 @@ Judge Agent 在每次检验时实时读取上述信息，不在内存中维护�
 | Next Action | 主 Agent 的下一步建议，由 Judge Agent 根据检验结果给出 |
 
 **写入约定：**
-- 检验结束时一次性生成，写入 `judge.md`
-- 每轮覆写，不追加
+- 检验完成后，结果写入 `judge.md`
+- 每轮追加，不覆盖
 - 主 Agent 通过 hook 返回值感知报告已生成，唤醒时读取
 
 ### 3.5 模块边界
@@ -324,7 +324,7 @@ Tier 3 的语义对齐与执行态 Agent 上下文隔离，避免检验过程污
 mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
 1. **认知构建：** Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 task.md 按需读取，不在状态平面中展开。
-2. **任务检验：** Agent 调用 `verify()`，驱动 Judge Agent 执行任务检验，生成一次性报告。Tier 0 在 verify() 链路内部由系统自动执行。
+2. **任务检验：** Agent 调用 `verify()`，驱动 Judge Agent 执行任务检验，结果写入 `judge.md`。Tier 0 在 verify() 链路内部由系统自动执行。
 3. **状态更新：** Agent 根据检验结果决策后续行动——更新 Todo、调用 `complete_task()` 标记完成、`abandon_task()` 标记废弃、或继续执行。状态更新通过 Tool Interface 执行写操作，支持 `complete_task`、`abandon_task`、`update_todo` 等。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
 **系统自动机制（不属于业务流）：**
