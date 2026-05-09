@@ -202,13 +202,13 @@ mem0ress 的诞生，源于对当前 AI Agent 发展路径的底层反思。我�
 
 **源自洞察三（2.3）：任务是将模糊意图转化为可判断状态的认知锚点。同构单元确保任意粒度下解析逻辑一致。**
 
-任务被拆解为同构的单元（Task）。每个子任务都拥有独立的清单文件（Manifest），物理上通过目录深度表达依赖关系。父任务的完成必须以所有子任务的对齐为前提。
+任务被拆解为同构的单元（Task）。每个子任务都拥有独立的任务文件（task.md），物理上通过目录深度表达依赖关系。父任务的完成必须以所有子任务的对齐为前提。
 
 这种同构设计解决了复杂意图管理中的三个核心问题：
 
 **解析一致性：** 认知网关只需处理一种类型的节点（Task）。无论任务是"实现登录模块"还是"修复安全漏洞"，系统使用完全相同的解析逻辑。这比异构结构（不同节点类型需要不同处理逻辑）大大降低了复杂度。
 
-**分形扩展：** 分形意味着自相似——树的每一层节点拥有与顶层相同的结构，只是粒度不同。"用户认证"任务的 Manifest 与"实现 OAuth 提供商"子任务的 Manifest 结构完全一致。这使得任务分解不需要额外的结构设计工作，分解过程本身是机械的。
+**分形扩展：** 分形意味着自相似——树的每一层节点拥有与顶层相同的结构，只是粒度不同。"用户认证"任务的 task.md 与"实现 OAuth 提供商"子任务的 task.md 结构完全一致。这使得任务分解不需要额外的结构设计工作，分解过程本身是机械的。
 
 **依赖表达的物理化：** 父任务目录下嵌套子任务目录，通过目录深度而非数据库外键表达依赖关系。这使得依赖的可见性不需要查询——`ls` 即是最直接的展示。"父任务是否完成"等价于"子任务目录是否全部关闭"，无需额外的状态聚合查询。
 
@@ -348,10 +348,10 @@ mem0ress 的解法是**零中介**：系统完全建立在"目录树 + 纯文本
 这带来三个具体优势：
 
 - **直接读取，无损透明：** Agent 可以直接 `cat` 任意清单文件，看到的与系统存储的完全一致。没有任何 API 层对内容做截断或改写。
-- **版本控制，原生可审计：** 所有认知产物（Manifest、Session、Gotchas）均在 Git 版本控制之下，任何变更均可追溯到具体的人和轮次。
+- **版本控制，原生可审计：** 所有认知产物（task.md、Session、Gotchas）均在 Git 版本控制之下，任何变更均可追溯到具体的人和轮次。
 - **结构即语义，工具无绑定：** 目录深度表达依赖关系，文件名承载类型语义。Agent 不需要特殊工具就能理解和导航整个认知空间。
 
-这与传统的"向量数据库 + 检索"模式形成鲜明对比：后者将原始信息编码为高维向量，检索时再解码——这个过程本身就是信息损失。而 mem0ress 的认知数据（Manifest、Session、Gotchas）永远保持人类可读和机器可解析的双重 fidelity。
+这与传统的"向量数据库 + 检索"模式形成鲜明对比：后者将原始信息编码为高维向量，检索时再解码——这个过程本身就是信息损失。而 mem0ress 的认知数据（task.md、Session、Gotchas）永远保持人类可读和机器可解析的双重 fidelity。
 
 ## 5. 概念：认知与态势感知
 
@@ -395,13 +395,13 @@ Requirements 的质量判断标准是"是否可自动化检验"：每个 Require
 
 Constraints 的质量判断标准是"是否可阻断"：违反时系统能否检测并阻止？若 Constraint 无法被系统感知（"代码要有良好可读性"），它就不适合作为 Constraints，应移至 Requirements。
 
-**Picture / Requirements / Constraints 的从 Manifest 获取，不重复记录。** 清单文件中统一存放，状态平面仅展示其摘要，不展开全文。
+**Picture / Requirements / Constraints 的从 task.md 获取，不重复记录。** 清单文件中统一存放，状态平面仅展示其摘要，不展开全文。
 
 ### 5.2 状态平面与数据平面
 
 mem0ress 的认知系统由两个核心平面构成，它们都是**时间切片**（某一时刻的快照），不是组件。
 
-**状态平面 (Status Plane)：** 任务相关的所有执行状态的聚合快照。状态平面是运行时快照，在 Agent 需要了解当前认知态势时（认知构建阶段）由认知数据模型按需组装，并在 Agent 唤醒时自动挂载到上下文。组装来源包括 Manifest（任务定义）、Session（历史切片）、Data Plane（版本指针）、Gotchas（偏差记录）。spec 定义组装的时机和职责边界，arch 定义具体的组装机制。
+**状态平面 (Status Plane)：** 任务相关的所有执行状态的聚合快照。状态平面是运行时快照，在 Agent 需要了解当前认知态势时（认知构建阶段）由认知数据模型按需组装，并在 Agent 唤醒时自动挂载到上下文。组装来源包括 task.md（任务定义）、Session（历史切片）、Data Plane（版本指针）、Gotchas（偏差记录）。spec 定义组装的时机和职责边界，arch 定义具体的组装机制。
 
 状态平面包括：
 - 任务树结构（父子关系）
@@ -412,15 +412,11 @@ mem0ress 的认知系统由两个核心平面构成，它们都是**时间切片
 
 Agent 唤醒时强制挂载，只输出当前状态，不做偏差判断。
 
-**数据平面 (Data Plane)：** 所有相关数据的 commit ID 快照。包括：
-- 各仓库当前 commit ID 映射
-- 长篇文档（PRD、设计稿等）的版本指针
-
-顺着状态平面的指针**按需展开挂载**，不默认加载。
+**数据平面 (Data Plane)：** 各仓库当前 commit ID 快照，记录在 Session 每轮快照的 `data_plane` 字段中。顺着状态平面的指针按需展开，不默认加载。
 
 **Session 作为数据来源：** Session 是每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。它是状态平面内容的数据来源之一，但不等于平面本身——平面是某一时刻的聚合快照，Session 是快照的时间序列。
 
-Session 记录执行进度（代码写到哪、文档完成多少、TODO 状态），不记录 Picture/Requirements/Constraints（这些从 TaskManifest 获取，不重复记录）。
+Session 记录执行进度（代码写到哪、文档完成多少、TODO 状态）和 `data_plane` 快照（各仓库当前 commit ID）。data_plane 不单独文件记录，Session 每轮快照中的 `data_plane` 字段即为版本快照，供回溯使用。
 
 ```mermaid
 %% label：状态平面与数据平面的构成
@@ -433,22 +429,18 @@ graph LR
         GTA["Gotchas<br/><指针>"]
     end
 
-    subgraph DP_Group["数据平面（commit ID 快照）"]
-        REPOA["frontend: abc123"]
-        REPOB["backend: def456"]
-    end
-
     subgraph SESSION_Group["Session（数据来源）"]
         HIST["历史快照序列"]
+        DPFLD["data_plane\n快照"]
     end
 
     SP_Group --> AC["Agent Context Window"]
-    DP_Group --> AC
+    DPFLD --> AC
     HIST -.->|提供数据| SP_Group
-    TID -.->|Manifest 提供<br>Picture/Requirements<br>/Constraints| TID
+    TID -.->|task.md 提供<br>Picture/Requirements<br>/Constraints| TID
     GTA -.->|指针引用| GREC
 
-    subgraph GOTCHA_Group["gotchas/（实际存储）"]
+    subgraph GOTCHA_Group["gotchas.md（实际存储）"]
         GREC["Gotcha 记录文件"]
     end
 ```
@@ -463,16 +455,15 @@ mem0ress 采用**纯文本持久化 + 运行时组装**的数据模型，参考�
 
 这一设计的局限在于：不支持需要事务语义的多步原子操作，所有一致性保证依赖调用方遵守组装协议。
 
-mem0ress 的文档数据模型由四个核心文档组成，各自承担不同的认知职责，协作构成完整的任务认知体系：
+mem0ress 的文档数据模型由三个核心文档组成，各自承担不同的认知职责，协作构成完整的任务认知体系：
 
 | 文档 | 定位 | 何时写入 |
 |------|------|----------|
-| Manifest（`index.md`） | 任务声明，Picture/Requirements/Constraints 的唯一真相来源 | 任务创建时写入，运行时以它为准 |
-| Session（`session.md`） | 轮次历史，按时间追加，不改变 Manifest | 每轮次结束后追加 |
-| Data Plane（`data-plane/refs.md`） | 代码版本快照，按需展开，不参与状态判断 | commit ID 变更时按需更新 |
-| Gotchas（`gotchas/*.md`） | 偏差记录，带外追加，不阻塞主流程 | 偏差确认后写入 |
+| task.md | 任务声明，Picture/Requirements/Constraints 的唯一真相来源 | 任务创建时写入，运行时以它为准 |
+| Session（`session.md`） | 轮次历史，按时间追加，不改变 task.md；含 data_plane 快照 | 每轮次结束后追加 |
+| Gotchas（`gotchas.md`） | 偏差记录，带外追加，不阻塞主流程 | 偏差确认后追加 |
 
-四个文档的关系：Manifest 是锚，三要素从它读取；Session 提供进度数据，支撑认知构建；Data Plane 提供版本上下文，支撑数据平面展开；Gotchas 记录偏离，供后续复盘追溯。
+三个文档的关系：task.md 是锚，三要素从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯。
 
 系统使用文件树表达认知的从属关系与上下文边界。
 
@@ -482,15 +473,13 @@ mem0ress 的文档数据模型由四个核心文档组成，各自承担不同�
 graph TD
     ROOT[".mem0ress/"]
     TASKS["tasks/"]
-    TMPL["index.md\nManifest\nPicture / Requirements\n/ Constraints / Todos"]
-    SESS["session.md\n轮次快照序列"]
-    DP["data-plane/\nrefs.md"]
-    GOT["gotchas/\n{timestamp}.md"]
+    TMPL["task.md\nPicture / Requirements\n/ Constraints / Todos"]
+    SESS["session.md\n轮次快照序列\n（含 data_plane）"]
+    GOT["gotchas.md"]
 
     ROOT --> TASKS
     TASKS --> TMPL
     TASKS --> SESS
-    TASKS --> DP
     TASKS --> GOT
 
     TMPL -.->|三要素来源| SESS
@@ -501,7 +490,7 @@ graph TD
     classDef file fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
     classDef ref fill:#fff3e0,stroke:#ff8f00,stroke-width:1px,stroke-dasharray:5,5;
     class ROOT,TASKS dir;
-    class TMPL,SESS,DP,GOT file;
+    class TMPL,SESS,GOT file;
     class GOT ref;
 ```
 
@@ -509,64 +498,19 @@ graph TD
 .mem0ress/
 └── tasks/
     └── auth_module/
-        ├── index.md           # The Manifest (包含图景、需求与 Todo)
-        ├── session.md         # 每个轮次的状态快照（Session 历史）
-        ├── data-plane/        # Data Plane 引用（仓库 → commit ID 映射）
-        ├── gotchas/           # 该任务独享的认知增量与偏差修正记录
-        └── auth_module-judge.md # Judge Agent Manifest（平铺）
+        ├── task.md            # task.md（包含图景、需求与 Todo）
+        ├── session.md         # 每个轮次的状态快照（Session 历史，含 data_plane 快照）
+        ├── gotchas.md         # 该任务独享的偏差记录（追加式）
+        └── auth_module-judge.md # Judge Agent task 文件（平铺）
 ```
 
-`index.md` 扮演了声明式清单（Manifest）。Session 记录每个轮次的执行进度，Picture/Requirements/Constraints 从 Manifest 获取，不重复记录。Judge Agent Manifest 存储在 Task 目录下，文件名为 `{task_id}-judge.md`，验证历史追加到其 `verification_history` 字段，不单独存储 Session。
+Session 记录每个轮次的执行进度和 data_plane 快照，Picture/Requirements/Constraints 从 task.md 获取，不重复记录。
 
-**Data Plane 关联表：**
-
-Data Plane 通过仓库名 → commit ID 的映射来记录代码状态：
-
-```markdown
-data_plane:
-  frontend-repo: abc123
-  backend-repo: def456
-  docs-repo: ghi789
-```
-
-每个 Turn 的 Session 快照中包含当时的 data_plane 状态，用于追踪多仓库开发环境。
+Session 快照中的 `data_plane` 字段直接记录各仓库当前 commit ID。
 
 ### 6.2 Task 模板
 
-**index.md 模板：**
-
-````markdown
----
-id: {task_id}
-type: task
-status: created
-cognitive_triad:
-  picture: {描述任务完成后的终极成功状态}
-  requirements: []
-  constraints: []
-data_plane: {}
-gotcha_refs: []
-todos:
-  - [ ] {第一步}
----
-# {task_id}
-
-## Picture
-{picture}
-
-## Requirements
-- ...
-
-## Constraints
-- ...
-
-## Todos
-- [ ] ...
-
-> **模板参考：** Session 模板、Gotcha 模板、Data Plane 模板见附录 B。
->
-> **双重格式说明：** Manifest 存在两种等价的语义表达方式。Frontmatter 中的 `cognitive_triad` 字段（YAML 格式）是机器可解析的标准格式，供 mem0ress 内部 API 读取；Body 中的 `## Picture / ## Requirements / ## Constraints` 是人类可读的展示格式，供 Agent 和利益相关者直接查阅。两者内容必须完全一致——Agent 写入 body 后必须同步更新 frontmatter，或由工具自动维护一致性。规范本身不强制要求同时维护两套格式，二选一即可，但一旦混用则必须保持同步。
-````
+task.md 模板位于 `docs/templates/tasks/task/task.md`，包含完整的 frontmatter 和 body 结构说明。
 
 ## 7. 逻辑与流程设计 (Logic & Workflow Design)
 
@@ -584,7 +528,7 @@ Todo 步进拆解：在锚定三要素后，Agent 将任务拆解为具体的机
 
 状态平面是认知构建的产出物，具有以下特性：只输出当前状态，不做偏差判断；实时扫描，每次调用直接读文件系统，不缓存；全面覆盖，显示所有任务，不隐藏任何节点；非侵入，只读不写，不改变任何状态。
 
-状态平面的显示内容包括：任务树结构（父子关系）；每个任务的 todo 完成度（如 "2/3 Todos 完成"）；任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）；偏差记录（Gotchas）指针；Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）。Picture/Requirements/Constraints 从 TaskManifest 获取，不显示在状态平面中。
+状态平面的显示内容包括：任务树结构（父子关系）；每个任务的 todo 完成度（如 "2/3 Todos 完成"）；任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）；偏差记录（Gotchas）指针；Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）。Picture/Requirements/Constraints 从 task.md 获取，不显示在状态平面中。
 
 Session 快照是认知构建的数据来源。每个轮次的状态快照记录 code_progress、docs_progress、todos 和 status。Session 采用版本快照模型，只追加不覆盖。
 
@@ -662,128 +606,23 @@ stateDiagram-v2
 
 | Node | 说明 |
 |------|------|
-| `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 Manifest 获取） |
-| `Task` | 认知单元，包含 Manifest（index.md）、Session（session.md）、Data Plane（data-plane/refs.md）、Gotchas（gotchas/）四个物理子节点 |
+| `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 task.md 获取） |
+| `Task` | 认知单元，包含 task.md、Session（session.md）、Gotchas（gotchas.md）三个物理子节点 |
 | `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以所有子任务完成为前提 |
-| `Judge Agent` | 伴生组件，执行 Tier 0/1/2/3 检验，Manifest 存储在 {task_id}-judge.md，与 Task 生命周期同步 |
+| `Judge Agent` | 伴生组件，执行 Tier 0/1/2/3 检验，task 文件存储在 {task_id}-judge.md，与 Task 生命周期同步 |
 
 ## 附录 B: 模板参考
 
-### B.1 Session 模板 (session.md)
+模板文件位于 `docs/templates/` 目录，镜像运行时 `.mem0ress/tasks/{task_id}/` 的物理结构：
 
-**模板格式：**
-
-````markdown
-# Session: {task_id}
-
-## Turn {N.M}
-date: {YYYY-MM-DDTHH:MM:SS}
-code_progress: "{本轮代码产出摘要}"
-data_plane:
-  {repository}: {commit_id}
-todos:
-  - {text: "...", done: true|false}
-status: {CREATED|IN_PROGRESS}
-````
-
-**字段说明：**
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `code_progress` | string | 本轮次代码产出摘要，描述性文本 |
-| `data_plane` | map | 仓库名 → commit ID 映射 |
-| `todos` | list | `{text, done}` 结构，done 为 boolean |
-| `status` | enum | CREATED / IN_PROGRESS / COMPLETED / ABANDONED（VERIFYING 为检验瞬态，不属于生命周期状态，不记录于 Session） |
-
-**写入约定：**
-- Turn 编号格式为 `{parent_turn}.{child_turn}`，如 1.1、1.2、2.1，体现嵌套关系
-- 每轮次结束时**追加**写入，不覆盖历史快照（版本快照模型）
-- **不记录 Picture / Requirements / Constraints**（这些从 Manifest 获取，不重复记录）
-
-**触发时机：** 每轮次结束时追加状态快照。
-
----
-
-### B.2 Gotcha 模板 (gotchas/{timestamp}.md)
-
-Gotcha 是带外偏差记录，写入路径为 `gotchas/{timestamp}.md`（文件名即时间戳，隐含任务归属，无需在内容中重复标注 task_id）。
-
-**模板格式：**
-
-````markdown
-# Gotcha
-
-## 偏离描述
-{具体偏离了什么（Picture / Requirements / Constraints）}
-
-## 原因分析
-{为什么偏离}
-
-## 经验总结
-{下次如何避免}
-
-## 关联检验
-- 时间: {timestamp}
-- 检验 Tier: {Tier 0/1/2/3}
-- 任务: {task_id}
-````
-
-**写入约定：**
-- 在偏差确认后写入 gotchas/ 目录
-- 不参与主流程，不影响任务状态，不阻断 Agent 继续执行
-- 属于带外记录，供后续复盘和追溯使用
-
----
-
-### B.3 Data Plane 模板 (data-plane/refs.md)
-
-Data Plane 记录当前任务关联的仓库 commit ID 快照。Session 快照中的 `data_plane` 字段引用此处维护的映射。
-
-**模板格式：**
-
-````markdown
-# Data Plane: {task_id}
-
-## Repositories
-
-| Repository | Commit ID | Last Updated | Description |
-|------------|-----------|-------------|-------------|
-| {repo-name} | {commit-id} | {YYYY-MM-DD} | {简要说明} |
-
-## Latest Commit Map
-
-```yaml
-repositories:
-  {repo-name}: {commit-id}
+```
+docs/templates/tasks/task/
+├── task.md              # task.md 模板
+├── session.md            # Session 模板
+└── gotchas.md           # Gotcha 模板（追加式）
 ```
 
-## Change Log
-
-| Date | Repository | From → To | Reason |
-|------|------------|-----------|--------|
-| {YYYY-MM-DD} | {repo-name} | {old-id} → {new-id} | {原因} |
-````
-
-**字段说明：**
-
-| 字段 | 说明 |
-|------|------|
-| Repository | 仓库名称标识 |
-| Commit ID | 当前指向的 commit SHA |
-| Last Updated | 最近一次变更时间 |
-| Description | 该仓库在当前任务中的用途说明 |
-
-**维护约定：**
-- 当仓库 commit ID 变更时按需更新
-- 每个 Task 目录下维护独立的 `data-plane/refs.md`
-- Change Log 自动追加，记录版本变迁原因，供 Agent 按需回溯
-- Data Plane 是**时间切片**，`repositories` 字段记录某一时刻的 commit ID 快照，Change Log 提供历史追溯通道
-
-**与 Session 的关系：**
-- 每轮 Session 快照中的 `data_plane` 字段引用当前 `data-plane/refs.md` 中的 commit map
-- 不在 Session 中重复记录完整的 Data Plane 内容，只记录快照指针
-
----
+具体模板内容和使用说明见各文件内部注释。
 
 ## 8. 暂无内容
 

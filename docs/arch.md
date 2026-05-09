@@ -59,7 +59,7 @@ graph TB
 
 **行为：**
 - 认知构建阶段时，直接扫描文件系统
-- 按需聚合 Task 节点的 Manifest（任务定义）、Session（历史切片）、Data Plane（版本指针）、Gotchas（偏差记录），组装为状态平面
+- 按需聚合 Task 节点的任务定义、Session（历史切片）、Data Plane（版本指针）、Gotchas（偏差记录），组装为状态平面
 - 只输出当前状态——不缓存、不诊断、不决策
 - 不做持久化，只做文件系统扫描和文本聚合
 
@@ -85,15 +85,14 @@ graph TB
 
 ```text
 .mem0ress/tasks/{task_id}/
-├── index.md                    # Task Manifest
-├── session.md                  # Task Session
-├── data-plane/refs.md          # Data Plane
-├── gotchas/{timestamp}.md      # Gotcha 记录
+├── task.md                    # Task 定义
+├── session.md                  # Task Session（含 data_plane 快照）
+├── gotchas.md                  # Gotcha 记录（追加式）
 ├── report.md                   # 本轮次检验报告（每轮覆写）
-└── {task_id}-judge.md         # Judge Agent Manifest（平铺）
+└── {task_id}-judge.md         # Judge Agent task 文件（平铺）
 ```
 
-Judge Agent 不创建独立目录。Manifest 和 Session（验证历史追加到 Manifest 的 `verification_history` 字段）都平铺在 Task 目录下。
+Judge Agent 不创建独立目录。task 文件和 Session（验证历史追加到 task 文件的 `verification_history` 字段）都平铺在 Task 目录下。
 
 **初始化流程**：
 
@@ -102,8 +101,8 @@ Judge Agent 不创建独立目录。Manifest 和 Session（验证历史追加到
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae' } } }%%
 flowchart TB
     TaskCreate["Task 创建"] --> SpawnJudge["spawn Judge Agent\nid: {task_id}-judge"]
-    SpawnJudge --> LoadManifest["加载 Picture/Requirements/Constraints"]
-    LoadManifest --> BuildMapping["建立 Todo → Requirements 映射"]
+    SpawnJudge --> LoadTaskDef["加载 Picture/Requirements/Constraints"]
+    LoadTaskDef --> BuildMapping["建立 Todo → Requirements 映射"]
     BuildMapping --> Ready["status: ready"]
 ```
 
@@ -134,10 +133,10 @@ created → ready → verifying → completed → destroyed
 
 | Tier | 检查内容 | 输入来源 |
 |------|---------|---------|
-| Tier 0 | Constraints 违反检查 | Constraints（Manifest）、当前代码状态（文件系统） |
-| Tier 1 | Todo 完成 + 子任务关闭 | todos（Manifest）、Session 当前快照、子任务 Manifest |
-| Tier 2 | Requirements 满足检查 | Requirements（Manifest）、实际产出（文件系统） |
-| Tier 3 | 语义对齐判断 | Picture（Manifest）、实际产出（文件系统） |
+| Tier 0 | Constraints 违反检查 | Constraints（task.md）、当前代码状态（文件系统） |
+| Tier 1 | Todo 完成 + 子任务关闭 | todos（task.md）、Session 当前快照、子任务 task.md |
+| Tier 2 | Requirements 满足检查 | Requirements（task.md）、实际产出（文件系统） |
+| Tier 3 | 语义对齐判断 | Picture（task.md）、实际产出（文件系统） |
 
 Judge Agent 在每次检验时实时读取上述信息，不在内存中维护中间状态。`verification_history` 字段记录检验历史摘要，供追溯使用。
 
@@ -232,7 +231,7 @@ Tier 3 的语义对齐与执行态 Agent 上下文隔离，避免检验过程污
 
 mem0ress 的核心业务流由 Agent 的三个主动决策构成：
 
-1. **认知构建：** Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 Manifest 按需读取，不在状态平面中展开。
+1. **认知构建：** Agent 调用 `get_status_plane()`，了解当前状态（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 task.md 按需读取，不在状态平面中展开。
 2. **任务检验：** Agent 调用 `verify()`，驱动 Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告。Tier 0 在 verify() 链路内部由系统自动执行。
 3. **状态更新：** Agent 根据检验结果决策后续行动——更新 Todo、调用 `complete_task()` 标记完成、`abandon_task()` 标记废弃、或继续执行。状态更新通过 Tool Interface 执行写操作，支持 `complete_task`、`abandon_task`、`update_todo` 等。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
@@ -305,36 +304,32 @@ mem0ress 使用文件树表达认知的从属关系与上下文边界，对应 s
 .mem0ress/
 └── tasks/
     └── {task_id}/
-        ├── index.md              # Manifest（Picture/Requirements/Constraints/Todo）
-        ├── session.md            # 轮次快照序列
-        ├── data-plane/
-        │   └── refs.md         # 仓库 → commit ID 映射
-        ├── gotchas/
-        │   └── {timestamp}.md   # 偏差记录
-        └── {task_id}-judge.md  # Judge Agent Manifest（平铺）
+        ├── task.md              # task.md（Picture/Requirements/Constraints/Todo）
+        ├── session.md            # 轮次快照序列（含 data_plane）
+        ├── gotchas.md           # 偏差记录（追加式）
+        └── {task_id}-judge.md   # Judge Agent task 文件（平铺）
 ```
 
 **模块职责映射：**
 
 | 物理组件 | 维护模块 |
 |----------|----------|
-| `index.md` | Tool Interface |
+| `task.md` | Tool Interface |
 | `session.md` | mem0ress 暴露接口，被调用时自动写入 |
-| `data-plane/refs.md` | Tool Interface（`link_data_plane`） |
-| `gotchas/` | Tool Interface（`add_gotcha`） |
+| `gotchas.md` | Tool Interface（`add_gotcha`） |
 | `{task_id}-judge.md` | Judge Agent（验证历史追加） |
 
 ### 6.2 Session 快照
 
-**触发链路：** mem0ress 在每轮次结束时暴露 Session 快照接口，被调用时自动追加记录到 session.md。写入内容由 spec.md B.1 Session 模板定义。
+**触发链路：** mem0ress 在每轮次结束时暴露 Session 快照接口，被调用时自动追加记录到 session.md。写入内容由 `docs/templates/tasks/task/session.md` 定义。
 
 ### 6.3 Gotcha 偏差记录
 
-**触发链路：** Agent 确认偏差后，通过 Tool Interface 的 `add_gotcha()` 写入 `gotchas/{timestamp}.md`。写入内容由 spec.md B.2 Gotcha 模板定义。
+**触发链路：** Agent 确认偏差后，通过 Tool Interface 的 `add_gotcha()` 追加到 `gotchas.md`。写入内容由 `docs/templates/tasks/task/gotchas.md` 定义。
 
-### 6.4 Data Plane 引用
+### 6.4 Data Plane 快照
 
-**触发链路：** 仓库 commit ID 变更时，Agent 通过 Tool Interface 的 `link_data_plane()` 更新 `data-plane/refs.md`。字段结构由 spec.md B.3 Data Plane 模板定义。
+**说明：** Data Plane 不单独文件存储。各仓库 commit ID 快照记录在 Session 每轮快照的 `data_plane` 字段中，供回溯使用。
 
 ---
 

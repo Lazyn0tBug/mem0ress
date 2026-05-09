@@ -12,11 +12,10 @@ mem0ress/
 ├── .mem0ress/             # [认知基座 Substrate] 物理承载层
 │   └── tasks/
 │       └── {task_id}/
-│           ├── index.md            # Task Manifest（Picture/Requirements/Constraints/Todo）
+│           ├── task.md                # task.md（Picture/Requirements/Constraints/Todo）
 │           ├── session.md          # 轮次快照序列
-│           ├── data-plane/        # Data Plane 引用（仓库 → commit ID）
-│           ├── gotchas/           # 偏差记录
-│           └── {task_id}-judge.md # Judge Agent Manifest（平铺）
+│           ├── gotchas.md         # 偏差记录
+│           └── {task_id}-judge.md # Judge Agent task 文件（平铺）
 └── src/
     └── mem0ress/
         ├── __init__.py
@@ -121,7 +120,7 @@ Task 创建 → spawn Judge Agent (id: {task_id}-judge)
          → status: ready
 ```
 
-**文件存储：** Judge Agent Manifest 平铺在 Task 目录下，不创建独立子目录。验证历史追加到 Manifest 的 `verification_history` 字段。
+**文件存储：** Judge Agent task 文件平铺在 Task 目录下，不创建独立子目录。验证历史追加到 task 文件的 `verification_history` 字段。
 
 ### 3.2 认知拦截器 (Gateway Interceptor)
 
@@ -170,7 +169,7 @@ Judge Agent 执行 Tier 0/1/2/3 检验，生成一次性报告写入 `report.md`
 
 mem0ress 的核心业务闭环由 Agent 的三个主动决策构成：
 
-1. **认知构建：** Agent 调用 `get_status_plane()`，获取状态平面快照（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 Manifest 按需读取，不在状态平面中展开。
+1. **认知构建：** Agent 调用 `get_status_plane()`，获取状态平面快照（任务树、TODO 进度、任务状态、Gotchas、Session 指针）。Picture/Requirements/Constraints 从 task.md 按需读取，不在状态平面中展开。
 2. **任务检验：** Agent 调用 `verify()`，驱动 Judge Agent 执行 Tier 0~3 检验，生成一次性报告。Tier 0 在 verify() 链路内部由系统自动执行。
 3. **状态更新：** Agent 根据检验结果调用 Tool Interface 写操作（`complete_task`、`abandon_task`、`update_todo` 等）。Gotcha 作为带外偏差记录，不影响状态，不阻断执行。
 
