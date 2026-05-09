@@ -34,5 +34,6 @@ status: {CREATED|IN_PROGRESS}
 - 每轮次结束时**追加**写入，不覆盖历史快照（版本快照模型）
 - **不记录 Picture / Requirements / Constraints**（这些从 task.md 获取，不重复记录）
 - `data_plane` 字段记录本轮次操作时的 commit ID 快照，供回溯使用
+- Data Plane 模板结构见 `data_plane.md`
 
 **触发时机：** 每轮次结束时追加状态快照。
