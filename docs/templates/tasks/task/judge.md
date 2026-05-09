@@ -3,7 +3,7 @@ description: "Judge Agent Verification — Tier 0-3 验证逻辑实例化模板�
 type: judge
 relationships:
   requires: ["task.md", "session.md", "data_plane.md"]
-  provides: ["report.md"]
+  provides: []
 fields:
   turn:
     type: string
