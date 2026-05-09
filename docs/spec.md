@@ -609,7 +609,7 @@ stateDiagram-v2
 | `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 task.md 获取） |
 | `Task` | 认知单元，包含 task.md、session.md、gotchas.md 三个物理子节点；judge.md 与 Task 并列平铺，不属于 Task 的子节点 |
 | `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以所有子任务完成为前提 |
-| `Judge Agent` | 伴生组件，执行任务检验（约束检查、Todo 完成、Requirements 满足、语义对齐）；Judge Agent 节点与 Task 节点并列平铺于同一任务目录下，judge.md 是其物理文件 |
+| `Judge Agent` | 伴生组件，执行任务检验；Judge Agent 节点与 Task 节点并列平铺于同一任务目录下，judge.md 是其物理文件 |
 
 ---
 
