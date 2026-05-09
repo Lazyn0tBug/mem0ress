@@ -160,7 +160,7 @@
 | # | 问题 | 建议 |
 |---|------|------|
 | P2-1 | task.md 第34行操作约定混入模板说明 | 移除该行或将其移至模板的使用说明文档 |
-| P2-2 | `ABANDONED` 状态的语义模糊 | 在 task.md 中为 `ABANDONED` 添加语义说明（与 COMPLETED 的区别） |
+| P2-2 | `ABANDONED` 状态的语义模糊 | **已在 spec.md 第568/603行定义**，无需在 task.md 重复 |
 | P2-3 | judge.md 与 mem0ress harness Tier 0/1/2/3 的对应关系不明确 | 在 judge.md 开头添加说明：judge.md 是 mem0ress Tier 验证的实例化模板 |
 
 ---
