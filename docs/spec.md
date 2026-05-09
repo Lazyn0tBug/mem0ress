@@ -171,6 +171,8 @@ Task 锚点还解决了目标模糊性的问题。当一个目标过于宏观时
 
 这种正交设计的认知收益是：Agent 可以独立思考进度问题或数据问题，而不需要同时处理两个维度的干扰。数据平面变化时，Agent 知道这是数据问题；任务状态变化时，Agent 知道这是进度问题。两种问题的处理策略不同，分开思考避免了认知混淆。
 
+基于双平面正交，Task 的整个执行循环围绕三个核心动作展开：**认知构建**、**任务检验**和**状态更新**。认知构建负责生成状态平面的快照，任务检验负责判断当前状态是否满足 Picture，状态更新负责将检验结果反映到 Task 状态。这三个动作在每个轮次结束后依次执行，构成完整的感知-判断-更新闭环。
+
 ---
 
 ## 3. 设计理念
@@ -246,6 +248,8 @@ mem0ress 的认知数据来自会话本身，而非外部知识库。系统从�
 * **数据平面：** 从会话中提取相关数据的 commit ID 快照，记录代码和文档在某一时刻的版本。Agent 需要操作具体数据时才按需挂载。
 
 两个平面都来源于会话，按需挂载。Agent 获取平面后，在其**认知工作区**中完成目标推理与决策。
+
+三个核心动作与 Task 生命周期绑定：轮次结束后依次执行**认知构建**（生成当前状态快照）、**任务检验**（判断是否满足 Picture）和**状态更新**（将检验结果反映到 Task 状态）。这三个动作的顺序是固定的——认知构建先于任务检验，任务检验先于状态更新。
 
 > **注：** 状态平面和数据平面都是时间切片，不是组件。图中的状态平面 / 数据平面指的是"某一时刻的快照"，而非独立的进程或服务。认知工作区是 Agent 的内部工作空间，两者是一体的。
 
@@ -442,9 +446,20 @@ graph LR
     end
 ```
 
-## 6. 文档数据模型 (Document Model)
+## 6. 文件组织与模板
 
 ### 6.1 文档结构
+
+mem0ress 的文档数据模型由四个核心文档组成，各自承担不同的认知职责，协作构成完整的任务认知体系：
+
+| 文档 | 定位 | 何时写入 |
+|------|------|----------|
+| Manifest（`index.md`） | 任务声明，Picture/Requirements/Constraints 的唯一真相来源 | 任务创建时写入，运行时以它为准 |
+| Session（`session.md`） | 轮次历史，按时间追加，不改变 Manifest | 每轮次结束后追加 |
+| Data Plane（`data-plane/refs.md`） | 代码版本快照，按需展开，不参与状态判断 | commit ID 变更时按需更新 |
+| Gotchas（`gotchas/*.md`） | 偏差记录，带外追加，不阻塞主流程 | 偏差确认后写入 |
+
+四个文档的关系：Manifest 是锚，三要素从它读取；Session 提供进度数据，支撑认知构建；Data Plane 提供版本上下文，支撑数据平面展开；Gotchas 记录偏离，供后续复盘追溯。
 
 系统使用文件树表达认知的从属关系与上下文边界。
 
@@ -541,154 +556,61 @@ todos:
 ````
 
 ## 7. 逻辑与流程设计 (Logic & Workflow Design)
-在 mem0ress 中，整个系统的运转不再是机械的文件读写，而是围绕任务目标的动态生命周期：任务创建、任务检验、认知构建。这是一个不断前向对齐的闭环。
+
+Task 的执行循环围绕三个核心动作展开：认知构建、任务检验和状态更新。这三个动作在每个轮次结束后依次执行，构成完整的感知-判断-更新闭环。
 
 ### 7.1 任务创建
-任务的创建是确立认知边界的起点。系统通过声明式的方式，逐步逼近任务的核心。
 
-逐步完善三要素： Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 Picture、Requirements 和 Constraints。三要素的定义应从 Picture 开始——先定义 Picture 作为目标锚，再从中推导出 Requirements 和 Constraints。冲突检测在三者全部定义后进行——若 Requirements 与 Constraints 相互矛盾，系统立即标记任务为"不可行"，而非等到执行阶段才发现。
+任务创建是确立认知边界的起点。Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 Picture、Requirements 和 Constraints。三要素的定义应从 Picture 开始——先定义 Picture 作为目标锚，再从中推导出 Requirements 和 Constraints。冲突检测在三者全部定义后进行——若 Requirements 与 Constraints 相互矛盾，系统立即标记任务为"不可行"，而非等到执行阶段才发现。
 
-Todo 步进拆解： 在锚定三要素后，Agent 将任务拆解为具体的机械步（Todo）。这些 Todo 构成了后续检验进度的基准线。
+Todo 步进拆解：在锚定三要素后，Agent 将任务拆解为具体的机械步（Todo）。这些 Todo 构成了后续检验进度的基准线。
 
-### 7.2 任务检验
+### 7.2 认知构建
 
-任务检验通过 Judge Agent 执行，外部调用接口为 `verify()`，调用后生成一次性报告写入 `report.md`。
+认知构建是轮次结束后生成状态平面快照的动作。它在任何节点（刚启动时、执行中、或检验失败后）都需要执行，为 Agent 提供当前任务的可判断状态。
+
+状态平面是认知构建的产出物，具有以下特性：只输出当前状态，不做偏差判断；实时扫描，每次调用直接读文件系统，不缓存；全面覆盖，显示所有任务，不隐藏任何节点；非侵入，只读不写，不改变任何状态。
+
+状态平面的显示内容包括：任务树结构（父子关系）；每个任务的 todo 完成度（如 "2/3 Todos 完成"）；任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）；偏差记录（Gotchas）指针；Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）。Picture/Requirements/Constraints 从 TaskManifest 获取，不显示在状态平面中。
+
+Session 快照是认知构建的数据来源。每个轮次的状态快照记录 code_progress、docs_progress、todos 和 status。Session 采用版本快照模型，只追加不覆盖。
+
+### 7.3 任务检验
+
+任务检验在认知构建之后执行，负责判断当前状态是否满足 Picture。检验由宿主在轮次结束后自动触发，按顺序执行 Tier 0/1/2/3 四层关卡。
 
 **四层关卡（Tiers）：**
 
-* **Tier 0: Constraints 约束检查：** 每轮次结束后由系统自动触发。检查 Constraints 是否被违反，若有违反报告违反事实，由主 Agent 决定是否修复及如何修复。
-* **Tier 1: Todo 完成检查：** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。
-* **Tier 2: Requirements 满足检查：** 验证每个 Requirement 是否达标。
-* **Tier 3: 语义对齐检查：** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 由 Agent 按需触发，不每次自动进入。
+任务检验按顺序执行以下四层关卡。其中 Tier 0/1/2 为自动通过条件，Tier 3 为语义对齐关卡，由 Agent 根据任务属性决定是否启用。
 
-**Tier 3 的触发条件：**
+* **Tier 0: Constraints 约束检查。** 检查 Constraints 是否被违反，若有违反报告违反事实，由主 Agent 决定是否修复及如何修复。
+* **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。
+* **Tier 2: Requirements 满足检查。** 验证每个 Requirement 是否达标。
+* **Tier 3: 语义对齐检查。** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 需要 Agent 主动判断本次检验是否需要语义对齐，以下情况适用：Picture 涉及主观判断或利益相关者感知时；Constraints 与 Picture 之间存在语义歧义时；任务被宿主系统判定为高危时；Agent 或利益相关者显式请求时。
 
-Tier 3 不是每次检验都自动进入的常规关卡。它由 Agent 根据任务属性主动决定是否触发。触发条件包括：
-
-- **Picture 涉及主观判断或利益相关者感知**：若 Picture 包含"用户感到满意"、"界面美观"等无法自动化验证的指标，Tier 1/2 无法覆盖，需要 Tier 3 的语义对齐。
-- **Constraints 与 Picture 之间存在语义歧义**：Tier 2 验证了"功能可用"，但 Tier 1/2 无法判断"是否做了不该做的事"——这属于 Constraints 与 Picture 的跨平面对齐。
-- **任务被宿主系统判定为高危**：宿主定义高危判断算法（如影响范围、可逆性、外部依赖等维度），高危任务的完成检验强制触发 Tier 3，无论 Tier 1/2 结果如何。
-- **Agent 或利益相关者显式请求**：在任务 Manifest 中预设 `require_tier3_verification: true`，或在任务执行过程中 Agent 主动触发 Tier 3 检验。
+例如：一个 Picture 是"用户无需输入密码即可登录"的 OAuth 任务，Tier 1 检查了所有 Todo 是否完成，Tier 2 验证了"支持 Google OAuth"和"支持 GitHub OAuth"这两个 Requirements 都满足，但 Tier 3 额外检查了"实际登录流程中用户确实没有被要求输入密码"——这个检查无法通过代码结构验证，必须看实际行为，属于语义对齐。
 
 **决策执行规则：**
 
-检验结果由 Agent 从 `report.md` 读取。任务完成后是否标记完成，由 Agent 基于危险性判断自主决定，或按权限设定让度给人。ABANDONED 由 Agent 主动标记，与检验结果无关。
+检验完成后结果写入 `report.md`，由主 Agent 从 `report.md` 读取并决策下一步。任务完成后是否标记完成，由 Agent 基于危险性判断自主决定，或按权限设定让度给人。ABANDONED 由 Agent 主动标记，与检验结果无关。
 
-**任务状态与检验的关系：**
+检验通过 → Agent 可标记任务完成；检验未通过 → Agent 决定下一步（修正、重试或废弃）。
 
-- 检验通过 → Agent 可标记任务完成
-- 检验未通过 → Agent 决定下一步（修正、重试或废弃）
+### 7.4 状态更新
 
-### 7.2.1 Judge Agent
+状态更新将检验结果反映到 Task 状态，并处理决策执行。
 
-Judge Agent 是执行 Tier 0/1/2/3 检验的专用组件，每个 Task 伴生一个 Judge Agent。
+**状态机：**
 
-**与 Task 的关系**：
+Task 生命周期包含五种状态：
 
-Judge Agent 与 Task 是**伴生关系**，不是从属关系。Judge Agent 的生命周期与 Task 同步——Task 创建时创建，Task 完成/废弃时销毁。
+- **CREATED**：三要素已定义，所有 Todo 均未开始
+- **IN_PROGRESS**：至少有一个 Todo 已完成，执行中
+- **VERIFYING**：任务检验进行中，瞬态，不能持续
+- **COMPLETED**：目标达成，认知生命周期结束
+- **ABANDONED**：目标放弃，记录 Gotcha 经验
 
-**Manifest 模板**：
-
-```markdown
----
-id: {task_id}-judge
-type: judge
-parent_task: {task_id}
-status: ready|verifying|error|destroyed
-
-cognitive_triad:
-  picture: "验证 {task_id} 的目标对齐状态"
-  requirements:
-    - "读取 Picture 和实际产出"
-    - "执行 Tier 0~3 检验"
-    - "返回对齐结果"
-  constraints:
-    - "只读取 Task 文件，不修改"
-    - "独立判断，不受主 Agent 影响"
-
-todos:
-  - [ ] Tier 0: Constraints 约束检查
-  - [ ] Tier 1: Todo + 子任务完成检查
-  - [ ] Tier 2: Requirements 满足检查
-  - [ ] Tier 3: 语义对齐检查
-
-verification_history: []
----
-```
-
-**验证接口**：
-
-| 字段 | 说明 |
-|------|------|
-| `verification_history` | 检验历史摘要，只追加不覆盖 |
-
-**验证结果格式**：
-
-| 字段 | 说明 |
-|------|------|
-| `verdict` | aligned / deviation / uncertain |
-| `tier_results` | 每个 Tier 的详细结果 |
-
-**文件存储**：
-
-Judge Agent Manifest 存储在 Task 目录下，文件名为 `{task_id}-judge.md`。
-
-```text
-.mem0ress/tasks/{task_id}/
-├── index.md              # Task Manifest
-├── session.md            # Task Session
-├── data-plane/
-├── gotchas/
-├── report.md             # 本轮次检验报告（每轮覆写）
-└── {task_id}-judge.md   # Judge Agent Manifest（平铺）
-```
-
-Judge Agent 不创建独立目录，其 Manifest 和 Session（验证历史追加到 Manifest 的 `verification_history` 字段）都平铺在 Task 目录下。
-
-**验证触发时机**：
-
-- Tier 0：每轮次结束后由系统自动触发
-- Tier 1/2：主 Agent 按需调用
-- Tier 3：按需触发（见 7.2 Tier 3 触发条件）
-
-**Judge Agent 与主 Agent 的交互**：
-
-Judge Agent 读取 Task 文件系统（Manifest、Session、代码/文档），不读取主 Agent 的执行上下文。检验完成后，结果写入 `report.md` 并通过 hook 返回值通知主 Agent。主 Agent 唤醒时读取该文件，获取本轮次检验结果。
-
-### 7.3 认知构建
-
-这是贯穿生命周期始终的核心动作。在任何节点（刚启动时、执行中、或检验失败后），系统都需要为 Agent 构建当前任务的状态平面。
-
-**状态平面（状态平面快照）：**
-
-* 只输出当前状态，不做偏差判断：只呈现当前状态，不做偏差判断
-* 实时扫描：每次调用直接读文件系统，不缓存
-* 全面覆盖：显示所有任务，不隐藏任何节点
-* 非侵入：只读不写，不改变任何状态
-
-**状态平面显示内容：**
-
-- 任务树结构（父子关系）
-- 每个任务的 todo 完成度（如 "2/3 Todos 完成"）
-- 任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）
-- 偏差记录（Gotchas）
-- Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）
-
-状态平面只输出当前状态，不展开 Session 详情。Picture/Requirements/Constraints 从 TaskManifest 获取，不显示在状态平面中。
-
-**Session 触发规则：**
-
-mem0ress 作为一个被动式的状态管理层，自身没有后台守护进程。Session 快照的触发通过以下方式完成：
-
-**宿主系统自动触发：** 每交互轮次结束时，宿主系统自动调用 mem0ress 接口记录当前快照，无需 Agent 显式调用。
-
-**Session 记录内容：** 每个轮次的状态快照，包括 code_progress、docs_progress、todos 和 status。Session 采用版本快照模型，只追加不覆盖，用于理解演进，暂不主动访问。
-
-**Picture / Requirements / Constraints 从 TaskManifest 获取，不显示在状态平面中。**
-
-### 7.4 决策执行：Agent 是所有决策的起点与终点
-
-mem0ress 中，人和 Agent 不存在分工——本质上都以 Agent 形态存在。决策权统一归属 Agent，Agent 按权限设定和危险性判断，自主行使或主动让度给人。
+状态转换规则：CREATED → IN_PROGRESS（任意 Todo 被标记为完成）；CREATED → ABANDONED（任务废弃）；IN_PROGRESS → VERIFYING（任务检验开始）；VERIFYING → IN_PROGRESS（检验未通过，Agent 决定重试）；VERIFYING → COMPLETED（检验通过）；VERIFYING → ABANDONED（检验失败后 Agent 决定废弃）；IN_PROGRESS → COMPLETED（任务完成）；IN_PROGRESS → ABANDONED（任务废弃）。
 
 ```mermaid
 %% label：Task 生命周期状态机
@@ -697,61 +619,19 @@ stateDiagram-v2
     [*] --> CREATED
     CREATED --> IN_PROGRESS : 任意 Todo 被标记为完成
     CREATED --> ABANDONED : 任务废弃
+    IN_PROGRESS --> VERIFYING : 任务检验开始
+    VERIFYING --> IN_PROGRESS : 检验未通过，Agent 决定重试
+    VERIFYING --> COMPLETED : 检验通过
+    VERIFYING --> ABANDONED : 检验失败后 Agent 决定废弃
     IN_PROGRESS --> COMPLETED : 任务完成
     IN_PROGRESS --> ABANDONED : 任务废弃
     COMPLETED --> [*]
     ABANDONED --> [*]
-
-    note right of CREATED
-        三要素已定义
-        所有 Todo 均未开始执行（done: false）
-    end note
-    note right of IN_PROGRESS
-        至少有一个 Todo 已完成（done: true）
-        执行中 / 检验中
-    end note
-    note right of COMPLETED
-        目标达成
-        认知生命周期结束
-    end note
-    note right of ABANDONED
-        目标放弃
-        记录 Gotcha 经验
-    end note
 ```
 
-**Agent 负责的决策：**
-- 任务创建时三要素的定义与完善
-- 是否触发 Tier 1/2 检验，以及按需触发 Tier 3（Tier 0 为自动前置处理，不在决策范围内）
-- 检验通过后是否标记任务为完成
-- 是否标记任务为废弃
-- 下一步行动（修正、重试、或推进其他任务）
+**决策执行：**
 
-**让度的触发条件：**
-
-让度是 Agent 的主动行为，其触发条件为：
-
-| 触发条件 | 让度行为 |
-|----------|----------|
-| Tier 0 检测到约束违反且主 Agent 无法自行修复 | Agent 发起让度请求，同步等待外部响应 |
-| 任务通过 Tier 1/2/3 检验，但宿主判定为高危 | Agent 发起让度请求，同步等待外部响应 |
-| 其他 | Agent 自主继续 |
-
-"高危"的判断算法由宿主系统定义，mem0ress 不硬编码阈值。典型维度包括影响范围、可逆性、外部依赖、决策后果等。
-
-让度的形式：Agent 发起让度请求并同步等待外部响应，Agent 暂停执行直至收到确认。让度是 Agent 的主动行为，不是系统强制中断。
-
-### 7.5 宿主让度策略
-
-mem0ress 不预设权限等级，"高危"的判断算法由宿主系统自行定义。宿主可选择完全不实现让度机制（所有决策由 Agent 自主），也可以定义任意精细度的让度策略。
-
-本规范仅定义让度的行为接口：
-
-- **触发时机：** 仅限于 Tier 0 检测到约束违反且主 Agent 无法自行修复，或任务完成标记时宿主判定为高危
-- **让度行为：** Agent 发起请求，同步等待外部响应，执行暂停
-- **响应内容：** 宿主返回允许/拒绝，Agent 根据响应决定下一步
-
-宿主实现可参考的判断维度：影响范围、可逆性、外部依赖、决策后果。
+Agent 的决策执行分为两种模式：自主执行和让度执行。让度执行的触发条件由宿主定义。
 
 ## 附录 A: 状态与节点
 
@@ -761,6 +641,7 @@ mem0ress 不预设权限等级，"高危"的判断算法由宿主系统自行定
 |-------|------|
 | `CREATED` | 任务已创建，三要素已定义，所有 Todo 均未开始 |
 | `IN_PROGRESS` | 任务进行中，至少有一个 Todo 已完成 |
+| `VERIFYING` | 任务检验进行中，瞬态，检验完成必须离开此状态 |
 | `COMPLETED` | 目标达成，认知生命周期结束 |
 | `ABANDONED` | 目标放弃，记录 Gotcha 经验 |
 
@@ -892,56 +773,11 @@ repositories:
 
 ---
 
-### B.4 Report 模板 (report.md)
+## 8. 暂无内容
 
-本轮次检验结束时一次性生成，写入 `report.md`，每轮覆写。
+本规范未使用第8章编号，章节号顺延至此。
 
-**模板格式：**
-
-````markdown
-# Verification Report: {task_id}
-
-## Timestamp
-{YYYY-MM-DDTHH:MM:SS}
-
-## Tier Results
-
-### Tier 0: Constraints
-- **Result:** PASS / FAIL / NOT_RUN
-- **Findings:** {违反事实或通过说明}
-
-### Tier 1: Todo + Subtask Completion
-- **Result:** PASS / FAIL / NOT_RUN
-- **Findings:** {未完成的 Todo 或子任务}
-
-### Tier 2: Requirements
-- **Result:** PASS / FAIL / NOT_RUN
-- **Findings:** {未满足的 Requirements}
-
-### Tier 3: Semantic Alignment
-- **Result:** PASS / FAIL / NOT_TRIGGERED
-- **Findings:** {语义偏差描述}
-
-## Summary
-- **Highest Tier Reached:** Tier {0/1/2/3}
-- **Verdict:** aligned / deviation
-- **Next Action:** {主 Agent 的下一步建议}
-````
-
-**字段说明：**
-
-| 字段 | 说明 |
-|------|------|
-| Timestamp | 报告生成时间 |
-| Tier Results | 每一层的结果（PASS/FAIL/NOT_RUN），以及具体发现 |
-| Highest Tier Reached | 本轮次检验走到的最深层级 |
-| Verdict | aligned（全部通过）/ deviation（存在未通过项） |
-| Next Action | 主 Agent 的下一步建议，由 Judge Agent 根据检验结果给出 |
-
-**写入约定：**
-- 检验结束时一次性生成，写入 `report.md`
-- 每轮覆写，不追加
-- 主 Agent 通过 hook 返回值感知报告已生成，唤醒时读取
+---
 
 ## 9. FAQ
 
