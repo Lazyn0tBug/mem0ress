@@ -149,7 +149,7 @@ def create(
 ) -> None:
     """Create a new task.
 
-    Creates task directory with index.md, session.md, gotchas.md, judge.md.
+    Creates task directory with task.md, session.md, gotchas.md, judge.md.
     If --parent is specified, creates a subtask under the parent's directory.
     """
     substrate_root = Path(root)
@@ -175,9 +175,9 @@ def create(
     # Create directories
     target_dir.mkdir(parents=True)
 
-    # Write index.md
-    index_path = target_dir / "index.md"
-    index_path.write_text(TEMPLATE_INDEX.format(task_id=task_id), encoding="utf-8")
+    # Write task.md
+    task_path = target_dir / "task.md"
+    task_path.write_text(TEMPLATE_INDEX.format(task_id=task_id), encoding="utf-8")
 
     # Write session.md
     session_path = target_dir / "session.md"
@@ -229,16 +229,16 @@ def abandon(
 
 
 def _update_status(task_id: str, root: str, new_status: TaskStatus, label: str) -> None:
-    """Update task status in index.md frontmatter."""
+    """Update task status in task.md frontmatter."""
     substrate_root = Path(root)
-    index_path = substrate_root / "tasks" / task_id / "index.md"
+    task_path = substrate_root / "tasks" / task_id / "task.md"
 
-    if not index_path.exists():
+    if not task_path.exists():
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
         raise typer.Exit(code=1)
 
-    manifest = SubstrateParser.parse_manifest(index_path)
-    expected_hash = get_file_hash(index_path)
+    manifest = SubstrateParser.parse_manifest(task_path)
+    expected_hash = get_file_hash(task_path)
 
     # Create new manifest with updated status (manifest is frozen, must construct new instance)
     updated = TaskManifest(
@@ -250,8 +250,8 @@ def _update_status(task_id: str, root: str, new_status: TaskStatus, label: str) 
         todos=manifest.todos,
     )
 
-    content = SubstrateParser.serialize_manifest(updated, index_path)
-    safe_write(index_path, content, expected_hash)
+    content = SubstrateParser.serialize_manifest(updated, task_path)
+    safe_write(task_path, content, expected_hash)
 
     console.print(f"[green]{label}:[/green] [bold]{task_id}[/bold]")
 

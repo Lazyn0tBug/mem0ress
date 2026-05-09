@@ -91,7 +91,7 @@ class TaskServiceImpl:
 
     # 写操作
     def create_task(self, task_id: str, picture: str) -> TaskManifest:
-        """创建新任务目录（含 index.md / session.md / gotchas.md / judge.md）。
+        """创建新任务目录（含 task.md / session.md / gotchas.md / judge.md）。
 
         Raises:
             TaskExistsError: 任务已存在
@@ -166,10 +166,10 @@ class TaskServiceImpl:
 
 | Tier | 检查内容 | 输入来源 |
 |------|---------|---------|
-| Tier 0 | Constraints 违反检查 | Constraints（index.md）、当前代码状态（文件系统） |
-| Tier 1 | Todo 完成 + 子任务关闭 | todos（index.md）、Session 当前快照、子任务 index.md |
-| Tier 2 | Requirements 满足检查 | Requirements（index.md）、实际产出（文件系统） |
-| Tier 3 | 语义对齐判断 | Picture（index.md）、实际产出（文件系统） |
+| Tier 0 | Constraints 违反检查 | Constraints（task.md）、当前代码状态（文件系统） |
+| Tier 1 | Todo 完成 + 子任务关闭 | todos（task.md）、Session 当前快照、子任务 task.md |
+| Tier 2 | Requirements 满足检查 | Requirements（task.md）、实际产出（文件系统） |
+| Tier 3 | 语义对齐判断 | Picture（task.md）、实际产出（文件系统） |
 
 **接口：**
 
@@ -217,7 +217,7 @@ def prepare_judge_context(
 
 ```
 .mem0ress/tasks/{task_id}/
-├── index.md       # Task 定义
+├── task.md       # Task 定义
 ├── session.md     # 轮次快照（每轮追加）
 ├── gotchas.md     # 偏差记录（每条追加）
 └── judge.md       # 检验报告（每轮追加，含时间戳）
@@ -327,7 +327,7 @@ def safe_write(file_path: Path, content: str, expected_hash: str) -> None:
 ### 6.3 零隐藏状态
 
 所有认知数据以纯文本（Markdown/YAML）存储，无二进制或隐藏状态：
-- `index.md` — Task 定义
+- `task.md` — Task 定义
 - `session.md` — 轮次快照（每轮追加）
 - `gotchas.md` — 偏差记录（每条追加）
 - `judge.md` — 检验报告（每轮追加，含时间戳）
@@ -336,7 +336,7 @@ def safe_write(file_path: Path, content: str, expected_hash: str) -> None:
 
 ## 7. 数据模型
 
-### 7.1 TaskManifest（index.md 的内存映射）
+### 7.1 TaskManifest（task.md 的内存映射）
 
 ```python
 class TaskManifest(BaseModel):
