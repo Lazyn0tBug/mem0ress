@@ -447,70 +447,70 @@ graph LR
 
 ## 6. 文档数据模型
 
-### 6.1 文档结构
+### 6.1 设计思想
 
 mem0ress 采用**纯文本持久化 + 运行时组装**的数据模型，参考了 OpenClaw 的 context engine 设计思路：OpenClaw 明确指出"文件是 memory 的唯一真相来源，模型只记忆写入磁盘的内容"，mem0ress 将这一原则延伸至任务认知领域。
 
-认知数据（Picture/Requirements/Constraints/Todo/状态/Gotchas）以 Markdown 文件形式存储在文件系统，运行时由 Plane Assembler 按需组装为状态平面，而非在内存中维护可变状态。选择目录+文档方式的原因有三点。其一，**消除隐藏状态**：所有认知数据都可被 Agent 直接读取和修改，不存在内存中的影子状态，外部工具（git、grep、编辑器）可直接操作，审计无盲区。其二，**时间切片而非可变状态**：Session 的每次轮次快照是追加的，Data Plane 的版本引用是不可变的，Gotchas 是带时间戳的增量记录，状态变化通过追加而非覆写实现，不存在"数据汤"问题。其三，**与 Agent 工具生态无缝衔接**：Agent 的文件工具天然支持文本操作，无需额外的 SDK 或数据库驱动，跨 Agent 共享只需共享文件路径。
+认知数据（Picture/Requirements/Constraints/Todo/状态/Gotchas）以 Markdown 文件形式存储在文件系统，运行时由 Plane Assembler 按需组装为状态平面，而非在内存中维护可变状态。选择目录加文档方式的原因有以下三点。
+
+**消除隐藏状态。** 所有认知数据都可被 Agent 直接读取和修改，不存在内存中的影子状态，外部工具（git、grep、编辑器）可直接操作，审计无盲区。
+
+**时间切片而非可变状态。** Session 的每次轮次快照是追加的，Data Plane 的版本引用是不可变的，Gotchas 是带时间戳的增量记录，状态变化通过追加而非覆写实现，不存在"数据汤"问题。
+
+**与 Agent 工具生态无缝衔接。** Agent 的文件工具天然支持文本操作，无需额外的 SDK 或数据库驱动，跨 Agent 共享只需共享文件路径。
 
 这一设计的局限在于：不支持需要事务语义的多步原子操作，所有一致性保证依赖调用方遵守组装协议。
 
-mem0ress 的文档数据模型由三个核心文档组成，各自承担不同的认知职责，协作构成完整的任务认知体系：
+### 6.2 组成与目录结构
+
+mem0ress 的文档数据模型由四个核心文档组成，各自承担不同的认知职责，协作构成完整的任务认知体系。系统使用文件树表达认知的从属关系与上下文边界。
 
 | 文档 | 定位 | 何时写入 |
 |------|------|----------|
 | task.md | 任务声明，Picture/Requirements/Constraints 的唯一真相来源 | 任务创建时写入，运行时以它为准 |
 | Session（`session.md`） | 轮次历史，按时间追加，不改变 task.md；含 data_plane 快照 | 每轮次结束后追加 |
 | Gotchas（`gotchas.md`） | 偏差记录，带外追加，不阻塞主流程 | 偏差确认后追加 |
+| judge.md | Judge Agent task 文件，与 Task 生命周期同步；不属于 Task 的三个物理子节点 | 任务创建时生成，检验后更新 |
 
-三个文档的关系：task.md 是锚，三要素从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯。
-
-系统使用文件树表达认知的从属关系与上下文边界。
+四个文档的关系：task.md 是锚，三要素从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载 Tier 0/1/2/3 检验逻辑，与 Task 生命周期同步。
 
 ```mermaid
 %% label：.mem0ress 文件树与概念映射
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#fff3e0' } } }%%
 graph TD
-    ROOT[".mem0ress/"]
-    TASKS["tasks/"]
-    TMPL["task.md\nPicture / Requirements\n/ Constraints / Todos"]
-    SESS["session.md\n轮次快照序列\n（含 data_plane）"]
+    ROOT[".mem0ress/tasks/"]
+    TMPL["task.md"]
+    SESS["session.md"]
     GOT["gotchas.md"]
+    JDG["judge.md"]
 
-    ROOT --> TASKS
-    TASKS --> TMPL
-    TASKS --> SESS
-    TASKS --> GOT
+    ROOT --> TMPL
+    ROOT --> SESS
+    ROOT --> GOT
+    ROOT --> JDG
 
-    TMPL -.->|三要素来源| SESS
-    SESS -.->|进度数据| TMPL
-    GOT -.->|偏差记录| TMPL
+    TMPL -.->|三要素 · 进度快照来源| SESS
+    TMPL -.->|偏差记录| GOT
 
     classDef dir fill:#c8e6c9,stroke:#388e3c,stroke-width:2px;
     classDef file fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef judge fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
     classDef ref fill:#fff3e0,stroke:#ff8f00,stroke-width:1px,stroke-dasharray:5,5;
-    class ROOT,TASKS dir;
+    class ROOT dir;
     class TMPL,SESS,GOT file;
-    class GOT ref;
+    class JDG judge;
 ```
 
 ```plaintext
-.mem0ress/
-└── tasks/
-    └── auth_module/
-        ├── task.md            # task.md（包含图景、需求与 Todo）
-        ├── session.md         # 每个轮次的状态快照（Session 历史，含 data_plane 快照）
-        ├── gotchas.md         # 该任务独享的偏差记录（追加式）
-        └── judge.md              # Judge Agent task 文件（平铺）
+.mem0ress/tasks/
+└── {task_id}/
+    ├── task.md       # 任务声明（Picture/Requirements/Constraints/Todo）
+    ├── session.md    # 轮次快照序列（含 data_plane 快照）
+    ├── gotchas.md    # 偏差记录（追加式）
+    └── judge.md      # Judge Agent task 文件（平铺）
 ```
 
-Session 记录每个轮次的执行进度和 data_plane 快照，Picture/Requirements/Constraints 从 task.md 获取，不重复记录。
-
-Session 快照中的 `data_plane` 字段直接记录各仓库当前 commit ID。
-
-### 6.2 Task 模板
-
-task.md 模板位于 `docs/templates/tasks/task/task.md`，包含完整的 frontmatter 和 body 结构说明。
+具体各文档的内容格式和字段说明见附录 B 模板参考。
 
 ## 7. 逻辑与流程设计 (Logic & Workflow Design)
 
@@ -624,11 +624,9 @@ docs/templates/tasks/task/
 
 具体模板内容和使用说明见各文件内部注释。
 
-## 8. 暂无内容
-
 ---
 
-## 9. FAQ
+## 8. FAQ
 
 ### Q: 为什么我们需要的是"认知"而不是"记忆"？
 A: 记忆是向后看（Retrospective）、被动式的存储行为。mem0ress 不是检索过去对话的存储系统，而是**前向的认知系统**，维持 AI 对当前目标、进度和认知缺口的 awareness。核心区分：传统记忆问"我们之前讨论了什么"，认知框架问"我要达成什么目标？我离目标还有多远？我还需要做什么？"
