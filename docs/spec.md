@@ -1,6 +1,6 @@
 ---
 title: 认知对齐平面(Cognitive Alignment Plane)
-version: 3.6 (Master Blueprint)
+version: 0.6 (Master Blueprint)
 definition: 辅助 AI Agent 构建目标态势并校准执行偏差的轻量级工具框架
 ---
 

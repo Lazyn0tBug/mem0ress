@@ -422,4 +422,4 @@ with CognitiveContext(".mem0ress") as ctx:
 | Phase 3 | 动作网关（actions + git_ops 待实现） | ✅ actions 完成 |
 | Phase 4 | 属性对齐验证（harness Tier 1/2/3） | ✅ 完成 |
 | Phase 5 | CLI 可观测性（cli.py status / init / create / done / abandon / report） | ✅ 完成 |
-| 待办 | git_ops.py — Data Plane 的 commit ID 管理 | 🔜 |
+| 待办 | git_ops.py — Data Plane 的 commit ID 管理 | ✅ 完成 |
