@@ -249,7 +249,21 @@ Picture / Requirements / Constraints 存在于 task.md 里，不在别处重复�
 
 ### 4.2 双重平面
 
-任务需要同时掌握两个不同维度的事实，认知性质不同，必须分开处理。
+任务需要同时掌握两个不同维度的事实：做到了什么（数据层）和推进到哪里（认知层）。两个维度认知性质不同，必须分开处理。数据平面以 Git 为底层，可追溯、可 revert；状态平面以数据平面为数据基础，外部状态不会因数据 revert 而回退，因此认知只能基于当下向前构建。
+
+#### 状态平面（Status Plane）
+
+状态平面回答"我在哪、做到哪了、目标偏了没有"。它在 Agent 唤醒时强制挂载，内容包括：任务树结构、Todo 完成度、任务状态、Gotchas 指针、Session 最近变化指针。状态平面是被"发现"的，不是被维护的——Agent 从多个数据源头按需组装，输出一个当下的认知快照。
+
+#### 数据平面（Data Plane）
+
+数据平面回答"当前操作的是哪个版本的代码"。它按需展开，不默认加载，内容为各仓库当前 commit ID（格式 `{repo_name}: "{commit_id}"`）。底层是 Git，通过 Session 每轮快照的 `data_plane` 字段组装。
+
+#### 组装关系
+
+Session 是每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。它是状态平面的数据来源之一，但不等于平面本身——平面是某一时刻的聚合快照，Session 是快照的时间序列。
+
+#### 对照表
 
 | | 状态平面（Status Plane） | 数据平面（Data Plane） |
 |---|---|---|
@@ -258,10 +272,8 @@ Picture / Requirements / Constraints 存在于 task.md 里，不在别处重复�
 | 内容 | 任务树结构、Todo 完成度、任务状态、Gotchas 指针、Session 最近变化指针 | 各仓库当前 commit ID（格式 `{repo_name}: "{commit_id}"`） |
 | 组装来源 | task.md、Session 历史切片、Data Plane 版本指针、Gotchas | Session 每轮快照的 `data_plane` 字段 |
 
-Session 是每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。它是状态平面内容的数据来源之一，但不等于平面本身——平面是某一时刻的聚合快照，Session 是快照的时间序列。
-
 ```mermaid
-%% label：状态平面与数据平面的构成
+%% label：状态平面与数据平面的组装关系
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#757575', 'secondaryColor': '#fff3e0', 'tertiaryColor': '#fafafa' } } }%%
 graph LR
     subgraph SP_Group["状态平面（执行快照）"]
