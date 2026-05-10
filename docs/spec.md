@@ -184,13 +184,21 @@ mem0ress 的概念体系围绕任务展开。本章描述任务的核心概念�
 
 ### 4.1 任务信息模型(PRC)
 
-每个任务由三个要素定义：Picture、Requirements、Constraints。三者共同构成判断执行是否偏离的绝对标准。
+每个任务由任务信息模型（PRC）定义。模型由三个要素构成：Picture（方向锚点）、Requirements（可验证标准）和 Constraints（边界约束）。三者缺一不可——缺少 Picture，任务没有目标锚点；缺少 Requirements，Picture 无法被检验；缺少 Constraints，任务没有不可逾越的底线。三者共同构成任务的完整定义。
 
-**Picture（图景）**是语义层面的成功状态。利益相关者能想象的目标，而不是实现路径。比如"用户不用输入密码就能登录"是 Picture，"用 OAuth 2.0 实现登录"是实现路径，不是 Picture。Picture 写得再好，如果利益相关者无法想象它描述的状态，就失去了锚定作用。
+**Picture（图景）**是任务完成后的宏观景象，以自然语言描绘任务完成后是什么样子的。Picture 提供方向锚点，使 Agent 理解最终目标是什么。Picture 必须是利益相关者能想象的状态，而不是实现路径——比如"用户不用输入密码就能登录"是 Picture，"用 OAuth 2.0 实现登录"是实现路径，不是 Picture。
 
-**Requirements（需求）**是可验证的通过/失败条件。Agent 依据 Picture 推导，利益相关者确认。每个 Requirement 都必须有明确的验收标准——"界面美观大方"这种依赖主观判断的不是有效的 Requirements。
+Picture 之所以不可缺席，是因为 Agent 具备语义理解能力。传统编程依赖穷举测试用例来判定任务完成——所有分支必须被覆盖、所有边界必须被检验。而 Agent 可以理解自然语言描绘的图景，即使没有穷举测试，也能通过语义理解判断任务是否真正完成。这意味着可以用少量检验点配合语义理解来判定完成情况，而不必为每个细节编写测试。
 
-**Constraints（约束）**是绝对不可逾越的底线。Agent 联合领域知识推导，利益相关者确认。违反时系统必须能检测到并拦住——如果系统感知不到，就不适合作为 Constraints，应该放到 Requirements 里。
+**Requirements（需求）**是任务完成的可验证标准。Requirements 将 Picture 转化为具体的检验点，但 Requirements 满足不等于任务满足——Requirements 是 Picture 满足的必要条件，而非充分条件。任务满足等价于 Picture 满足。Agent 依据 Picture 推导 Requirements，利益相关者确认。每个 Requirement 都必须有明确的验收标准——"界面美观大方"这种依赖主观判断的不是有效的 Requirements。
+
+**Constraints（约束）**是任务的外部属性，为任务的过程和结果定义边界条件。Constraints 不是任务的第三层组成部分，而是贯穿任务全程的约束线。违反 Constraints 即使 Requirements 全部满足、Picture 看似达成，任务也不算完成。Agent 联合领域知识推导 Constraints，利益相关者确认。违反时系统必须能检测到并拦住——如果系统感知不到，就不适合作为 Constraints，应该放到 Requirements 里。
+
+**三者的逻辑关系：**
+
+Picture 锚定方向，Requirements 提供可检验的验收条件，Constraints 划定不可逾越的边界——三者共同构成任务完整定义。Requirements 是 Picture 的必要条件，Picture 是任务完成的充分条件。Constraints 独立于两者之外，作为贯穿全程的约束线存在。
+
+**模型要素的定义角色：**
 
 | 要素 | 主要定义者 | 参与者 |
 |------|-----------|--------|
@@ -204,8 +212,8 @@ mem0ress 的概念体系围绕任务展开。本章描述任务的核心概念�
 %% label：任务信息模型定义顺序
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#2e7d32', 'lineColor': '#616161' } } }%%
 flowchart LR
-    A["1. 定义 Picture\n（语义成功状态）"] --> B["2. 从 Picture 推导 Requirements\n（可验证条件）"]
-    A --> C["3. 从 Picture + 上下文推导 Constraints\n（不可逾越底线）"]
+    A["1. 定义 Picture\n（任务完成后的宏观景象）"] --> B["2. 从 Picture 推导 Requirements\n（可验证的检验点）"]
+    A --> C["3. 从 Picture + 上下文推导 Constraints\n（贯穿全程的约束线）"]
     B --> D{"Req ∩ Cst\n相互矛盾？"}
     C --> D
     D -->|是| E["沟通修正\n消除矛盾"]
@@ -213,6 +221,28 @@ flowchart LR
     D -->|否| F["模型写入 task.md"]
     style E fill:#ffcdd2,stroke:#c62828
     style F fill:#c8e6c9,stroke:#2e7d32
+```
+
+```mermaid
+%% label：PRC 三者逻辑关系
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#fce4ec', 'primaryTextColor': '#880e4f', 'primaryBorderColor': '#c62828', 'lineColor': '#616161' } } }%%
+graph TD
+    PIC["Picture\n方向锚点 · 任务完成的充分条件"]
+    REQ["Requirements\n可验证标准 · Picture 的必要条件"]
+    CST["Constraints\n边界约束 · 贯穿全程的约束线"]
+
+    REQ -->|必要条件| PIC
+    PIC -->|充分条件| SAT["任务满足"]
+    CST -.->|即使 Req 满足\n任务仍不算完成| SAT
+
+    classDef pic fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef req fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef cst fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
+    classDef sat fill:#fff9c4,stroke:#f57f17,stroke-width:2px;
+    class PIC pic;
+    class REQ req;
+    class CST cst;
+    class SAT sat;
 ```
 
 Picture / Requirements / Constraints 存在于 task.md 里，不在别处重复记录。状态平面只展示摘要，不展开全文。
