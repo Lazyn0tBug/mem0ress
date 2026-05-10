@@ -61,7 +61,7 @@ graph TB
 
     subgraph TIERS["任务检验（Judge Agent）"]
         J["Judge Agent\n任务检验执行器"]
-        C["Constraints 检查"]
+        C["Constraints 约束检查"]
         T["Todo 完成检查"]
         R["Requirements 满足检查"]
         S["语义对齐检查"]
@@ -70,11 +70,11 @@ graph TB
     PRC --> TASK
     TASK --> SP
     TASK --> DP
+    SP --> J
     J --> C
     J --> T
     J --> R
     J -.->|按需触发| S
-    SP --> J
 
     classDef prc fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef task fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
@@ -140,7 +140,7 @@ mem0ress 的设计基于三个核心洞察。三个洞察之间存在一条推�
 %% label：同构认知单元示意
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#2e7d32', 'lineColor': '#616161', 'secondaryColor': '#fafafa', 'tertiaryColor': '#f5f5f5' } } }%%
 graph TD
-    root["Task: /tasks"] --> A["Task: auth_module"]
+    root["/tasks（根目录）"] --> A["Task: auth_module"]
     A --> A1["Task: oauth_google"]
     A --> A2["Task: oauth_github"]
     A --> A3["Task: session_store"]
@@ -354,16 +354,19 @@ graph TD
     ROOT --> GOT
     ROOT --> JDG
 
-    TMPL -.->|模型 · 进度快照来源| SESS
-    TMPL -.->|偏差记录| GOT
+    SESS -.->|进度快照序列| SP["状态平面"]
+    GOT -.->|偏差记录指针| SP
+    TMPL -.->|提供三要素供平面组装| SP
 
     classDef dir fill:#c8e6c9,stroke:#388e3c,stroke-width:2px;
     classDef file fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
     classDef judge fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
+    classDef plane fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
     classDef ref fill:#fff3e0,stroke:#ff8f00,stroke-width:1px,stroke-dasharray:5,5;
     class ROOT dir;
     class TMPL,SESS,GOT file;
     class JDG judge;
+    class SP plane;
 ```
 Task、Session、Gotchas、Judge 文件的模板见`docs/templates`。
 
@@ -437,22 +440,7 @@ Task 生命周期包含五种状态：
 - **COMPLETED**：目标达成，认知生命周期结束
 - **ABANDONED**：目标放弃，记录 Gotcha 经验
 
-状态转换规则：CREATED → IN_PROGRESS（任意 Todo 被标记为完成）；CREATED → ABANDONED（任务废弃）；IN_PROGRESS → COMPLETED（检验通过）；IN_PROGRESS → ABANDONED（任务废弃）。
-
-```mermaid
-%% label：Task 生命周期状态机
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae' } } }%%
-stateDiagram-v2
-    [*] --> CREATED
-    CREATED --> IN_PROGRESS : 任意 Todo 被标记为完成
-    CREATED --> ABANDONED : 任务废弃
-    IN_PROGRESS --> COMPLETED : 检验通过
-    IN_PROGRESS --> ABANDONED : 任务废弃
-    COMPLETED --> [*]
-    ABANDONED --> [*]
-```
-
-> **注：** VERIFYING 是瞬态，存在于检验执行期间，检验完成后立即转换到 COMPLETED 或 ABANDONED，不作为独立稳定状态存在于图中。
+状态转换规则：CREATED → IN_PROGRESS（任意 Todo 被标记为完成）；CREATED → ABANDONED（任务废弃）；IN_PROGRESS → COMPLETED（检验通过）；IN_PROGRESS → ABANDONED（任务废弃）。状态机见 §4.3 图示。
 
 **决策执行：**
 
