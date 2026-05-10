@@ -234,57 +234,7 @@ Picture / Requirements / Constraints 存在于 task.md 里，不在别处重复�
 | 内容 | 任务树结构、Todo 完成度、任务状态、Gotchas 指针、Session 最近变化指针 | 各仓库当前 commit ID（格式 `{repo_name}: "{commit_id}"`） |
 | 组装来源 | task.md、Session 历史切片、Data Plane 版本指针、Gotchas | Session 每轮快照的 `data_plane` 字段 |
 
-**Plane Assembler 的触发与组装机制：** Plane Assembler 在两个时机执行组装——一是 Agent 唤醒时（强制挂载状态平面到上下文），二是每轮次结束时（检测本轮状态变更，将变化写入 Session 快照）。组装过程为：读取 task.md 获取任务定义和 Picture/Requirements/Constraints 摘要 → 提取 Session 中最近的状态快照 → 合并 Gotchas 指针和 data_plane 版本指针 → 组装为状态平面挂载到 Agent 上下文。只输出当前状态，不做偏差判断。
-
-Picture / Requirements / Constraints 存在于 task.md 里，状态平面不显示 PRC 三要素全文，只展示摘要。
-
-两个平面都来源于会话本身——从会话流中 hook 出认知数据，与外部知识（向量数据库、API 文档、全网搜索）完全独立。外部知识属于 Agent 的背景知识，按需检索后体现在会话中，mem0ress 只从会话流提取切片。
-
 Session 是每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。它是状态平面内容的数据来源之一，但不等于平面本身——平面是某一时刻的聚合快照，Session 是快照的时间序列。
-
-```mermaid
-%% label：Plane Assembler 组装流程
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#757575', 'secondaryColor': '#fff3e0', 'tertiaryColor': '#fafafa' } } }%%
-flowchart TB
-    subgraph 触发时机["触发时机"]
-        WAKE["Agent 唤醒\n（强制挂载）"]
-        TURN["每轮次结束\n（状态变更驱动）"]
-    end
-
-    subgraph 组装来源["组装来源"]
-        TMPL["task.md\n任务定义"]
-        SESS["Session\n最近快照"]
-        DPTR["data_plane\n版本指针"]
-        GREC["gotchas.md\n偏差记录"]
-    end
-
-    subgraph 组装过程["Plane Assembler"]
-        READ["读取 task.md\n获取三要素摘要"]
-        SNAP["提取 Session\n最近快照"]
-        MERGE["合并 Gotchas 指针\n与 data_plane 指针"]
-        ASSEMBLE["组装状态平面"]
-    end
-
-    WAKE --> ASSEMBLE
-    TURN --> ASSEMBLE
-    TMPL --> READ
-    SESS --> SNAP
-    GREC --> MERGE
-    DPTR --> MERGE
-    READ --> ASSEMBLE
-    SNAP --> ASSEMBLE
-    MERGE --> ASSEMBLE
-    ASSEMBLE --> CTX["Agent Context Window"]
-
-    classDef trigger fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
-    classDef source fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
-    classDef process fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
-    classDef output fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
-    class WAKE,TURN trigger;
-    class TMPL,SESS,DPTR,GREC source;
-    class READ,SNAP,MERGE,ASSEMBLE process;
-    class CTX output;
-```
 
 ```mermaid
 %% label：状态平面与数据平面的构成
@@ -311,6 +261,7 @@ graph LR
     subgraph GOTCHA_Group["gotchas.md（实际存储）"]
         GREC["Gotcha 记录文件"]
     end
+```
 
 ### 4.3 任务生命周期
 
