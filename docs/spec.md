@@ -160,7 +160,7 @@ graph TD
 
 任务检验需要结构化的要素。三个要素既在创建时锚定完成标准，也在检验时提供判断依据——让执行者和判断者独立地做出相同的判断。因此为每个任务定义三个要素：Picture（语义成功状态）、Requirements（可验证条件）、Constraints（不可逾越底线）。
 
-定义顺序：先定 Picture，再从 Picture 推导出 Requirements 和 Constraints。三者都定义完之后检查有没有矛盾——有矛盾则中止创建，返回冲突提示。
+定义顺序：先定 Picture，再从 Picture 推导出 Requirements 和 Constraints。三者都定义完之后检查有没有矛盾——若存在矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，三要素写入 task.md。
 
 ### 3.3 选择双重平面来呈现认知
 
@@ -204,7 +204,7 @@ mem0ress 的概念体系围绕任务展开。本章描述任务的核心概念�
 | Requirements | Agent（基于 Picture 推导） | 利益相关者确认 |
 | Constraints | Agent + 领域知识 | 利益相关者确认 |
 
-定义顺序固定：先定 Picture，再推导 Requirements 和 Constraints。三者都定义完之后检查有没有矛盾——有矛盾则中止创建，返回冲突提示，不创建任务。若冲突检测通过，三要素写入 task.md，任务创建成功。
+定义顺序固定：先定 Picture，再推导 Requirements 和 Constraints。三者都定义完之后检查有没有矛盾——若存在矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，三要素写入 task.md。
 
 ```mermaid
 %% label：PRC 三要素定义顺序
@@ -214,8 +214,9 @@ flowchart LR
     A --> C["3. 从 Picture + 上下文推导 Constraints\n（不可逾越底线）"]
     B --> D{"Req ∩ Cst\n相互矛盾？"}
     C --> D
-    D -->|是| E["返回冲突提示\n任务创建中止"]
-    D -->|否| F["任务创建成功"]
+    D -->|是| E["沟通修正\n消除矛盾"]
+    E --> B
+    D -->|否| F["三要素写入 task.md"]
     style E fill:#ffcdd2,stroke:#c62828
     style F fill:#c8e6c9,stroke:#2e7d32
 ```
@@ -291,7 +292,7 @@ stateDiagram-v2
 * **Tier 0: Constraints 检查。** 检查 Constraints 是否被违反，若有违反报告违反事实，由主 Agent 决定是否修复及如何修复。
 * **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭。
 * **Tier 2: Requirements 满足检查。** 验证每个 Requirement 是否达标。
-* **Tier 3: 语义对齐检查。** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 由 Agent 主动判断是否需要启用，适用于：Picture 涉及主观判断或利益相关者感知时、Constraints 与 Picture 之间存在语义歧义时。
+* **Tier 3: Picture 语义对齐检查。** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 由 Agent 主动判断是否需要启用，适用于：Picture 涉及主观判断或利益相关者感知时、Constraints 与 Picture 之间存在语义歧义时。
 
 检验完成后 Agent 自主决策下一步。检验通过 → Agent 可标记任务完成；检验未通过 → Agent 决定下一步（修正、重试或废弃）。
 
@@ -357,7 +358,7 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务检验
 
 ### 5.1 任务创建
 
-任务创建是确立认知边界的起点。Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 Picture、Requirements 和 Constraints。三要素的定义应从 Picture 开始——先定义 Picture 作为目标锚，再从中推导出 Requirements 和 Constraints。冲突检测在三者全部定义后进行——若 Requirements 与 Constraints 相互矛盾，系统立即标记任务为"不可行"，而非等到执行阶段才发现。
+任务创建是确立认知边界的起点。Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 Picture、Requirements 和 Constraints。三要素的定义应从 Picture 开始——先定义 Picture 作为目标锚，再从中推导出 Requirements 和 Constraints。冲突检测在三者全部定义后进行——若 Requirements 与 Constraints 相互矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，三要素写入 task.md。
 
 Todo 步进拆解：在锚定三要素后，Agent 将任务拆解为具体的机械步（Todo）。这些 Todo 构成了后续检验进度的基准线。
 
