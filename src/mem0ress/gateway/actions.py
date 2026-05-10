@@ -9,8 +9,8 @@ from mem0ress.core.schema import (
     TaskStatus,
     TodoItem,
 )
-from mem0ress.storage.fs import get_file_hash, safe_write
-from mem0ress.storage.parser import SubstrateParser
+from mem0ress.substrate.fs import get_file_hash, safe_write
+from mem0ress.substrate.parser import SubstrateParser
 
 
 class TaskExistsError(Exception):
@@ -221,6 +221,74 @@ class TaskServiceImpl:
         )
 
         # Write with optimistic lock
+        content = SubstrateParser.serialize_manifest(updated_manifest, index_path)
+        safe_write(index_path, content, expected_hash)
+
+        return updated_manifest
+
+    def complete_task(self, task_id: str) -> TaskManifest:
+        """Mark a task as COMPLETED.
+
+        Args:
+            task_id: Task identifier
+
+        Returns:
+            Updated TaskManifest with status COMPLETED
+
+        Raises:
+            FileNotFoundError: If task does not exist
+            ConflictError: If file was modified concurrently
+        """
+        index_path = self._task_index_path(task_id)
+        if not index_path.exists():
+            raise FileNotFoundError(f"Task '{task_id}' does not exist")
+
+        manifest = SubstrateParser.parse_manifest(index_path)
+        expected_hash = get_file_hash(index_path)
+
+        updated_manifest = TaskManifest(
+            id=manifest.id,
+            type=manifest.type,
+            status=TaskStatus.COMPLETED,
+            cognitive_triad=manifest.cognitive_triad,
+            gotcha_refs=manifest.gotcha_refs,
+            todos=manifest.todos,
+        )
+
+        content = SubstrateParser.serialize_manifest(updated_manifest, index_path)
+        safe_write(index_path, content, expected_hash)
+
+        return updated_manifest
+
+    def abandon_task(self, task_id: str) -> TaskManifest:
+        """Mark a task as ABANDONED.
+
+        Args:
+            task_id: Task identifier
+
+        Returns:
+            Updated TaskManifest with status ABANDONED
+
+        Raises:
+            FileNotFoundError: If task does not exist
+            ConflictError: If file was modified concurrently
+        """
+        index_path = self._task_index_path(task_id)
+        if not index_path.exists():
+            raise FileNotFoundError(f"Task '{task_id}' does not exist")
+
+        manifest = SubstrateParser.parse_manifest(index_path)
+        expected_hash = get_file_hash(index_path)
+
+        updated_manifest = TaskManifest(
+            id=manifest.id,
+            type=manifest.type,
+            status=TaskStatus.ABANDONED,
+            cognitive_triad=manifest.cognitive_triad,
+            gotcha_refs=manifest.gotcha_refs,
+            todos=manifest.todos,
+        )
+
         content = SubstrateParser.serialize_manifest(updated_manifest, index_path)
         safe_write(index_path, content, expected_hash)
 

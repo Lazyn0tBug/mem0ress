@@ -133,3 +133,33 @@ class TaskServiceProtocol(Protocol):
             ConflictError: If file was modified concurrently
         """
         ...
+
+    def complete_task(self, task_id: str) -> TaskManifest:
+        """Mark a task as COMPLETED.
+
+        Args:
+            task_id: Task identifier
+
+        Returns:
+            Updated TaskManifest with status COMPLETED
+
+        Raises:
+            FileNotFoundError: If task does not exist
+            ConflictError: If file was modified concurrently
+        """
+        ...
+
+    def abandon_task(self, task_id: str) -> TaskManifest:
+        """Mark a task as ABANDONED.
+
+        Args:
+            task_id: Task identifier
+
+        Returns:
+            Updated TaskManifest with status ABANDONED
+
+        Raises:
+            FileNotFoundError: If task does not exist
+            ConflictError: If file was modified concurrently
+        """
+        ...

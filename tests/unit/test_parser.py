@@ -4,7 +4,7 @@
 import pytest
 
 from mem0ress.core.schema import CognitiveTriad, TaskStatus, TodoItem
-from mem0ress.storage.parser import SubstrateParser
+from mem0ress.substrate.parser import SubstrateParser
 
 
 class TestSubstrateParser:

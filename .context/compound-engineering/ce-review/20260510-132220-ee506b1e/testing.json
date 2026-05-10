@@ -1,0 +1,107 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "test_task_service.py: Broken optimistic lock test - writes to same file it reads from",
+      "severity": "P1",
+      "file": "/Users/gpdi/code/ai/mem0ress/tests/unit/test_task_service.py",
+      "line": 70,
+      "confidence": 0.92,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "After external modification, call service.update_todo() directly instead of manually building the manifest and calling safe_write.",
+      "why_it_matters": "The optimistic lock is a core safety mechanism for concurrent file access. If the test is broken, concurrent modification may not raise ConflictError in production, leading to silent data corruption.",
+      "evidence": [
+        "Line 79: original_hash = get_file_hash(index_path) - captures hash of initial file",
+        "Line 84-89: File is externally modified with new content",
+        "Line 92: manifest = SubstrateParser.parse_manifest(index_path) - reads the NOW-MODIFIED file (hash no longer matches original)",
+        "Line 93-102: Builds new manifest from the modified content",
+        "Line 104: content = SubstrateParser.serialize_manifest(updated_manifest, index_path)",
+        "Line 106: safe_write(index_path, content, original_hash) - writes with original_hash but the file was already modified, so the hash read at line 92 was ALREADY the modified hash. The write will NOT raise ConflictError because the CURRENT file hash matches original_hash only if the modification didn't happen. This test does not prove ConflictError works.",
+        "Compare with test_conflict_detection_on_concurrent_modification in test_task_lifecycle.py which does it correctly: it writes the file directly, then calls safe_write with a fake old hash that does not match, correctly triggering ConflictError."
+      ]
+    },
+    {
+      "title": "test_task_service.py: 12 tests with no assertion for the raised error",
+      "severity": "P1",
+      "file": "/Users/gpdi/code/ai/mem0ress/tests/unit/test_task_service.py",
+      "line": 32,
+      "confidence": 0.90,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Put the actual call that should raise inside the with pytest.raises() block. For example: with pytest.raises(FileNotFoundError): service.update_todo(\"nonexistent\", 0, True)",
+      "why_it_matters": "pytest.raises() without a body in the with block is a no-op. The test passes regardless of whether the code raises or not. This gives false confidence that error handling works.",
+      "evidence": [
+        "Lines 32-33: with pytest.raises(TaskExistsError): - no code inside block",
+        "Line 46: with pytest.raises(FileNotFoundError): - no code inside block", 
+        "Line 62: with pytest.raises(IndexError): - no code inside block",
+        "Line 67: with pytest.raises(FileNotFoundError): - no code inside block",
+        "Line 105: with pytest.raises(ConflictError): - no code inside block (note this is the broken optimistic lock test)",
+        "Line 150: with pytest.raises(FileNotFoundError): - no code inside block",
+        "Line 166: with pytest.raises(FileNotFoundError): - no code inside block",
+        "Line 181: with pytest.raises(IndexError): - no code inside block",
+        "Line 187: with pytest.raises(FileNotFoundError): - no code inside block",
+        "Line 204: with pytest.raises(FileNotFoundError): - no code inside block",
+        "Line 221: with pytest.raises(FileNotFoundError): - no code inside block",
+        "Also test_complete_task_nonexistent_raises at line 201 has same issue"
+      ]
+    },
+    {
+      "title": "test_task_service.py: complete_task and abandon_task missing concurrent modification tests",
+      "severity": "P2",
+      "file": "/Users/gpdi/code/ai/mem0ress/tests/unit/test_task_service.py",
+      "line": 190,
+      "confidence": 0.82,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add test for complete_task and abandon_task with concurrent file modification - similar to the correct test in test_task_lifecycle.py test_conflict_detection_on_concurrent_modification",
+      "why_it_matters": "complete_task and abandon_task both use safe_write with optimistic locking. If concurrent modification occurs during these operations, ConflictError should be raised. Currently only update_todo has a (broken) test for this path, leaving complete_task and abandon_task untested for the conflict case.",
+      "evidence": [
+        "actions.py lines 229-261: complete_task reads manifest, gets file hash, then calls safe_write",
+        "actions.py lines 263-295: abandon_task reads manifest, gets file hash, then calls safe_write",
+        "Both follow the same pattern as update_todo which does have a conflict test (though broken)",
+        "No test exercises ConflictError path for either complete_task or abandon_task"
+      ]
+    },
+    {
+      "title": "test_git_ops.py: get_dirty_files has incomplete coverage for public API",
+      "severity": "P2",
+      "file": "/Users/gpdi/code/ai/mem0ress/tests/unit/test_git_ops.py",
+      "line": 203,
+      "confidence": 0.78,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add test for get_dirty_files with multiple dirty files (both modified and untracked), and test that it raises GitError when path is not a git repo.",
+      "why_it_matters": "get_dirty_files is a public function used by snapshot_data_plane. The current tests only cover clean repo and single-file dirty state. Edge cases like multiple dirty files, untracked files, and error handling are untested.",
+      "evidence": [
+        "git_ops.py lines 137-167: get_dirty_files parses 'git status --porcelain' output",
+        "Line 164: parts = line[2:].strip() - skips status indicator characters",
+        "test_get_dirty_files only tests: empty result for clean repo, single dirty file",
+        "No test for: multiple dirty files, untracked files, mixed staged/unstaged changes, error handling for non-repo path"
+      ]
+    }
+  ],
+  "residual_risks": [
+    "The broken optimistic lock test means the core ConflictError mechanism is not validated for the update_todo code path. If this mechanism fails silently, concurrent modifications will corrupt task state.",
+    "Harness tier2 shell command timeout path is not tested - subprocess.TimeoutExpired is caught at line 141 of harness/__init__.py but no test verifies this behavior",
+    "PlaneAssembler._build_entry silently catches all exceptions at line 125 and creates fallback error entries - this error-path behavior is not tested"
+  ],
+  "testing_gaps": [
+    "No test for complete_task with concurrent modification scenario",
+    "No test for abandon_task with concurrent modification scenario", 
+    "No test for add_todo with concurrent modification scenario",
+    "No test for remove_todo with concurrent modification scenario",
+    "No test for Tier 2 subprocess timeout handling (subprocess.TimeoutExpired)",
+    "No test for snapshot_data_plane function (git_ops.py lines 243-271)",
+    "No test for intercept module (CognitiveContext in gateway/intercept.py) - lifecycle hooks are entirely untested",
+    "No test for get_repo_branch error path when path is not a git repo"
+  ]
+}

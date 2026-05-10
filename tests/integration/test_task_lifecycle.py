@@ -4,8 +4,8 @@
 import pytest
 
 from mem0ress.core.schema import TaskStatus
-from mem0ress.plane import PlaneAssembler
-from mem0ress.service.impl.task_service import TaskServiceImpl
+from mem0ress.gateway.plane import PlaneAssembler
+from mem0ress.gateway.actions import TaskServiceImpl
 
 
 class TestTaskLifecycleIntegration:
@@ -74,7 +74,7 @@ class TestTaskLifecycleIntegration:
 
     def test_conflict_detection_on_concurrent_modification(self, tmp_path):
         """Test optimistic lock raises ConflictError when hash mismatch."""
-        from mem0ress.storage.fs import ConflictError, get_file_hash
+        from mem0ress.substrate.fs import ConflictError, get_file_hash
 
         service = TaskServiceImpl(substrate_root=tmp_path)
         service.create_task("auth_module", "用户顺畅登录")
@@ -94,8 +94,8 @@ class TestTaskLifecycleIntegration:
         modified_hash = get_file_hash(index_path)
 
         # Now try to write using the OLD hash - should raise ConflictError
-        from mem0ress.storage.fs import safe_write
-        from mem0ress.storage.parser import SubstrateParser
+        from mem0ress.substrate.fs import safe_write
+        from mem0ress.substrate.parser import SubstrateParser
 
         manifest = service.get_task("auth_module")
         new_todos = [manifest.todos[0].__class__(text=manifest.todos[0].text, done=True)]

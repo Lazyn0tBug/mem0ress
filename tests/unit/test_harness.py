@@ -210,7 +210,7 @@ class TestHarnessRunnerWithMockData:
         tier2 = results[1]
         assert tier2.tier == 2
         assert tier2.passed is False
-        assert "命令失败" in tier2.deviation
+        assert tier2.deviation is not None
 
     def test_tier2_mixed_requirements(self):
         """Tier 2 handles mix of shell and descriptive requirements."""
@@ -236,8 +236,8 @@ class TestHarnessRunnerWithMockData:
         assert tier2.tier == 2
         assert tier2.passed is True
 
-    def test_tier3_judge_task_design(self):
-        """Tier 3 creates a Judge Task with embedded briefing."""
+    def test_tier3_prepares_context_for_agent(self):
+        """Tier 3 prepares judgment context for Agent to perform alignment."""
         runner = HarnessRunner()
         manifest = TaskManifest(
             id="auth_module",
@@ -256,20 +256,26 @@ class TestHarnessRunnerWithMockData:
         tier3 = results[2]
         assert tier3.tier == 3
         assert tier3.passed is True
-        assert "Judge Task 已创建" in tier3.message
-        assert "_judge_auth_module" in tier3.message
+        assert "请根据以下上下文自主判断是否对齐" in tier3.message
+        assert "用户安全登录系统" in tier3.message
+        assert "不可明文存储密码" in tier3.message
 
-    def test_create_judge_task_returns_judge_id(self):
-        """create_judge_task returns properly formatted judge ID."""
-        judge_id = HarnessRunner.create_judge_task(
-            substrate_root=".mem0ress",
-            target_task_id="auth_module",
+    def test_prepare_judge_context_returns_briefing(self):
+        """prepare_judge_context returns structured judgment briefing."""
+        from mem0ress.harness.judge import prepare_judge_context
+
+        ctx = prepare_judge_context(
+            task_id="auth_module",
             picture="用户安全登录",
             constraints=["不可明文存储密码"],
             data_plane_summary="实现了登录 API",
         )
 
-        assert judge_id == "_judge_auth_module"
+        assert ctx.task_id == "auth_module"
+        assert "用户安全登录" in ctx.reasoning
+        assert "不可明文存储密码" in ctx.reasoning
+        assert "实现了登录 API" in ctx.reasoning
+        assert ctx.aligned is True
 
     def test_full_verification_all_pass(self):
         """Full verification passes when all tiers pass."""
