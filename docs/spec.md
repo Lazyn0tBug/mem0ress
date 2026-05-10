@@ -230,6 +230,8 @@ Picture / Requirements / Constraints 存在于 task.md 里，不在别处重复�
 
 状态平面是运行时快照，在 Agent 需要了解当前认知态势时（认知构建阶段）由认知数据模型按需组装，并在 Agent 唤醒时自动挂载到上下文。组装来源包括 task.md（任务定义）、Session（历史切片）、Data Plane（版本指针）、Gotchas（偏差记录）。Agent 唤醒时强制挂载，只输出当前状态，不做偏差判断。
 
+Picture / Requirements / Constraints 存在于 task.md 里，状态平面不显示 PRC 三要素全文，只展示摘要。
+
 **数据平面（Data Plane）**是数据层面的快照。回答"当前操作的是哪个版本的代码"。各仓库的当前 commit ID 记录在 Session 每轮快照的 `data_plane` 字段中，格式为 `{repo_name}: "{commit_id}"` 的键值映射。数据平面顺着状态平面的指针按需展开，不默认加载。
 
 两个平面都来源于会话本身——从会话流中 hook 出认知数据，与外部知识（向量数据库、API 文档、全网搜索）完全独立。外部知识属于 Agent 的背景知识，按需检索后体现在会话中，mem0ress 只从会话流提取切片。
@@ -289,7 +291,7 @@ stateDiagram-v2
 * **Tier 0: Constraints 检查。** 检查 Constraints 是否被违反，若有违反报告违反事实，由主 Agent 决定是否修复及如何修复。
 * **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭。
 * **Tier 2: Requirements 满足检查。** 验证每个 Requirement 是否达标。
-* **Tier 3: 语义对齐检查。** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 由 Agent 主动判断是否需要启用，适用于：Picture 涉及主观判断或利益相关者感知时、Constraints 与 Picture 之间存在语义歧义时、任务被宿主系统判定为高危时。
+* **Tier 3: 语义对齐检查。** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 由 Agent 主动判断是否需要启用，适用于：Picture 涉及主观判断或利益相关者感知时、Constraints 与 Picture 之间存在语义歧义时。
 
 检验完成后 Agent 自主决策下一步。检验通过 → Agent 可标记任务完成；检验未通过 → Agent 决定下一步（修正、重试或废弃）。
 
@@ -380,7 +382,7 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 * **Tier 0: Constraints 约束检查。** 检查 Constraints 是否被违反，若有违反报告违反事实，由主 Agent 决定是否修复及如何修复。
 * **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭；处于 CREATED 或 IN_PROGRESS 状态则视为未完成。
 * **Tier 2: Requirements 满足检查。** 验证每个 Requirement 是否达标。
-* **Tier 3: 语义对齐检查。** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 需要 Agent 主动判断本次检验是否需要语义对齐，以下情况适用：Picture 涉及主观判断或利益相关者感知时；Constraints 与 Picture 之间存在语义歧义时；任务被宿主系统判定为高危时；Agent 或利益相关者显式请求时。
+* **Tier 3: 语义对齐检查。** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 需要 Agent 主动判断本次检验是否需要语义对齐，以下情况适用：Picture 涉及主观判断或利益相关者感知时；Constraints 与 Picture 之间存在语义歧义时；Agent 或利益相关者显式请求时。
 
 例如：一个 Picture 是"用户无需输入密码即可登录"的 OAuth 任务，Tier 1 检查了所有 Todo 是否完成，Tier 2 验证了"支持 Google OAuth"和"支持 GitHub OAuth"这两个 Requirements 都满足，但 Tier 3 额外检查了"实际登录流程中用户确实没有被要求输入密码"——这个检查无法通过代码结构验证，必须看实际行为，属于语义对齐。
 
