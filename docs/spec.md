@@ -284,14 +284,7 @@ stateDiagram-v2
 
 > **注：** VERIFYING 是瞬态，存在于检验执行期间，检验完成后立即转换到 COMPLETED 或 ABANDONED，不作为独立稳定状态存在于图中。
 
-**任务检验**在认知构建之后执行，判断当前状态是否满足 Picture。检验按四层关卡执行：
-
-* **Tier 0: Constraints 检查。** 检查 Constraints 是否被违反，若有违反报告违反事实，由主 Agent 决定是否修复及如何修复。
-* **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭。
-* **Tier 2: Requirements 满足检查。** 验证每个 Requirement 是否达标。
-* **Tier 3: Picture 语义对齐检查。** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 由 Agent 主动判断是否需要启用，适用于：Picture 涉及主观判断或利益相关者感知时、Constraints 与 Picture 之间存在语义歧义时。
-
-检验完成后 Agent 自主决策下一步。检验通过 → Agent 可标记任务完成；检验未通过 → Agent 决定下一步（修正、重试或废弃）。
+**任务检验**在认知构建之后执行，判断当前状态是否满足 Picture。详见 §5.3。
 
 ### 4.4 文档数据模型
 
@@ -302,7 +295,7 @@ mem0ress 采用纯文本持久化 + 运行时组装的数据模型。认知数�
 * **task.md**：任务声明，Picture/Requirements/Constraints 的唯一真源。任务创建时写入，运行时以它为准。
 * **session.md**：轮次快照序列，含 data_plane 快照。每轮次结束后按时间追加，不改变 task.md。
 * **gotchas.md**：偏差记录，带外追加，不阻塞主流程。偏差确认后追加。
-* **judge.md**：Judge Agent 任务文件，与 Task 生命周期同步。judge.md 与 Task 节点并列平铺于同一任务目录下，不属于 Task 的物理子节点——它属于 Judge Agent 的物理文件，与 Task 同级并行。任务创建时生成，检验后更新。
+* **judge.md**：Judge Agent 任务文件，与 Task 生命周期同步。judge.md 与 Task 节点并列平铺于同一任务目录下，不属于 Task 的物理子节点——它属于 Judge Agent 的物理文件，与 Task 同级并行。任务创建时生成，检验后追加。
 
 task.md 是锚，三要素从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载任务检验逻辑，与 Task 生命周期同步。
 
@@ -443,7 +436,7 @@ A: 任务模型（Task Model）是认知对齐平面的基本单元。将一切�
 - **无冲突设计**：父任务完成以其所有子任务完成为绝对前提，避免并发冲突
 
 ### Q: 为什么任务没有冲突协调机制？
-A: mem0ress 的设计遵循**冲突只能避免，无法解决**的哲学原则（来自 MetaDev 规范的哲学四）。协调机制是试图在冲突发生后解决它，但更好的做法是通过设计使冲突根本不发生。
+A: mem0ress 的设计遵循**冲突避免优于协调**的哲学原则。协调机制是试图在冲突发生后解决它，但更好的做法是通过设计使冲突根本不发生。
 
 mem0ress 通过以下设计消除冲突：
 - **物理隔离**：不同任务处于不同目录，父任务目录下嵌套子任务目录，通过目录深度表达依赖关系
@@ -501,6 +494,6 @@ mem0ress 通过以下机制避免：
 | Node | 说明 |
 |------|------|
 | `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 task.md 获取） |
-| `Task` | 认知单元，包含 task.md、session.md、gotchas.md 三个物理子节点；judge.md 与 Task 并列平铺，不属于 Task 的子节点 |
+| `Task` | 认知单元，包含 task.md、session.md、gotchas.md 三个物理子节点；gotchas.md 带外追加，不阻塞主流程；judge.md 与 Task 并列平铺，不属于 Task 的子节点 |
 | `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以所有子任务完成为前提 |
 | `Judge Agent` | 伴生组件，执行任务检验；Judge Agent 节点与 Task 节点并列平铺于同一任务目录下，judge.md 是其物理文件 |
