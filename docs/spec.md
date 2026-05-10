@@ -11,15 +11,15 @@ definition: 辅助 AI Agent 构建目标态势并校准执行偏差的轻量级�
 
 ### 1.1 背景
 
-"记忆"暗示了一种向后看（Retrospective）、被动式的存储行为。在真正执行复杂任务时，我们需要的不是"翻找档案"，而是"向前的目标感"和"当下的全局掌控力"。
+"记忆"这个词暗示了一种向后看、被动式的存储行为。但在真正执行复杂任务时，我们需要的不是"翻找档案"，而是"向前的目标感"和"当下的全局掌控力"。
 
 当前 AI Agent 在"长文本上下文"和"精确检索"之间不断徘徊，催生了三个结构性问题：
 
-* **数据汤困境：** 传统记忆将历史对话、代码片段、废弃架构融合成一锅没有边界的"数据汤"，导致上下文污染（Context Collapse）和不可逆的熵增。
+* **数据汤困境：** 传统记忆将历史对话、代码片段、废弃架构融合成一锅没有边界的"数据汤"，导致上下文污染和不可逆的熵增。
 * **意图迷失：** 数据库本身没有意图。通过追溯历史来拼凑当下，永远无法匹配"向前看"的目标牵引。
-* **大模型之上的大模型：** 许多 memory 系统徒增算力消耗，试图通过 LLM 总结 LLM 来缓解交互局限，但从未触及"自主管理状态"这一架构核心。
+* **大模型之上的大模型：** 许多 memory 系统徒增算力消耗，试图用 LLM 总结 LLM 来缓解交互局限，但从未触及"自主管理状态"这一核心问题。
 
-当我们讨论记忆时，真正关心的不是过去每一秒的原始画面，而是当前和未来：我们现在在做什么(Task)，已经完成了什么(状态平面)，还需要做什么(Todo)，是否满足需求(Requirements)，是否符合约束(Constraints)，是否达成目标(Picture)。
+讨论记忆时，我们真正关心的不是过去每一秒的原始画面，而是现在和未来：我们现在在做什么，已经完成了什么，还需要做什么，是否满足需求，是否符合约束，是否达成目标。
 
 我们需要的不是记忆，而是**认知（Cognition）**。
 
@@ -27,11 +27,11 @@ definition: 辅助 AI Agent 构建目标态势并校准执行偏差的轻量级�
 
 **目标用户：** AI/Agent 框架开发者。mem0ress 为开发者提供任务状态管理和目标态势感知能力，而非直接面向终端用户。
 
-mem0ress 是一个**认知对齐平面 (Cognitive Alignment Plane)**。它不是传统意义上的"记忆检索数据库"，也不以二进制或向量方式存储，而是一个基于纯文本的、通过利用已有信息来有效构建目标相关视图、并持续检验执行偏差的逻辑框架。
+mem0ress 是一个**认知对齐平面 (Cognitive Alignment Plane)** 。它不是传统意义上的"记忆检索数据库"，也不以二进制或向量方式存储，而是一个基于纯文本的、通过利用已有信息来有效构建目标相关视图、并持续检验执行偏差的逻辑框架。
 
-其核心功能是：在任务执行过程中，为 AI Agent 提供清晰的图景（Picture）与执行约束（Constraints），确保 Agent 的动作始终与既定需求对齐，防止其在长路径任务中偏离目标。
+核心功能是：在任务执行过程中，为 AI Agent 提供清晰的图景与执行约束，确保 Agent 的动作始终与既定需求对齐，防止其在长路径任务中偏离目标。
 
-mem0ress 不试图重现所有记忆，而是使 AI 始终能够保持明确的认知：我是谁、我在做什么、我的目标是什么、我还有什么要做。当前的 AI 已经足够智能，不需要从会话中一遍又一遍检索相似信息，但它往往在多轮会话之后对自己的目标认知产生了偏差。
+mem0ress 不试图重现所有记忆，而是让 AI 始终能够保持明确的认知：我是谁、我在做什么、我的目标是什么、我还有什么要做。当前的 AI 已经足够智能，不需要从会话中一遍又一遍检索相似信息，但它往往在多轮会话之后对自己的目标认知产生了偏差。
 
 ### 1.3 核心解法概览
 
@@ -49,12 +49,12 @@ graph TB
         CST["Constraints\n约束"]
     end
 
-    subgraph TASK["Task 认知单元（洞察三）"]
+    subgraph TASK["Task 认知单元（洞察一 + 三）"]
         TR["三要素 + 执行进度\n= 可判断状态"]
         ST["CREATED / IN_PROGRESS\n/ VERIFYING / COMPLETED\n/ ABANDONED"]
     end
 
-    subgraph DUAL["双平面正交（洞察四）"]
+    subgraph DUAL["双平面分离"]
         SP["状态平面\n（做什么 → 做到哪）"]
         DP["数据平面\n（当前代码版本）"]
     end
@@ -89,277 +89,114 @@ graph TB
     class ST state;
 ```
 
-## 2. 核心洞察 (Core Insights)
+## 2. 核心洞察
 
-mem0ress 的设计基于四个洞察。这些洞察源自记忆研究、认知科学和任务管理领域的交叉经验。它们共同构成了整个规范的认知科学基础，也为其他认知架构（如 MetaDev）提供了可独立引用的理论锚点。
+mem0ress 的设计基于三个核心洞察。三个洞察之间存在一条推导链——前一个洞察是后一个洞察的前提。
 
-**洞察之间的关系：** 四个洞察并非完全独立，而是存在一条隐含的推导链。洞察一（目标属性）是整个体系的起点——它否定了"存储优先"的记忆架构，确立了"目标锚定"的方向。洞察二（PRC 框架）在这一方向上进一步细化：目标锚定需要可判断的完成标准，因此提出 Picture/Requirements/Constraints 三要素。洞察三（Task 锚点）和洞察四（双平面正交）从洞察二独立推导而来——三要素需要一个载体（Task），而"做什么"和"做到哪"恰好是两个相互独立的观察维度。这种推导关系意味着：单独引用洞察一是安全的；单独引用洞察三或四，可能需要同时引用洞察二作为前提。
+### 2.1 记忆以目标为锚
 
-```mermaid
-%% label：四个洞察的依赖关系
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae' } } }%%
-graph LR
-    I1["洞察一\n记忆的目标属性"]
-    I2["洞察二\nPRC 框架"]
-    I3["洞察三\nTask 锚点"]
-    I4["洞察四\n双平面正交"]
+**洞察一：记忆以目标为锚，而非以时间为锚。**
 
-    I1 -->|推导| I2
-    I2 -->|拆分| I3
-    I2 -->|拆分| I4
+人类记忆不是被动记录仪。同一段经历，在不同目标下被提取的内容截然不同——不是因为记忆被篡改了，而是因为提取的线索（目标）不同。这说明记忆的组织方式天然以目标为锚，而非以时间为锚。
 
-    classDef insight fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
-    class I1,I2,I3,I4 insight;
-```
+认知心理学中，目标导向记忆（Goal-Directed Memory）的研究表明：记忆的编码和检索都依赖于目标线索。相同材料在不同目标下激活完全不同的记忆网络。这直接否定了"被动存储所有对话历史"的做法——存储本身并不产生有用的认知，目标的锚定才能。
 
-### 2.1 根源：记忆的目标属性 (Root: Target Attribute of Memory)
+这一洞察是整个 mem0ress 设计决策的起点：它否定了"存储优先"的记忆架构，转向"目标锚定的认知架构"。
 
-**洞察一：上下文是被发现的，而非被维持的。**
+### 2.2 任务以完成标准为边界
 
-人类记忆不是被动的记录仪。同一段经历，在不同目标下被提取的内容截然不同——不是因为记忆被篡改了，而是因为提取的线索（目标）不同。这说明记忆的组织方式天然以目标为锚，而非以时间为锚。
+**洞察二：目标若无结构化的完成标准，执行结果无法被验证。**
 
-这一洞察是 mem0ress 所有设计决策的起点：它否定了"存储优先"的记忆架构，转向"目标锚定的认知架构"。
+仅有方向性的目标描述（如"实现用户登录功能"）无法指导执行或判断完成。执行者面临三个无法回避的问题：什么样的状态算成功？需要满足哪些可验证的条件？什么是绝对不可逾越的边界？
 
-### 2.2 核心：PRC 框架 (Core: PRC Framework)
+传统软件工程的回答是"测试用例通过即完成"。但测试用例通过只验证了预设假设，无法回答"利益相关者真正想要的问题是否被解决了"。需求文档定义的是实现路径，不是目标本身——两者之间的缺口在 AI Agent 场景下变得更加尖锐，因为 AI 能够理解语义而不依赖完整枚举的检验条件。
 
-**洞察二：目标需要一个可判断的完成标准，否则执行无法被检验。**
+这意味着需要一种机制来锚定"真正的成功状态"，而不是"符合测试用例"。完成标准必须有结构，能让执行者和判断者独立地做出相同的判断。
 
-> **来源说明：** 洞察二否定了"存储优先"的记忆架构，确立了"目标锚定"的方向——这与洞察一（2.1）一脉相承。但洞察一回答的是"为什么要有目标"，洞察二回答的是"目标本身需要什么结构才能被检验"。两者共同构成 PRC 框架的认知基础。
+更进一步，完成标准的结构必须与任务绑定才能生效——孤立的条件列表没有锚点，无法在执行过程中被追溯、被判断、被验证。
 
-Picture 是目标的核心语义锚，Requirements 和 Constraints 是从 Picture 具象化出来的两个维度——前者回答"达成目标需要满足哪些条件"，后者回答"任务由实施到完成，哪些约束和禁则必须满足"。三者共同构成判断未来动作是否偏离的标准，其中 **Picture 是绝对的锚**。
+### 2.3 任务需要的是认知，而非记忆
 
-仅有目标是不够的。目标"实现一个安全认证模块"无法回答三个关键问题：什么样的成果算成功？需要满足什么可验证的条件？什么是绝对不能做的？
+**洞察三：任务真正需要的不是记忆，而是认知。**
 
-这三个问题分别对应三个认知要素：
+当前 AI Agent 的记忆系统在两个极端之间徘徊：要么是无限膨胀的对话历史（上下文污染），要么是精确但孤立的向量检索（只能回答被问到的问题）。两者都在试图回答"我之前见过什么"，却回避了一个更根本的问题——任务执行过程中，Agent 最需要的是对当前目标、进度和偏差的清晰感知。这种感知无法通过积累更多历史数据来获得，因为数据再多也无法替代判断力。
 
-**Picture（图景）** 是语义层面的终极成功状态，由利益相关者定义，回答"做成什么样"。它不是功能清单，而是利益相关者眼中可感知的结果——即使所有代码都写完了、测试都通过了，只要用户感知到"还是不能登录"，Picture 即未达成。
+这意味着对 Agent 而言，真正稀缺的不是更多信息，而是**一种能让自己随时判断"我在哪、目标偏没偏、还差什么"的能力**。记忆系统存储的是过去，认知系统回答的是当下。一个始终知道"我现在在做什么任务、目标是什么、已完成哪些步骤"的 Agent，对任务的掌控力远强于一个存储了十年对话的 Agent——不是因为它记得更多，而是它能判断更多。
 
-**Requirements（需求）** 是从 Picture 推导出的具体条件，回答"达成目标需要满足哪些条件"。每一个 Requirement 都必须可独立验证：要么通过，要么不通过，没有灰色地带。Requirements 是 Picture 的必要条件——达成 Picture 必须首先满足所有 Requirements。
-
-**Constraints（约束）** 是从 Picture 和执行上下文推导出的具体规则，回答"任务由实施到完成，哪些约束和禁则必须满足"。Constraints 不是"尽量遵守"，而是"一旦违反系统必须阻断"。例如"不许存储明文密码"、"Access Token 有效期不得超过 1 小时"。Constraints 与 Requirements 可能产生冲突——"需支持离线使用"与"数据不得离开设备"在某些场景下不可兼得。这种冲突必须在任务构建阶段被发现并标记，而非等到执行阶段才暴露。
-
-**为什么 Picture 不可缺席**
-
-传统的软件工程以测试用例通过作为完成标准。但测试用例通过只说明符合预定需求，不等于达成目标——需求是利益相关者对"如何解决问题"的假设，而 Picture 是利益相关者对"问题是否被真正解决"的最终判断。
-
-AI Agent 具备语义理解能力，能够理解自然语言描绘的图景。这意味着可以用少量检验点配合语义理解来判定任务是否完成，不必为每个细节编写测试用例。Picture 提供了语义判断的锚点——它允许 AI 或人做出高阶的、整体性的完成判断，而不仅仅依赖于可枚举的检验项。
-
-因此，所有任务都需要 Picture，只是模糊程度不同。传统软件开发认为"测试用例通过即合格"，这只说明符合预定需求，不能认为是达到了目标。即使所有 Requirements 满足，Picture 未对齐则任务未完成。
-
-PRC 框架的认知科学来源是目标导向行为理论（Goal-Directed Behavior）和约束满足网络（Constraint Satisfaction Networks）——两者的共同点在于：目标的达成不是路径上所有步骤的累加，而是同时满足目标状态、可验证条件和不可违反边界的多重约束解。
-
-### 2.3 锚点：任务作为认知单元 (Anchor: Task as Cognitive Unit)
-
-**洞察三：任务是人类和 AI 共同的工作记忆单元。**
-
-人类长期记忆以事件（Event）为单位组织，而非以知识点为单位。"上周的架构评审会议"比"分布式系统一致性原理"更容易被记忆和回忆。事件封装了目标、行动、结果和上下文——这种封装使得记忆具有天然的边界和检索线索。
-
-任务（Task）作为信息的组织单元，恰好对应了这个认知模型。每个 Task 包含 Picture（目标）、Requirements（可验证条件）、Constraints（不可逾越边界）和执行进度——这四者的组合使得一个 Task 在任意时刻都有一个可判断的状态：正在推进、已完成、或已偏离。
-
-Task 作为认知锚点的意义在于：它同时服务于 Agent 和人。对 Agent 而言，Task 是唯一的解析对象——无论任务是"实现登录模块"还是"修复安全漏洞"，系统使用完全相同的解析逻辑，不需要为不同类型的节点设计不同的处理机制。对人而言，Task 的分形树状结构使得整个认知空间可以通过目录深度直观表达——父子关系就是依赖关系，不需要额外的状态聚合查询。
-
-Task 锚点还解决了目标模糊性的问题。当一个目标过于宏观时（如"优化系统性能"），Agent 可以通过将目标转化为 Task 并定义其 Picture 来使目标变得可判断。Picture 定义了"足够好的性能"是什么样子——这不是一个数字，而是一个利益相关者认可的语义状态。
-
-### 2.4 正交：双平面对偶性 (Orthogonality: Dual-Plane Duality)
-
-**洞察四：认知可以沿两个相互独立的维度切分——做什么和做到哪了。**
-
-对任意一个任务的执行状态，都可以沿两个维度观察：
-
-**数据平面**（Data Plane）回答"当前操作的是什么版本的代码和文档"。它记录相关仓库的当前 commit ID 快照、长篇文档的版本指针。当 Agent 被重新唤醒时，它需要知道上次操作的是哪一行代码——而不是从会话历史中大海捞针。
-
-**状态平面**（Status Plane）回答"当前任务推进到什么阶段了"。它聚合任务树结构、每个 Task 的 TODO 完成度、任务状态（CREATED / IN_PROGRESS / VERIFYING / COMPLETED / ABANDONED）和偏差记录（Gotchas）。
-
-两个平面之所以必须正交互斥，有认知效率的原因：如果每次获取状态都要同时加载数据版本和执行进度，认知负载翻倍；如果混合在一起，Agent 无法独立判断"我现在应该看数据还是看进度"。
-
-正交互斥的实现是：Agent 主动按需展开数据平面，而不是默认加载。状态平面在每次唤醒时强制挂载（因为它回答的是"我在哪"），数据平面则在 Agent 需要操作具体数据时才展开（通过 commit ID 快照按需挂载）。两个平面都是时间切片——某一时刻的快照——而非组件或服务。
-
-这种正交设计的认知收益是：Agent 可以独立思考进度问题或数据问题，而不需要同时处理两个维度的干扰。数据平面变化时，Agent 知道这是数据问题；任务状态变化时，Agent 知道这是进度问题。两种问题的处理策略不同，分开思考避免了认知混淆。
-
-基于双平面正交，Task 的整个执行循环围绕三个核心动作展开：**认知构建**、**任务检验**和**状态更新**。认知构建负责生成状态平面的快照，任务检验负责判断当前状态是否满足 Picture，状态更新负责将检验结果反映到 Task 状态。这三个动作在每个轮次结束后依次执行，构成完整的感知-判断-更新闭环。
+这条推导链决定了整篇规范的叙事结构——理解它，就能理解 mem0ress 为什么是这样设计而不是那样。
 
 ---
 
-## 3. 设计理念
+## 3 设计决策
 
-mem0ress 的诞生，源于对当前 AI Agent 发展路径的底层反思。我们拒绝将 RAG（检索增强生成）等同于 AI 的大脑，摒弃传统的“被动记忆检索”理念。mem0ress 的架构设计并非为了优化数据的存储与查询，而是为了给自主 Agent 构建一个具备前瞻性（Forward-looking）的心智模型（Mental Model）。
 
-系统的运转建立在以下四大核心理念之上：
+### 3.1 选择任务作为认知单元
 
-### 3.1 目标锚定：目的论认知
+洞察一否定了以时间为锚的记忆架构，洞察三指明了任务需要认知而非存储。这两者共同推导出一个结论：认知系统应以任务（Task）为唯一单元。事件记忆（Episodic Memory）比语义记忆更牢固、更易提取，原因在于事件天然封装了目标、行动、结果和上下文——这些维度共同提供了认知的边界和检索线索。孤立的知识点或对话片段没有这种结构，它们既没有目标锚点，也没有可判断的边界，无法成为可靠的认知单元。
 
-**源自洞察一（2.1）：上下文是被发现的，而非被维持的。**
+每个任务封装目标、可验证条件、不可逾越边界和执行进度——四者的组合使得任务在任意时刻都有一个可判断的状态。同构性是关键的设计选择：如果认知单元种类繁多（里程碑、史诗、故事点、子任务），系统需要为每种类型设计不同的处理逻辑，认知负载倍增。统一的任务模型在任何粒度下都适用，系统复杂性维持在常数级别。
 
-在传统基于向量的记忆设计中，信息是游离的，系统通过算力去大海捞针。但在 mem0ress 中，认知遵循严格的"目的论（Teleology）"。任何被引入平面的信息必须有明确的目的。系统不存储无关的零散数据，仅记录与任务目标直接相关的认知增量。失去目标指向的信息被视为噪音，不予投影到当前平面。
+以目录树表达任务层级。父任务目录下嵌套子任务目录，目录深度即依赖关系——`ls` 就能看到边界，不需要额外的状态聚合。
 
-### 3.2 认知而非记忆：记录"状态突变"
-
-**源自洞察一（2.1）：记忆的目标属性决定了认知应以任务为中心，只记录与目标相关的状态变化。**
-
-人类的大脑之所以高效，是因为它懂得遗忘过程，只铭记结果。系统不记录 Agent 执行过程中的所有流水账，仅记录导致目标推进或路径修正的**状态变更**。通过记录状态变更而非过程录像，有效控制上下文规模。
-
-### 3.3 同构的认知单元：分形树状结构
-
-**源自洞察三（2.3）：任务是将模糊意图转化为可判断状态的认知锚点。同构单元确保任意粒度下解析逻辑一致。**
-
-任务被拆解为同构的单元（Task）。每个子任务都拥有独立的任务文件（task.md），物理上通过目录深度表达依赖关系。父任务的完成必须以所有子任务的对齐为前提。
-
-这种同构设计解决了复杂意图管理中的三个核心问题：
-
-**解析一致性：** 认知网关只需处理一种类型的节点（Task）。无论任务是"实现登录模块"还是"修复安全漏洞"，系统使用完全相同的解析逻辑。这比异构结构（不同节点类型需要不同处理逻辑）大大降低了复杂度。
-
-**分形扩展：** 分形意味着自相似——树的每一层节点拥有与顶层相同的结构，只是粒度不同。"用户认证"任务的 task.md 与"实现 OAuth 提供商"子任务的 task.md 结构完全一致。这使得任务分解不需要额外的结构设计工作，分解过程本身是机械的。
-
-**依赖表达的物理化：** 父任务目录下嵌套子任务目录，通过目录深度而非数据库外键表达依赖关系。这使得依赖的可见性不需要查询——`ls` 即是最直接的展示。"父任务是否完成"等价于"子任务目录是否全部关闭"，无需额外的状态聚合查询。
+所有认知单元同类同构：父任务是 Task，子任务也是 Task，递归下去每一层都是 Task。没有里程碑、没有史诗、没有故事点，只有 Task。同构性使认知网关只需要一套解析逻辑。认知唯一：对于一个任务，没有两份认知同时存在的状态，不讨论新旧与变更，只维护一份认知。
 
 ```mermaid
-%% label：分形树状结构
+%% label：同构认知单元示意
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#2e7d32', 'lineColor': '#616161', 'secondaryColor': '#fafafa', 'tertiaryColor': '#f5f5f5' } } }%%
 graph TD
-    root("/tasks")
-    A["auth_module/"]
-    A1["oauth_google/"]
-    A2["oauth_github/"]
-    A3["session_store/"]
-    A1a["provider/"]
-    A1b["callback/"]
-
-    root --> A
-    A --> A1
-    A --> A2
-    A --> A3
-    A1 --> A1a
-    A1 --> A1b
+    root["Task: /tasks"] --> A["Task: auth_module"]
+    A --> A1["Task: oauth_google"]
+    A --> A2["Task: oauth_github"]
+    A --> A3["Task: session_store"]
+    A1 --> A1a["Task: provider"]
+    A1 --> A1b["Task: callback"]
 
     classDef task fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef root fill:#c8e6c9,stroke:#388e3c,stroke-width:3px;
-    classDef leaf fill:#f1f8e9,stroke:#689f38,stroke-width:1px;
-    class root root;
-    class A,A1,A2,A3 task;
-    class A1a,A1b leaf;
+    class root,A,A1,A2,A3,A1a,A1b task;
 ```
 
-### 3.4 认知平面的数据流架构
+### 3.2 选择PRC作为任务检验要素
 
-**源自洞察四（2.4）：状态平面与数据平面正交互斥，避免状态与数据之间的维度捆绑——即每次获取状态时被迫同时加载数据版本，或混合后 Agent 无法独立判断当前该关注哪个维度。**
+任务检验需要结构化的要素。三个要素既在创建时锚定完成标准，也在检验时提供判断依据——让执行者和判断者独立地做出相同的判断。因此为每个任务定义三个要素：Picture（语义成功状态）、Requirements（可验证条件）、Constraints（不可逾越底线）。
 
-mem0ress 的认知数据来自会话本身，而非外部知识库。系统从会话流中 **hook** 出构建认知所需的信息，这是与外部数据完全独立的并行过程——外部知识（向量数据库、API 文档、全网搜索）属于 Agent 的背景知识，mem0ress 不感知、不管理，也不依赖它们。
+定义顺序：先定 Picture，再从 Picture 推导出 Requirements 和 Constraints。三者都定义完之后检查有没有矛盾——若存在矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，三要素写入 task.md。
 
-**认知数据的来源与流向：**
+### 3.3 选择双重平面来呈现认知
 
-会话流承载了 Agent 的所有执行动作与中间产物。mem0ress 在会话中 hook 出与任务目标相关的数据，将其组织为两个时间切片：
+任务需要同时掌握两个不同维度的事实：做到了什么（数据层面）和推进到哪里（执行层面）。两个问题认知性质不同，必须分开处理。详见 §4.2。
 
-* **状态平面：** 从会话中提取任务执行状态（Todo 进度、代码产出、文档进度、组件状态），聚合成某一时刻的执行快照。Agent 唤醒时强制挂载（因为它回答的是"我在哪"）。
-* **数据平面：** 从会话中提取相关数据的 commit ID 快照，记录代码和文档在某一时刻的版本。Agent 需要操作具体数据时才按需挂载。
+三个核心动作按固定顺序执行：认知构建 → 任务检验 → 状态更新。认知构建先于任务检验，任务检验先于状态更新。
 
-两个平面都来源于会话，按需挂载。Agent 获取平面后，在其**认知工作区**中完成目标推理与决策。
+### 3.4 选择状态变更驱动认知构建
 
-三个核心动作与 Task 生命周期绑定：轮次结束后依次执行**认知构建**（生成当前状态快照）、**任务检验**（判断是否满足 Picture）和**状态更新**（将检验结果反映到 Task 状态）。这三个动作的顺序是固定的——认知构建先于任务检验，任务检验先于状态更新。
+每轮次结束时，Agent 感知本轮任务内容的状态变更，并基于此更新对任务的认知。系统检测本轮中发生的任务相关变化——Todo 完成状态变化、Constraints 违反记录、Requirements 满足情况、任务状态转移、子任务关闭、新偏差追加——并将这些变化写入 Session 快照。Plane Assembler 从 Session 中提取最新快照，组装为状态平面挂载到 Agent 上下文，使 Agent 在下一轮开始时立即掌握当前任务态势。
 
-> **注：** 状态平面和数据平面都是时间切片，不是组件。图中的状态平面 / 数据平面指的是"某一时刻的快照"，而非独立的进程或服务。认知工作区是 Agent 的内部工作空间，两者是一体的。
+认知构建以轮次为周期，感知→构建→挂载构成完整闭环。只记录导致目标推进或路径修正的状态变更，不记录过程录像。
 
-```mermaid
-%% label：认知平面的数据流
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#e3f2fd', 'tertiaryColor': '#fafafa', 'fontFamily': 'arial' } } }%%
-graph TB
-    subgraph 会话层["会话流 (Conversation)"]
-        CF["Agent 执行动作<br>中间产物产出"]
-    end
+**纯文本持久化的设计理由：** 见 §4.4 文档数据模型。
 
-    subgraph 认知层["mem0ress 认知工作区"]
-        SP["状态平面"]
-        DP["数据平面"]
-    end
+mem0ress 只管一件事：认知的生命周期管理，也就是任务的创建、检验与认知态势的构建。大模型沙箱隔离、并发控制这些，都交给宿主操作系统。
 
-    CF["Agent 执行动作<br>中间产物产出"]
-    Agent["(Agent)"]
+mem0ress 不是回答问题的引擎，而是呈现状态的窗口。它在任何时刻都完整构建当前认知的所有要素——任务树在哪、做到哪了、约束有没有被触碰、目标偏了没有。不做相关性排序，不挑选，不截断。
 
-    CF -->|hook 出认知数据| 认知层
-    认知层 -->|挂载平面| Agent
+---
 
-    classDef conv fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
-    classDef cog fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
-    classDef agent fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
-    class CF conv;
-    class SP,DP cog;
-    class Agent agent;
-```
+## 4. 概念与设计
 
-以上四大理念，共同构成了 mem0ress 的设计哲学。以下工程准则，是将上述理念落实为具体约束的实践规范——违反这些准则，即等同于违反第二章（核心洞察）的设计初衷。
+mem0ress 的概念体系围绕任务展开。本章描述任务的核心概念、两种平面的构成、生命周期以及数据模型。
 
-```mermaid
-%% label：工程准则与洞察的映射关系
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae' } } }%%
-graph TB
-    subgraph 洞察层["第二章：核心洞察"]
-        I1["洞察一\n目标属性"]
-        I2["洞察二\nPRC 框架"]
-        I3["洞察三\nTask 锚点"]
-        I4["洞察四\n双平面正交"]
-    end
+### 4.1 PRC——任务三要素
 
-    subgraph 理念层["第三章：设计理念"]
-        G1["目标锚定"]
-        G2["认知而非记忆"]
-        G3["同构认知单元"]
-        G4["认知平面数据流"]
-    end
+每个任务由三个要素定义：Picture、Requirements、Constraints。三者共同构成判断执行是否偏离的绝对标准。
 
-    subgraph 准则层["第四章：工程准则"]
-        E1["SSOT + 绝对覆写"]
-        E2["系统级卸责"]
-        E3["反黑盒 + 绝对可观测性"]
-    end
+**Picture（图景）**是语义层面的成功状态。利益相关者能想象的目标，而不是实现路径。比如"用户不用输入密码就能登录"是 Picture，"用 OAuth 2.0 实现登录"是实现路径，不是 Picture。Picture 写得再好，如果利益相关者无法想象它描述的状态，就失去了锚定作用。
 
-    I1 --> G1
-    I1 --> G2
-    I3 --> G3
-    I4 --> G4
-    G1 --> E1
-    G2 --> E1
-    G3 --> E2
-    G3 --> E3
-    G4 --> E3
+**Requirements（需求）**是可验证的通过/失败条件。Agent 依据 Picture 推导，利益相关者确认。每个 Requirement 都必须有明确的验收标准——"界面美观大方"这种依赖主观判断的不是有效的 Requirements。
 
-    classDef insight fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
-    classDef principle fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
-    classDef rule fill:#fff9c4,stroke:#f9a825,stroke-width:2px;
-    class I1,I2,I3,I4 insight;
-    class G1,G2,G3,G4 principle;
-    class E1,E2,E3 rule;
-```
+**Constraints（约束）**是绝对不可逾越的底线。Agent 联合领域知识推导，利益相关者确认。违反时系统必须能检测到并拦住——如果系统感知不到，就不适合作为 Constraints，应该放到 Requirements 里。
 
-## 4. 工程准则
-
-### 4.1 单一事实来源与绝对覆写 (SSOT & Absolute Overwrite)
-
-拒绝模糊的认知合并。**运行时工作区**（Agent 的认知空间）内产生新认知时，直接覆写旧认知——这是避免认知歧义的核心机制。系统在覆写前提供严格的冲突检查机制，确保认知的确定性。覆写发生在运行时，持久化仍遵循「不要存储要按需发现」原则。
-
-### 4.2 系统级卸责 (System-Level Offloading)
-
-mem0ress 只专注一件事：认知的生命周期管理，即任务的创建、检验与认知态势的构建。大模型沙箱隔离、并发控制等底层复杂性，均交由宿主操作系统解决。
-
-### 4.3 反黑盒与绝对可观测性 (Anti-Blackbox & Absolute Observability)
-
-可观测性（Observability）不仅仅是"能看到日志"，而是"从输出推断内部状态"的能力。传统记忆系统是黑盒：Agent 无法直接知道系统内部的认知状态，只能通过 API 返回的结果猜测——而这些结果往往已经过蒸馏和裁剪，失去了原始上下文。
-
-mem0ress 的解法是**零中介**：系统完全建立在"目录树 + 纯文本（Markdown/YAML）"之上，没有任何私有格式或隐藏状态。
-
-这带来三个具体优势：
-
-- **直接读取，无损透明：** Agent 可以直接 `cat` 任意清单文件，看到的与系统存储的完全一致。没有任何 API 层对内容做截断或改写。
-- **版本控制，原生可审计：** 所有认知产物（task.md、Session、Gotchas）均在 Git 版本控制之下，任何变更均可追溯到具体的人和轮次。
-- **结构即语义，工具无绑定：** 目录深度表达依赖关系，文件名承载类型语义。Agent 不需要特殊工具就能理解和导航整个认知空间。
-
-这与传统的"向量数据库 + 检索"模式形成鲜明对比：后者将原始信息编码为高维向量，检索时再解码——这个过程本身就是信息损失。而 mem0ress 的认知数据（task.md、Session、Gotchas）永远保持人类可读和机器可解析的双重 fidelity。
-
-## 5. 概念：认知与态势感知
-
-### 5.1 认知三要素：定义与使用指南
-
-第二章（洞察二）已完整阐述了认知三要素的理论基础——Picture/Requirements/Constraints 三者共同构成判断未来动作是否偏离的绝对标准。本节聚焦于实际使用时的操作指南。
-
-**谁来定义：**
+三要素的定义角色如下：
 
 | 要素 | 主要定义者 | 参与者 |
 |------|-----------|--------|
@@ -367,56 +204,37 @@ mem0ress 的解法是**零中介**：系统完全建立在"目录树 + 纯文本
 | Requirements | Agent（基于 Picture 推导） | 利益相关者确认 |
 | Constraints | Agent + 领域知识 | 利益相关者确认 |
 
-**什么时候定义：**
-
-三要素的定义应从 Picture 开始。Picture 是目标的语义锚，是利益相关者认可的终极成功状态；Requirements 是从 Picture 推导出的可验证条件，Constraints 是从 Picture 和上下文推导出的执行底线。没有 Picture，Requirements 和 Constraints 就失去了存在的意义——因此应先定义 Picture，再从中推导出 Requirements 和 Constraints。
-
-冲突检测在三者全部定义后进行——若 Requirements 与 Constraints 相互矛盾，系统立即标记任务为"不可行"。
+定义顺序固定：先定 Picture，再推导 Requirements 和 Constraints。三者都定义完之后检查有没有矛盾——若存在矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，三要素写入 task.md。
 
 ```mermaid
-%% label：PRC 三要素定义（建议顺序）
+%% label：PRC 三要素定义顺序
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#2e7d32', 'lineColor': '#616161' } } }%%
 flowchart LR
     A["1. 定义 Picture\n（语义成功状态）"] --> B["2. 从 Picture 推导 Requirements\n（可验证条件）"]
     A --> C["3. 从 Picture + 上下文推导 Constraints\n（不可逾越底线）"]
     B --> D{"Req ∩ Cst\n相互矛盾？"}
     C --> D
-    D -->|是| E["标记「不可行」\n任务创建失败"]
-    D -->|否| F["任务进入执行阶段"]
+    D -->|是| E["沟通修正\n消除矛盾"]
+    E --> B
+    D -->|否| F["三要素写入 task.md"]
     style E fill:#ffcdd2,stroke:#c62828
     style F fill:#c8e6c9,stroke:#2e7d32
 ```
 
-**如何判断填写质量：**
+Picture / Requirements / Constraints 存在于 task.md 里，不在别处重复记录。状态平面只展示摘要，不展开全文。
 
-Picture 的质量判断标准是"是否可感知"：能否向利益相关者描述一个他们能想象的成功状态？若 Picture 描述的是实现路径（"使用 OAuth 2.0 实现登录"），而非成功状态（"用户无需输入密码即可登录"），说明 Picture 需要重新提炼。
+### 4.2 双重平面
 
-Requirements 的质量判断标准是"是否可自动化检验"：每个 Requirement 都必须有明确的通过/失败判定语句。若 Requirement 依赖主观判断（"界面美观大方"），它就不是有效的 Requirements。
+任务需要同时掌握两个不同维度的事实，认知性质不同，必须分开处理。
 
-Constraints 的质量判断标准是"是否可阻断"：违反时系统能否检测并阻止？若 Constraint 无法被系统感知（"代码要有良好可读性"），它就不适合作为 Constraints，应移至 Requirements。
+| | 状态平面（Status Plane） | 数据平面（Data Plane） |
+|---|---|---|
+| 回答 | "我在哪、做到哪了、目标偏了没有" | "当前操作的是哪个版本的代码" |
+| 挂载时机 | Agent 唤醒时强制挂载 | 按需展开，不默认加载 |
+| 内容 | 任务树结构、Todo 完成度、任务状态、Gotchas 指针、Session 最近变化指针 | 各仓库当前 commit ID（格式 `{repo_name}: "{commit_id}"`） |
+| 组装来源 | task.md、Session 历史切片、Data Plane 版本指针、Gotchas | Session 每轮快照的 `data_plane` 字段 |
 
-**Picture / Requirements / Constraints 的从 task.md 获取，不重复记录。** 清单文件中统一存放，状态平面仅展示其摘要，不展开全文。
-
-### 5.2 状态平面与数据平面
-
-mem0ress 的认知系统由两个核心平面构成，它们都是**时间切片**（某一时刻的快照），不是组件。
-
-**状态平面 (Status Plane)：** 任务相关的所有执行状态的聚合快照。状态平面是运行时快照，在 Agent 需要了解当前认知态势时（认知构建阶段）由认知数据模型按需组装，并在 Agent 唤醒时自动挂载到上下文。组装来源包括 task.md（任务定义）、Session（历史切片）、Data Plane（版本指针）、Gotchas（偏差记录）。spec 定义组装的时机和职责边界，arch 定义具体的组装机制。
-
-状态平面包括：
-- 任务树结构（父子关系）
-- 每个任务的 todo 完成度（如 "2/3 Todos 完成"）
-- 任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）
-- 偏差记录（Gotchas，指针）
-- Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）
-
-Agent 唤醒时强制挂载，只输出当前状态，不做偏差判断。
-
-**数据平面 (Data Plane)：** 各仓库当前 commit ID 快照，记录在 Session 每轮快照的 `data_plane` 字段中。顺着状态平面的指针按需展开，不默认加载。
-
-**Session 作为数据来源：** Session 是每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。它是状态平面内容的数据来源之一，但不等于平面本身——平面是某一时刻的聚合快照，Session 是快照的时间序列。
-
-Session 记录执行进度（代码写到哪、文档完成多少、TODO 状态）和 `data_plane` 快照（各仓库当前 commit ID）。data_plane 不单独文件记录，Session 每轮快照中的 `data_plane` 字段即为版本快照，供回溯使用。
+Session 是每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。它是状态平面内容的数据来源之一，但不等于平面本身——平面是某一时刻的聚合快照，Session 是快照的时间序列。
 
 ```mermaid
 %% label：状态平面与数据平面的构成
@@ -445,34 +263,50 @@ graph LR
     end
 ```
 
-## 6. 文档数据模型
+### 4.3 任务生命周期
 
-### 6.1 设计思想
+任务从创建到结束经历五种状态：CREATED（三要素已定义，所有 Todo 未开始）、IN_PROGRESS（至少有一个 Todo 已完成）、VERIFYING（任务检验进行中，瞬态）、COMPLETED（目标达成）、ABANDONED（目标放弃）。
 
-mem0ress 采用**纯文本持久化 + 运行时组装**的数据模型，参考了 OpenClaw 的 context engine 设计思路：OpenClaw 明确指出"文件是 memory 的唯一真相来源，模型只记忆写入磁盘的内容"，mem0ress 将这一原则延伸至任务认知领域。
+状态转换规则：CREATED → IN_PROGRESS（任意 Todo 被标记为完成）；CREATED → ABANDONED（任务废弃）；IN_PROGRESS → COMPLETED（检验通过）；IN_PROGRESS → ABANDONED（任务废弃）。
 
-认知数据（Picture/Requirements/Constraints/Todo/状态/Gotchas）以 Markdown 文件形式存储在文件系统，运行时由 Plane Assembler 按需组装为状态平面，而非在内存中维护可变状态。选择目录加文档方式的原因有以下三点。
+```mermaid
+%% label：Task 生命周期状态机
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae' } } }%%
+stateDiagram-v2
+    [*] --> CREATED
+    CREATED --> IN_PROGRESS : 任意 Todo 被标记为完成
+    CREATED --> ABANDONED : 任务废弃
+    IN_PROGRESS --> COMPLETED : 检验通过
+    IN_PROGRESS --> ABANDONED : 任务废弃
+    COMPLETED --> [*]
+    ABANDONED --> [*]
+```
 
-**消除隐藏状态。** 所有认知数据都可被 Agent 直接读取和修改，不存在内存中的影子状态，外部工具（git、grep、编辑器）可直接操作，审计无盲区。
+> **注：** VERIFYING 是瞬态，存在于检验执行期间，检验完成后立即转换到 COMPLETED 或 ABANDONED，不作为独立稳定状态存在于图中。
 
-**时间切片而非可变状态。** Session 的每次轮次快照是追加的，Data Plane 的版本引用是不可变的，Gotchas 是带时间戳的增量记录，状态变化通过追加而非覆写实现，不存在"数据汤"问题。
+**任务检验**在认知构建之后执行，判断当前状态是否满足 Picture。检验按四层关卡执行：
 
-**与 Agent 工具生态无缝衔接。** Agent 的文件工具天然支持文本操作，无需额外的 SDK 或数据库驱动，跨 Agent 共享只需共享文件路径。
+* **Tier 0: Constraints 检查。** 检查 Constraints 是否被违反，若有违反报告违反事实，由主 Agent 决定是否修复及如何修复。
+* **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭。
+* **Tier 2: Requirements 满足检查。** 验证每个 Requirement 是否达标。
+* **Tier 3: Picture 语义对齐检查。** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 由 Agent 主动判断是否需要启用，适用于：Picture 涉及主观判断或利益相关者感知时、Constraints 与 Picture 之间存在语义歧义时。
 
-这一设计的局限在于：不支持需要事务语义的多步原子操作，所有一致性保证依赖调用方遵守组装协议。
+检验完成后 Agent 自主决策下一步。检验通过 → Agent 可标记任务完成；检验未通过 → Agent 决定下一步（修正、重试或废弃）。
 
-### 6.2 组成与目录结构
+### 4.4 文档数据模型
 
-mem0ress 的文档数据模型由四个核心文档组成，各自承担不同的认知职责，协作构成完整的任务认知体系。系统使用文件树表达认知的从属关系与上下文边界。
+mem0ress 采用纯文本持久化 + 运行时组装的数据模型。认知数据以 Markdown 文件形式存储在文件系统，运行时由系统按需组装为状态平面。
 
-| 文档 | 定位 | 何时写入 |
-|------|------|----------|
-| task.md | 任务声明，Picture/Requirements/Constraints 的唯一真相来源 | 任务创建时写入，运行时以它为准 |
-| Session（`session.md`） | 轮次历史，按时间追加，不改变 task.md；含 data_plane 快照 | 每轮次结束后追加 |
-| Gotchas（`gotchas.md`） | 偏差记录，带外追加，不阻塞主流程 | 偏差确认后追加 |
-| judge.md | Judge Agent task 文件，与 Task 生命周期同步；不属于 Task 的三个物理子节点 | 任务创建时生成，检验后更新 |
+**四个核心文档**：
 
-四个文档的关系：task.md 是锚，三要素从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载任务检验逻辑，与 Task 生命周期同步。
+* **task.md**：任务声明，Picture/Requirements/Constraints 的唯一真源。任务创建时写入，运行时以它为准。
+* **session.md**：轮次快照序列，含 data_plane 快照。每轮次结束后按时间追加，不改变 task.md。
+* **gotchas.md**：偏差记录，带外追加，不阻塞主流程。偏差确认后追加。
+* **judge.md**：Judge Agent 任务文件，与 Task 生命周期同步。judge.md 与 Task 节点并列平铺于同一任务目录下，不属于 Task 的物理子节点——它属于 Judge Agent 的物理文件，与 Task 同级并行。任务创建时生成，检验后更新。
+
+task.md 是锚，三要素从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载任务检验逻辑，与 Task 生命周期同步。
+
+纯文本持久化有三个原因：消除隐藏状态（所有数据可直接读取和修改，外部工具 git、grep、编辑器可直接操作）、时间切片而非可变状态（快照追加，不存在数据汤问题）、与 Agent 工具生态无缝衔接（文件工具天然支持，无需额外 SDK）。
 
 ```mermaid
 %% label：.mem0ress 文件树与概念映射
@@ -500,6 +334,7 @@ graph TD
     class TMPL,SESS,GOT file;
     class JDG judge;
 ```
+Task、Session、Gotchas、Judge 文件的模板见`docs/templates`。
 
 ```plaintext
 .mem0ress/tasks/
@@ -507,22 +342,26 @@ graph TD
     ├── task.md       # 任务声明（Picture/Requirements/Constraints/Todo）
     ├── session.md    # 轮次快照序列（含 data_plane 快照）
     ├── gotchas.md    # 偏差记录（追加式）
-    └── judge.md      # Judge Agent task 文件（平铺）
+    └── judge.md      # Judge Agent task 文件
 ```
 
 具体各文档的内容格式和字段说明见 `docs/templates/`。
 
-## 7. 逻辑与流程设计 (Logic & Workflow Design)
+**设计局限**：不支持需要事务语义的多步原子操作，所有一致性保证依赖调用方遵守组装协议。
+
+---
+
+## 5. 逻辑与流程设计 
 
 Task 的执行循环围绕三个核心动作展开：认知构建、任务检验和状态更新。这三个动作在每个轮次结束后依次执行，构成完整的感知-判断-更新闭环。
 
-### 7.1 任务创建
+### 5.1 任务创建
 
-任务创建是确立认知边界的起点。Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 Picture、Requirements 和 Constraints。三要素的定义应从 Picture 开始——先定义 Picture 作为目标锚，再从中推导出 Requirements 和 Constraints。冲突检测在三者全部定义后进行——若 Requirements 与 Constraints 相互矛盾，系统立即标记任务为"不可行"，而非等到执行阶段才发现。
+任务创建是确立认知边界的起点。Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 Picture、Requirements 和 Constraints。三要素的定义应从 Picture 开始——先定义 Picture 作为目标锚，再从中推导出 Requirements 和 Constraints。冲突检测在三者全部定义后进行——若 Requirements 与 Constraints 相互矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，三要素写入 task.md。
 
 Todo 步进拆解：在锚定三要素后，Agent 将任务拆解为具体的机械步（Todo）。这些 Todo 构成了后续检验进度的基准线。
 
-### 7.2 认知构建
+### 5.2 认知构建
 
 认知构建是轮次结束后生成状态平面快照的动作。它在任何节点（刚启动时、执行中、或检验失败后）都需要执行，为 Agent 提供当前任务的可判断状态。
 
@@ -532,7 +371,7 @@ Todo 步进拆解：在锚定三要素后，Agent 将任务拆解为具体的机
 
 Session 快照是认知构建的数据来源。每个轮次的状态快照记录 code_progress、docs_progress、todos 和 status。Session 采用版本快照模型，只追加不覆盖。
 
-### 7.3 任务检验
+### 5.3 任务检验
 
 任务检验在认知构建之后执行，负责判断当前状态是否满足 Picture。检验在轮次结束后自动触发，是只读操作，不执行写操作。
 
@@ -543,7 +382,7 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 * **Tier 0: Constraints 约束检查。** 检查 Constraints 是否被违反，若有违反报告违反事实，由主 Agent 决定是否修复及如何修复。
 * **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭；处于 CREATED 或 IN_PROGRESS 状态则视为未完成。
 * **Tier 2: Requirements 满足检查。** 验证每个 Requirement 是否达标。
-* **Tier 3: 语义对齐检查。** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 需要 Agent 主动判断本次检验是否需要语义对齐，以下情况适用：Picture 涉及主观判断或利益相关者感知时；Constraints 与 Picture 之间存在语义歧义时；任务被宿主系统判定为高危时；Agent 或利益相关者显式请求时。
+* **Tier 3: 语义对齐检查。** 读取 Picture 与实际产出，执行语义对齐判断。Tier 3 需要 Agent 主动判断本次检验是否需要语义对齐，以下情况适用：Picture 涉及主观判断或利益相关者感知时；Constraints 与 Picture 之间存在语义歧义时；Agent 或利益相关者显式请求时。
 
 例如：一个 Picture 是"用户无需输入密码即可登录"的 OAuth 任务，Tier 1 检查了所有 Todo 是否完成，Tier 2 验证了"支持 Google OAuth"和"支持 GitHub OAuth"这两个 Requirements 都满足，但 Tier 3 额外检查了"实际登录流程中用户确实没有被要求输入密码"——这个检查无法通过代码结构验证，必须看实际行为，属于语义对齐。
 
@@ -553,7 +392,7 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 
 检验通过 → Agent 可标记任务完成；检验未通过 → Agent 决定下一步（修正、重试或废弃）。
 
-### 7.4 状态更新
+### 5.4 状态更新
 
 状态更新将检验结果反映到 Task 状态，并处理决策执行。
 
@@ -567,7 +406,7 @@ Task 生命周期包含五种状态：
 - **COMPLETED**：目标达成，认知生命周期结束
 - **ABANDONED**：目标放弃，记录 Gotcha 经验
 
-状态转换规则：CREATED → IN_PROGRESS（任意 Todo 被标记为完成）；CREATED → ABANDONED（任务废弃）；IN_PROGRESS → VERIFYING（任务检验开始）；VERIFYING → IN_PROGRESS（检验未通过，Agent 决定重试）；VERIFYING → COMPLETED（检验通过）；VERIFYING → ABANDONED（检验失败后 Agent 决定废弃）；IN_PROGRESS → COMPLETED（任务完成）；IN_PROGRESS → ABANDONED（任务废弃）。
+状态转换规则：CREATED → IN_PROGRESS（任意 Todo 被标记为完成）；CREATED → ABANDONED（任务废弃）；IN_PROGRESS → COMPLETED（检验通过）；IN_PROGRESS → ABANDONED（任务废弃）。
 
 ```mermaid
 %% label：Task 生命周期状态机
@@ -576,44 +415,22 @@ stateDiagram-v2
     [*] --> CREATED
     CREATED --> IN_PROGRESS : 任意 Todo 被标记为完成
     CREATED --> ABANDONED : 任务废弃
-    IN_PROGRESS --> VERIFYING : 任务检验开始
-    VERIFYING --> IN_PROGRESS : 检验未通过，Agent 决定重试
-    VERIFYING --> COMPLETED : 检验通过
-    VERIFYING --> ABANDONED : 检验失败后 Agent 决定废弃
-    IN_PROGRESS --> COMPLETED : 任务完成
+    IN_PROGRESS --> COMPLETED : 检验通过
     IN_PROGRESS --> ABANDONED : 任务废弃
     COMPLETED --> [*]
     ABANDONED --> [*]
 ```
 
+> **注：** VERIFYING 是瞬态，存在于检验执行期间，检验完成后立即转换到 COMPLETED 或 ABANDONED，不作为独立稳定状态存在于图中。
+
 **决策执行：**
 
 检验完成后 Agent 自主决策下一步。
 
-## 附录 A: 状态与节点
-
-#### 状态表 (State Table)
-
-| State | 说明 |
-|-------|------|
-| `CREATED` | 任务已创建，三要素已定义，所有 Todo 均未开始 |
-| `IN_PROGRESS` | 任务进行中，至少有一个 Todo 已完成 |
-| `VERIFYING` | 任务检验进行中，瞬态，检验完成必须离开此状态 |
-| `COMPLETED` | 目标达成，认知生命周期结束 |
-| `ABANDONED` | 目标放弃，记录 Gotcha 经验 |
-
-#### 节点表 (Node Table)
-
-| Node | 说明 |
-|------|------|
-| `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 task.md 获取） |
-| `Task` | 认知单元，包含 task.md、session.md、gotchas.md 三个物理子节点；judge.md 与 Task 并列平铺，不属于 Task 的子节点 |
-| `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以所有子任务完成为前提 |
-| `Judge Agent` | 伴生组件，执行任务检验；Judge Agent 节点与 Task 节点并列平铺于同一任务目录下，judge.md 是其物理文件 |
 
 ---
 
-## 8. FAQ
+## 6. FAQ
 
 ### Q: 为什么我们需要的是"认知"而不是"记忆"？
 A: 记忆是向后看（Retrospective）、被动式的存储行为。mem0ress 不是检索过去对话的存储系统，而是**前向的认知系统**，维持 AI 对当前目标、进度和认知缺口的 awareness。核心区分：传统记忆问"我们之前讨论了什么"，认知框架问"我要达成什么目标？我离目标还有多远？我还需要做什么？"
@@ -658,9 +475,32 @@ A: Picture 是语义层面的成功状态，Requirements 是可验证的指标�
 Picture 作为完成标准防止"勾选心态"——Agent 不会在完成所有条目后仍然错失实际需求。
 
 ### Q: 什么是"数据汤"困境，mem0ress 如何避免？
-A: 数据汤（Data Soup）发生在记忆系统将所有信息存入无结构的池子时：信息失去边界、新旧混杂、无法区分当前与过时，导致上下文污染（Context Collapse）和熵增。
+A: 数据汤（Data Soup）发生在记忆系统将所有信息存入无结构的池子时：信息失去边界、新旧混杂、无法区分当前与过时，导致上下文污染和熵增。
 
 mem0ress 通过以下机制避免：
 - **目标锚定**：信息仅在与活跃 Task 关联时才有意义，失去目标指向的信息视为噪音，不予投影到当前平面
 - **认知来源隔离**：mem0ress 的认知数据来源于会话 hook，不管理也不依赖外部知识（向量数据库/API 文档/全网搜索）——外部知识属于 Agent 的背景知识，Agent 按需检索后体现在会话中，mem0ress 只从会话流提取切片
 - **生命周期一致**：认知与任务关联，任务完成则认知生命周期结束
+
+---
+
+## 附录 A: 状态与节点
+
+#### 状态表 (State Table)
+
+| State | 说明 |
+|-------|------|
+| `CREATED` | 任务已创建，三要素已定义，所有 Todo 均未开始 |
+| `IN_PROGRESS` | 任务进行中，至少有一个 Todo 已完成 |
+| `VERIFYING` | 任务检验进行中，瞬态，检验完成必须离开此状态 |
+| `COMPLETED` | 目标达成，认知生命周期结束 |
+| `ABANDONED` | 目标放弃，记录 Gotcha 经验 |
+
+#### 节点表 (Node Table)
+
+| Node | 说明 |
+|------|------|
+| `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 task.md 获取） |
+| `Task` | 认知单元，包含 task.md、session.md、gotchas.md 三个物理子节点；judge.md 与 Task 并列平铺，不属于 Task 的子节点 |
+| `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以所有子任务完成为前提 |
+| `Judge Agent` | 伴生组件，执行任务检验；Judge Agent 节点与 Task 节点并列平铺于同一任务目录下，judge.md 是其物理文件 |
