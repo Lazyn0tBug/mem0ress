@@ -43,14 +43,14 @@ mem0ress 将所有认知单元统一为同构的任务节点（Task），每个�
 %% label：核心解法总览
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae', 'fontFamily': 'arial' } } }%%
 graph TB
-    subgraph PRC["认知三要素（任务完整单元）"]
+    subgraph PRC["任务信息模型（任务完整单元）"]
         PIC["Picture\n图景"]
         REQ["Requirements\n需求"]
         CST["Constraints\n约束"]
     end
 
     subgraph TASK["Task 认知单元（认知而非记忆）"]
-        TR["三要素 + 执行进度\n= 可判断状态"]
+        TR["任务信息模型 + 执行进度\n= 可判断状态"]
         ST["CREATED / IN_PROGRESS\n/ VERIFYING / COMPLETED\n/ ABANDONED"]
     end
 
@@ -152,11 +152,11 @@ graph TD
     class root,A,A1,A2,A3,A1a,A1b task;
 ```
 
-### 3.2 选择PRC作为任务信息要素
+### 3.2 选择PRC作为任务信息模型
 
-任务作为信息的完整单元，需要结构化的要素来承载其边界——三个要素既在创建时锚定完成标准，也在检验时提供判断依据。因此为每个任务定义三个要素：Picture（语义成功状态）、Requirements（可验证条件）、Constraints（不可逾越底线）。
+任务作为信息的完整单元，需要结构化的要素来承载其边界——模型既在创建时锚定完成标准，也在检验时提供判断依据。因此为每个任务定义三个要素：Picture（语义成功状态）、Requirements（可验证条件）、Constraints（不可逾越底线）。
 
-定义顺序：先定 Picture，再从 Picture 推导出 Requirements 和 Constraints。三者都定义完之后检查有没有矛盾——若存在矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，三要素写入 task.md。
+定义顺序：先定 Picture，再从 Picture 推导出 Requirements 和 Constraints。三者都定义完之后检查有没有矛盾——若存在矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，模型写入 task.md。
 
 ### 3.3 选择双重平面来呈现认知
 
@@ -182,7 +182,7 @@ mem0ress 不是回答问题的引擎，而是呈现状态的窗口。它在任�
 
 mem0ress 的概念体系围绕任务展开。本章描述任务的核心概念、两种平面的构成、生命周期以及数据模型。
 
-### 4.1 PRC——任务三要素
+### 4.1 任务信息模型(PRC)
 
 每个任务由三个要素定义：Picture、Requirements、Constraints。三者共同构成判断执行是否偏离的绝对标准。
 
@@ -192,18 +192,16 @@ mem0ress 的概念体系围绕任务展开。本章描述任务的核心概念�
 
 **Constraints（约束）**是绝对不可逾越的底线。Agent 联合领域知识推导，利益相关者确认。违反时系统必须能检测到并拦住——如果系统感知不到，就不适合作为 Constraints，应该放到 Requirements 里。
 
-三要素的定义角色如下：
-
 | 要素 | 主要定义者 | 参与者 |
 |------|-----------|--------|
 | Picture | 利益相关者（用户、业务负责人） | Agent 辅助提炼 |
 | Requirements | Agent（基于 Picture 推导） | 利益相关者确认 |
 | Constraints | Agent + 领域知识 | 利益相关者确认 |
 
-定义顺序固定：先定 Picture，再推导 Requirements 和 Constraints。三者都定义完之后检查有没有矛盾——若存在矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，三要素写入 task.md。
+定义顺序固定：先定 Picture，再推导 Requirements 和 Constraints。三者都定义完之后检查有没有矛盾——若存在矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，模型写入 task.md。
 
 ```mermaid
-%% label：PRC 三要素定义顺序
+%% label：任务信息模型定义顺序
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#2e7d32', 'lineColor': '#616161' } } }%%
 flowchart LR
     A["1. 定义 Picture\n（语义成功状态）"] --> B["2. 从 Picture 推导 Requirements\n（可验证条件）"]
@@ -212,7 +210,7 @@ flowchart LR
     C --> D
     D -->|是| E["沟通修正\n消除矛盾"]
     E --> B
-    D -->|否| F["三要素写入 task.md"]
+    D -->|否| F["模型写入 task.md"]
     style E fill:#ffcdd2,stroke:#c62828
     style F fill:#c8e6c9,stroke:#2e7d32
 ```
@@ -261,7 +259,7 @@ graph LR
 
 ### 4.3 任务生命周期
 
-任务从创建到结束经历五种状态：CREATED（三要素已定义，所有 Todo 未开始）、IN_PROGRESS（至少有一个 Todo 已完成）、VERIFYING（任务检验进行中，瞬态）、COMPLETED（目标达成）、ABANDONED（目标放弃）。
+任务从创建到结束经历五种状态：CREATED（模型已定义，所有 Todo 未开始）、IN_PROGRESS（至少有一个 Todo 已完成）、VERIFYING（任务检验进行中，瞬态）、COMPLETED（目标达成）、ABANDONED（目标放弃）。
 
 状态转换规则：CREATED → IN_PROGRESS（任意 Todo 被标记为完成）；CREATED → ABANDONED（任务废弃）；IN_PROGRESS → COMPLETED（检验通过）；IN_PROGRESS → ABANDONED（任务废弃）。
 
@@ -293,7 +291,7 @@ mem0ress 采用纯文本持久化 + 运行时组装的数据模型。认知数�
 * **gotchas.md**：偏差记录，带外追加，不阻塞主流程。偏差确认后追加。
 * **judge.md**：Judge Agent 任务文件，与 Task 生命周期同步。judge.md 与 Task 节点并列平铺于同一任务目录下，不属于 Task 的物理子节点——它属于 Judge Agent 的物理文件，与 Task 同级并行。任务创建时生成，检验后追加。
 
-task.md 是锚，三要素从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载任务检验逻辑，与 Task 生命周期同步。
+task.md 是锚，模型从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载任务检验逻辑，与 Task 生命周期同步。
 
 纯文本持久化有三个原因：消除隐藏状态（所有数据可直接读取和修改，外部工具 git、grep、编辑器可直接操作）、时间切片而非可变状态（快照追加，不存在数据汤问题）、与 Agent 工具生态无缝衔接（文件工具天然支持，无需额外 SDK）。
 
@@ -312,7 +310,7 @@ graph TD
     ROOT --> GOT
     ROOT --> JDG
 
-    TMPL -.->|三要素 · 进度快照来源| SESS
+    TMPL -.->|模型 · 进度快照来源| SESS
     TMPL -.->|偏差记录| GOT
 
     classDef dir fill:#c8e6c9,stroke:#388e3c,stroke-width:2px;
@@ -346,9 +344,9 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务检验
 
 ### 5.1 任务创建
 
-任务创建是确立认知边界的起点。Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 Picture、Requirements 和 Constraints。三要素的定义应从 Picture 开始——先定义 Picture 作为目标锚，再从中推导出 Requirements 和 Constraints。冲突检测在三者全部定义后进行——若 Requirements 与 Constraints 相互矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，三要素写入 task.md。
+任务创建是确立认知边界的起点。Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 Picture、Requirements 和 Constraints。模型的定义应从 Picture 开始——先定义 Picture 作为目标锚，再从中推导出 Requirements 和 Constraints。冲突检测在三者全部定义后进行——若 Requirements 与 Constraints 相互矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，模型写入 task.md。
 
-Todo 步进拆解：在锚定三要素后，Agent 将任务拆解为具体的机械步（Todo）。这些 Todo 构成了后续检验进度的基准线。
+Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械步（Todo）。这些 Todo 构成了后续检验进度的基准线。
 
 ### 5.2 认知构建
 
@@ -389,7 +387,7 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 
 Task 生命周期包含五种状态：
 
-- **CREATED**：三要素已定义，所有 Todo 均未开始
+- **CREATED**：模型已定义，所有 Todo 均未开始
 - **IN_PROGRESS**：至少有一个 Todo 已完成，执行中
 - **VERIFYING**：任务检验进行中，瞬态，不能持续
 - **COMPLETED**：目标达成，认知生命周期结束
@@ -479,7 +477,7 @@ mem0ress 通过以下机制避免：
 
 | State | 说明 |
 |-------|------|
-| `CREATED` | 任务已创建，三要素已定义，所有 Todo 均未开始 |
+| `CREATED` | 任务已创建，模型已定义，所有 Todo 均未开始 |
 | `IN_PROGRESS` | 任务进行中，至少有一个 Todo 已完成 |
 | `VERIFYING` | 任务检验进行中，瞬态，检验完成必须离开此状态 |
 | `COMPLETED` | 目标达成，认知生命周期结束 |
