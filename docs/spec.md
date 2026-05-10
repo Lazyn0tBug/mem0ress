@@ -203,6 +203,16 @@ graph TB
 
 认知构建以轮次为周期，感知→构建→挂载构成完整闭环。只记录导致目标推进或路径修正的状态变更，不记录过程录像。
 
+**纯文本持久化的设计理由：** 选择目录加文档方式有三个原因。
+
+*消除隐藏状态。* 所有认知数据都可被 Agent 直接读取和修改，不存在内存中的影子状态，外部工具（git、grep、编辑器）可直接操作，审计无盲区。
+
+*时间切片而非可变状态。* Session 的每次轮次快照是追加的，Data Plane 的版本引用是不可变的，Gotchas 是带时间戳的增量记录，状态变化通过追加而非覆写实现，不存在"数据汤"问题。
+
+*与 Agent 工具生态无缝衔接。* Agent 的文件工具天然支持文本操作，无需额外的 SDK 或数据库驱动，跨 Agent 共享只需共享文件路径。
+
+这一设计的局限在于：不支持需要事务语义的多步原子操作，所有一致性保证依赖调用方遵守组装协议。
+
 ---
 
 mem0ress 不是回答问题的引擎，而是呈现状态的窗口。传统 memory 系统像问答机器人：你问一个点，它试图给一个更精确的答案。mem0ress 不一样——它不是问答，是构建。任何时刻，只要你需要，它把当前认知的所有要素完整铺开：任务树在哪、做到哪了、约束有没有被触碰、目标偏了没有。没有哪个要素比其他要素更重要，也没有"相关性排序"决定谁被展示谁被丢弃。
@@ -227,7 +237,15 @@ mem0ress 的概念体系围绕任务展开。本章描述任务的核心概念�
 
 **Constraints（约束）**是绝对不可逾越的底线。Agent 联合领域知识推导，利益相关者确认。违反时系统必须能检测到并拦住——如果系统感知不到，就不适合作为 Constraints，应该放到 Requirements 里。
 
-定义顺序固定：先定 Picture，再推导 Requirements 和 Constraints。三者都定义完之后检查有没有矛盾——有矛盾则中止创建，返回冲突提示，不创建任务。
+三要素的定义角色如下：
+
+| 要素 | 主要定义者 | 参与者 |
+|------|-----------|--------|
+| Picture | 利益相关者（用户、业务负责人） | Agent 辅助提炼 |
+| Requirements | Agent（基于 Picture 推导） | 利益相关者确认 |
+| Constraints | Agent + 领域知识 | 利益相关者确认 |
+
+定义顺序固定：先定 Picture，再推导 Requirements 和 Constraints。三者都定义完之后检查有没有矛盾——有矛盾则中止创建，返回冲突提示，不创建任务。若冲突检测通过，三要素写入 task.md，任务创建成功。
 
 ```mermaid
 %% label：PRC 三要素定义顺序
@@ -253,7 +271,7 @@ Picture / Requirements / Constraints 存在于 task.md 里，不在别处重复�
 
 状态平面是运行时快照，在 Agent 需要了解当前认知态势时（认知构建阶段）由认知数据模型按需组装，并在 Agent 唤醒时自动挂载到上下文。组装来源包括 task.md（任务定义）、Session（历史切片）、Data Plane（版本指针）、Gotchas（偏差记录）。Agent 唤醒时强制挂载，只输出当前状态，不做偏差判断。
 
-**数据平面（Data Plane）**是数据层面的快照。回答"当前操作的是哪个版本的代码"。记录各仓库当前 commit ID，记录在 Session 每轮快照的 `data_plane` 字段中。顺着状态平面的指针按需展开，不默认加载。
+**数据平面（Data Plane）**是数据层面的快照。回答"当前操作的是哪个版本的代码"。各仓库的当前 commit ID 记录在 Session 每轮快照的 `data_plane` 字段中，格式为 `{repo_name}: "{commit_id}"` 的键值映射。数据平面顺着状态平面的指针按需展开，不默认加载。
 
 两个平面都来源于会话本身——从会话流中 hook 出认知数据，与外部知识（向量数据库、API 文档、全网搜索）完全独立。外部知识属于 Agent 的背景知识，按需检索后体现在会话中，mem0ress 只从会话流提取切片。
 
@@ -323,9 +341,11 @@ mem0ress 采用纯文本持久化 + 运行时组装的数据模型。认知数�
 **四个核心文档**：
 
 * **task.md**：任务声明，Picture/Requirements/Constraints 的唯一真源。任务创建时写入，运行时以它为准。
-* **session.md**：轮次快照序列，含 data_plane 快照。每轮次结束后追加，不改变 task.md。
+* **session.md**：轮次快照序列，含 data_plane 快照。每轮次结束后按时间追加，不改变 task.md。
 * **gotchas.md**：偏差记录，带外追加，不阻塞主流程。偏差确认后追加。
-* **judge.md**：Judge Agent 任务文件，与 Task 生命周期同步。任务创建时生成，检验后更新。
+* **judge.md**：Judge Agent 任务文件，与 Task 生命周期同步。judge.md 与 Task 节点并列平铺于同一任务目录下，不属于 Task 的物理子节点——它属于 Judge Agent 的物理文件，与 Task 同级并行。任务创建时生成，检验后更新。
+
+task.md 是锚，三要素从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载任务检验逻辑，与 Task 生命周期同步。
 
 纯文本持久化有三个原因：消除隐藏状态（所有数据可直接读取和修改，外部工具 git、grep、编辑器可直接操作）、时间切片而非可变状态（快照追加，不存在数据汤问题）、与 Agent 工具生态无缝衔接（文件工具天然支持，无需额外 SDK）。
 
@@ -370,8 +390,6 @@ Task、Session、Gotchas、Judge 文件的模板见`docs/templates`。
 
 ---
 
-### 4OLD
-
 ## 4. 工程准则
 
 ### 4.1 认知唯一性
@@ -385,187 +403,6 @@ mem0ress 只管一件事：认知的生命周期管理，也就是任务的创�
 ### 4.3 构建认知体系
 
 mem0ress 不是回答问题的引擎，而是呈现状态的窗口。它在任何时刻都完整构建当前认知的所有要素——任务树在哪、做到哪了、约束有没有被触碰、目标偏了没有。不做相关性排序，不挑选，不截断。
-
-## 5. 概念
-
-### 5.1 认知三要素：定义与使用指南
-
-第二章讲过理论，这节说怎么填。
-
-Picture、Requirements、Constraints 怎么定义、谁定义、什么时候定义，下面一一说清楚。
-
-| 要素 | 主要定义者 | 参与者 |
-|------|-----------|--------|
-| Picture | 利益相关者（用户、业务负责人） | Agent 辅助提炼 |
-| Requirements | Agent（基于 Picture 推导） | 利益相关者确认 |
-| Constraints | Agent + 领域知识 | 利益相关者确认 |
-
-**什么时候定义：**
-
-先定 Picture。Picture 是利益的语义锚——说不清楚"做成什么样"，后面都没法推。三者都定完之后，检查 Requirements 和 Constraints 有没有矛盾，有的话直接标记"不可行"，别等到执行阶段才发现。
-
-```mermaid
-%% label：PRC 三要素定义（建议顺序）
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#2e7d32', 'lineColor': '#616161' } } }%%
-flowchart LR
-    A["1. 定义 Picture\n（语义成功状态）"] --> B["2. 从 Picture 推导 Requirements\n（可验证条件）"]
-    A --> C["3. 从 Picture + 上下文推导 Constraints\n（不可逾越底线）"]
-    B --> D{"Req ∩ Cst\n相互矛盾？"}
-    C --> D
-    D -->|是| E["标记「不可行」\n任务创建失败"]
-    D -->|否| F["任务进入执行阶段"]
-    style E fill:#ffcdd2,stroke:#c62828
-    style F fill:#c8e6c9,stroke:#2e7d32
-```
-
-Picture 写得好不好，就看能不能向利益相关者描述一个他们能想象的状态。如果写的是实现路径（"用 OAuth 2.0 实现登录"）而不是成功状态（"用户不用输入密码就能登录"），说明没写到位。
-
-Requirements 能不能自动检验？每个 Requirement 都得有明确的通过/失败标准。"界面美观大方"这种依赖主观判断的，不是有效的 Requirements。
-
-Constraints 能不能被阻断？违反的时候系统能不能检测到并拦住？"代码要有良好可读性"这种系统感知不到的，不适合作为 Constraints，应该放到 Requirements 里。
-
-Picture / Requirements / Constraints 存在 task.md 里，不在别处重复记录。状态平面只展示摘要，不展开全文。
-
-### 5.2 状态平面与数据平面
-
-mem0ress 的认知系统由两个核心平面构成，它们都是**时间切片**（某一时刻的快照），不是组件。
-
-**状态平面 (Status Plane)：** 任务相关的所有执行状态的聚合快照。状态平面是运行时快照，在 Agent 需要了解当前认知态势时（认知构建阶段）由认知数据模型按需组装，并在 Agent 唤醒时自动挂载到上下文。组装来源包括 task.md（任务定义）、Session（历史切片）、Data Plane（版本指针）、Gotchas（偏差记录）。spec 定义组装的时机和职责边界，arch 定义具体的组装机制。
-
-状态平面包括：
-- 任务树结构（父子关系）
-- 每个任务的 todo 完成度（如 "2/3 Todos 完成"）
-- 任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）
-- 偏差记录（Gotchas，指针）
-- Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）
-
-Agent 唤醒时强制挂载，只输出当前状态，不做偏差判断。
-
-**数据平面 (Data Plane)：** 各仓库当前 commit ID 快照，记录在 Session 每轮快照的 `data_plane` 字段中。顺着状态平面的指针按需展开，不默认加载。
-
-**Session 作为数据来源：** Session 是每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。它是状态平面内容的数据来源之一，但不等于平面本身——平面是某一时刻的聚合快照，Session 是快照的时间序列。
-
-Session 记录执行进度（代码写到哪、文档完成多少、TODO 状态）和 `data_plane` 快照（各仓库当前 commit ID）。data_plane 不单独文件记录，Session 每轮快照中的 `data_plane` 字段即为版本快照，供回溯使用。
-
-```mermaid
-%% label：状态平面与数据平面的构成
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#757575', 'secondaryColor': '#fff3e0', 'tertiaryColor': '#fafafa' } } }%%
-graph LR
-    subgraph SP_Group["状态平面（执行快照）"]
-        TID["Task ID"]
-        TODO["TODO 进度"]
-        STS["Task Status\nCREATED / IN_PROGRESS\nVERIFYING / COMPLETED\n/ ABANDONED"]
-        GTA["Gotchas<br/><指针>"]
-    end
-
-    subgraph SESSION_Group["Session（数据来源）"]
-        HIST["历史快照序列"]
-        DPFLD["data_plane\n快照"]
-    end
-
-    SP_Group --> AC["Agent Context Window"]
-    DPFLD --> AC
-    HIST -.->|提供数据| SP_Group
-    TID -.->|task.md 提供<br>Picture/Requirements<br>/Constraints| TID
-    GTA -.->|指针引用| GREC
-
-    subgraph GOTCHA_Group["gotchas.md（实际存储）"]
-        GREC["Gotcha 记录文件"]
-    end
-```
-
-## 6. 文档数据模型
-
-### 6.1 设计思想
-
-mem0ress 采用**纯文本持久化 + 运行时组装**的数据模型，参考了 OpenClaw 的 context engine 设计思路：OpenClaw 明确指出"文件是 memory 的唯一真相来源，模型只记忆写入磁盘的内容"，mem0ress 将这一原则延伸至任务认知领域。
-
-认知数据（Picture/Requirements/Constraints/Todo/状态/Gotchas）以 Markdown 文件形式存储在文件系统，运行时由 Plane Assembler 按需组装为状态平面，而非在内存中维护可变状态。选择目录加文档方式的原因有以下三点。
-
-**消除隐藏状态。** 所有认知数据都可被 Agent 直接读取和修改，不存在内存中的影子状态，外部工具（git、grep、编辑器）可直接操作，审计无盲区。
-
-**时间切片而非可变状态。** Session 的每次轮次快照是追加的，Data Plane 的版本引用是不可变的，Gotchas 是带时间戳的增量记录，状态变化通过追加而非覆写实现，不存在"数据汤"问题。
-
-**与 Agent 工具生态无缝衔接。** Agent 的文件工具天然支持文本操作，无需额外的 SDK 或数据库驱动，跨 Agent 共享只需共享文件路径。
-
-这一设计的局限在于：不支持需要事务语义的多步原子操作，所有一致性保证依赖调用方遵守组装协议。
-
-### 6.2 组成与目录结构
-
-mem0ress 的文档数据模型由四个核心文档组成，各自承担不同的认知职责，协作构成完整的任务认知体系。系统使用文件树表达认知的从属关系与上下文边界。
-
-| 文档 | 定位 | 何时写入 |
-|------|------|----------|
-| task.md | 任务声明，Picture/Requirements/Constraints 的唯一真相来源 | 任务创建时写入，运行时以它为准 |
-| Session（`session.md`） | 轮次历史，按时间追加，不改变 task.md；含 data_plane 快照 | 每轮次结束后追加 |
-| Gotchas（`gotchas.md`） | 偏差记录，带外追加，不阻塞主流程 | 偏差确认后追加 |
-| judge.md | Judge Agent task 文件，与 Task 生命周期同步；不属于 Task 的三个物理子节点 | 任务创建时生成，检验后更新 |
-
-四个文档的关系：task.md 是锚，三要素从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载任务检验逻辑，与 Task 生命周期同步。
-
-```mermaid
-%% label：.mem0ress 文件树与概念映射
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#fff3e0' } } }%%
-graph TD
-    ROOT[".mem0ress/tasks/"]
-    TMPL["task.md"]
-    SESS["session.md"]
-    GOT["gotchas.md"]
-    JDG["judge.md"]
-
-    ROOT --> TMPL
-    ROOT --> SESS
-    ROOT --> GOT
-    ROOT --> JDG
-
-    TMPL -.->|三要素 · 进度快照来源| SESS
-    TMPL -.->|偏差记录| GOT
-
-    classDef dir fill:#c8e6c9,stroke:#388e3c,stroke-width:2px;
-    classDef file fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
-    classDef judge fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
-    classDef ref fill:#fff3e0,stroke:#ff8f00,stroke-width:1px,stroke-dasharray:5,5;
-    class ROOT dir;
-    class TMPL,SESS,GOT file;
-    class JDG judge;
-```
-
-**task.md 示例：**
-
-```yaml
----
-id: oauth_google
-status: IN_PROGRESS
-picture: 用户无需输入密码即可登录
-requirements:
-  - 支持 Google OAuth 2.0
-  - Access Token 有效期不超过 1 小时
-constraints:
-  - 不许存储明文密码
-  - 不许在日志中记录 Token 明文
-todos:
-  - done: true
-    text: 实现 OAuth Provider 抽象接口
-  - done: false
-    text: 实现 Google OAuth 回调处理
-data_plane:
-  auth_module: "a3f8c2d"
-gotchas: []
----
-```
-
-Session、Gotchas、Judge 文件的结构见附录 B。
-
-```plaintext
-.mem0ress/tasks/
-└── {task_id}/
-    ├── task.md       # 任务声明（Picture/Requirements/Constraints/Todo）
-    ├── session.md    # 轮次快照序列（含 data_plane 快照）
-    ├── gotchas.md    # 偏差记录（追加式）
-    └── judge.md      # Judge Agent task 文件（平铺）
-```
-
-具体各文档的内容格式和字段说明见附录 B 模板参考。
 
 ## 7. 逻辑与流程设计 (Logic & Workflow Design)
 
