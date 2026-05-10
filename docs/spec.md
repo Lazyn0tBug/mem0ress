@@ -186,7 +186,7 @@ mem0ress 不是回答问题的引擎，而是呈现状态的窗口。它在任�
 
 mem0ress 的概念体系围绕任务展开。本章描述任务的核心概念、两种平面的构成、生命周期以及数据模型。
 
-### 4.1 认知三要素
+### 4.1 PRC——任务三要素
 
 每个任务由三个要素定义：Picture、Requirements、Constraints。三者共同构成判断执行是否偏离的绝对标准。
 
@@ -229,7 +229,7 @@ Picture / Requirements / Constraints 存在于 task.md 里，不在别处重复�
 
 **状态平面（Status Plane）**是执行层面的快照。回答"我在哪、做到哪了、目标偏了没有"。内容包括：任务树结构（父子关系）、每个任务的 Todo 完成度、任务状态（CREATED / IN_PROGRESS / VERIFYING / COMPLETED / ABANDONED）、偏差记录（Gotchas）指针、Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）。
 
-状态平面是运行时快照，在 Agent 需要了解当前认知态势时（认知构建阶段）由认知数据模型按需组装，并在 Agent 唤醒时自动挂载到上下文。组装来源包括 task.md（任务定义）、Session（历史切片）、Data Plane（版本指针）、Gotchas（偏差记录）。Agent 唤醒时强制挂载，只输出当前状态，不做偏差判断。
+**状态平面（Status Plane）**是运行时快照，在 Agent 需要了解当前认知态势时（认知构建阶段）由 Plane Assembler 按需组装，并在 Agent 唤醒时自动挂载到上下文。组装来源包括 task.md（任务定义）、Session（历史切片）、Data Plane（版本指针）、Gotchas（偏差记录）。Agent 唤醒时强制挂载，只输出当前状态，不做偏差判断。
 
 Picture / Requirements / Constraints 存在于 task.md 里，状态平面不显示 PRC 三要素全文，只展示摘要。
 
@@ -237,7 +237,7 @@ Picture / Requirements / Constraints 存在于 task.md 里，状态平面不显�
 
 两个平面都来源于会话本身——从会话流中 hook 出认知数据，与外部知识（向量数据库、API 文档、全网搜索）完全独立。外部知识属于 Agent 的背景知识，按需检索后体现在会话中，mem0ress 只从会话流提取切片。
 
-**Session 是数据来源。** Session 是每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。它是状态平面内容的数据来源之一，但不等于平面本身——平面是某一时刻的聚合快照，Session 是快照的时间序列。Session 记录执行进度（代码写到哪、文档完成多少、TODO 状态）和 `data_plane` 快照（各仓库当前 commit ID）。
+**Session**是数据来源。 Session 是每个 Task 的私有历史，记录每个轮次的状态快照。版本快照模型，只追加不覆盖。它是状态平面内容的数据来源之一，但不等于平面本身——平面是某一时刻的聚合快照，Session 是快照的时间序列。Session 记录执行进度（代码写到哪、文档完成多少、TODO 状态）和 `data_plane` 快照（各仓库当前 commit ID）。
 
 ```mermaid
 %% label：状态平面与数据平面的构成
