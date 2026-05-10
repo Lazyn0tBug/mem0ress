@@ -394,7 +394,7 @@ Task、Session、Gotchas、Judge 文件的模板见`docs/templates`。
 
 ---
 
-## 5. 逻辑与流程设计 (Logic & Workflow Design)
+## 5. 逻辑与流程设计 
 
 Task 的执行循环围绕三个核心动作展开：认知构建、任务检验和状态更新。这三个动作在每个轮次结束后依次执行，构成完整的感知-判断-更新闭环。
 
@@ -470,26 +470,6 @@ stateDiagram-v2
 
 检验完成后 Agent 自主决策下一步。
 
-## 附录 A: 状态与节点
-
-#### 状态表 (State Table)
-
-| State | 说明 |
-|-------|------|
-| `CREATED` | 任务已创建，三要素已定义，所有 Todo 均未开始 |
-| `IN_PROGRESS` | 任务进行中，至少有一个 Todo 已完成 |
-| `VERIFYING` | 任务检验进行中，瞬态，检验完成必须离开此状态 |
-| `COMPLETED` | 目标达成，认知生命周期结束 |
-| `ABANDONED` | 目标放弃，记录 Gotcha 经验 |
-
-#### 节点表 (Node Table)
-
-| Node | 说明 |
-|------|------|
-| `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 task.md 获取） |
-| `Task` | 认知单元，包含 task.md、session.md、gotchas.md 三个物理子节点；judge.md 与 Task 并列平铺，不属于 Task 的子节点 |
-| `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以所有子任务完成为前提 |
-| `Judge Agent` | 伴生组件，执行任务检验；Judge Agent 节点与 Task 节点并列平铺于同一任务目录下，judge.md 是其物理文件 |
 
 ---
 
@@ -544,3 +524,26 @@ mem0ress 通过以下机制避免：
 - **目标锚定**：信息仅在与活跃 Task 关联时才有意义，失去目标指向的信息视为噪音，不予投影到当前平面
 - **认知来源隔离**：mem0ress 的认知数据来源于会话 hook，不管理也不依赖外部知识（向量数据库/API 文档/全网搜索）——外部知识属于 Agent 的背景知识，Agent 按需检索后体现在会话中，mem0ress 只从会话流提取切片
 - **生命周期一致**：认知与任务关联，任务完成则认知生命周期结束
+
+---
+
+## 附录 A: 状态与节点
+
+#### 状态表 (State Table)
+
+| State | 说明 |
+|-------|------|
+| `CREATED` | 任务已创建，三要素已定义，所有 Todo 均未开始 |
+| `IN_PROGRESS` | 任务进行中，至少有一个 Todo 已完成 |
+| `VERIFYING` | 任务检验进行中，瞬态，检验完成必须离开此状态 |
+| `COMPLETED` | 目标达成，认知生命周期结束 |
+| `ABANDONED` | 目标放弃，记录 Gotcha 经验 |
+
+#### 节点表 (Node Table)
+
+| Node | 说明 |
+|------|------|
+| `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 task.md 获取） |
+| `Task` | 认知单元，包含 task.md、session.md、gotchas.md 三个物理子节点；judge.md 与 Task 并列平铺，不属于 Task 的子节点 |
+| `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以所有子任务完成为前提 |
+| `Judge Agent` | 伴生组件，执行任务检验；Judge Agent 节点与 Task 节点并列平铺于同一任务目录下，judge.md 是其物理文件 |
