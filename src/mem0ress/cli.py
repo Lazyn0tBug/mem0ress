@@ -66,7 +66,7 @@ type: gotcha
 
 TEMPLATE_JUDGE = (
     "---\n"
-    "description: \"Judge Agent Verification — Tier 0-3 验证逻辑实例化模板\"\n"
+    'description: "Judge Agent Verification — Tier 0-3 验证逻辑实例化模板"\n'
     "type: judge\n"
     "---\n"
     "\n"
@@ -96,9 +96,7 @@ def status(
 
     if not substrate_root.exists():
         console.print(f"[yellow]No cognitive substrate found at[/yellow] [bold]{root}[/bold]")
-        console.print(
-            "[dim]Run 'mem0 init' first to initialize the substrate.[/dim]"
-        )
+        console.print("[dim]Run 'mem0 init' first to initialize the substrate.[/dim]")
         raise typer.Exit(code=1)
 
     try:
@@ -157,9 +155,7 @@ def create(
 
     if not tasks_dir.exists():
         console.print(f"[red]No cognitive substrate found at[/red] [bold]{root}[/bold]")
-        console.print(
-            "[dim]Run 'mem0 init' first to initialize the substrate.[/dim]"
-        )
+        console.print("[dim]Run 'mem0 init' first to initialize the substrate.[/dim]")
         raise typer.Exit(code=1)
 
     # Determine target directory
@@ -290,7 +286,7 @@ def report(
     # Find the next turn or end of file
     if len(turns) > 1:
         next_turn = turns[-2]
-        turn_content = content[turn_start:next_turn.start()]
+        turn_content = content[turn_start : next_turn.start()]
     else:
         turn_content = content[turn_start:]
 
@@ -351,7 +347,7 @@ def render_rich_status_plane(plane, console: Console) -> None:
     console.print(tree)
 
     # System laws
-    laws = "\n".join(f"  {i+1}. {law}" for i, law in enumerate(plane.system_laws))
+    laws = "\n".join(f"  {i + 1}. {law}" for i, law in enumerate(plane.system_laws))
     console.print(Panel(laws, title="[bold]System Laws[/bold]", border_style="dim"))
 
 
@@ -370,8 +366,7 @@ def _build_entry_tree(entry) -> Tree:
 
     progress = f"[{completed}/{total}]" if total > 0 else "[-]"
     header = (
-        f"■ [bold]{entry.task_id}[/bold] {progress} "
-        f"[{status_color}]{status_label}[/{status_color}]"
+        f"■ [bold]{entry.task_id}[/bold] {progress} [{status_color}]{status_label}[/{status_color}]"
     )
     entry_tree = Tree(header, guide_style="dim")
 

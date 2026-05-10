@@ -19,9 +19,7 @@ class CognitiveTriad(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    picture: str = Field(
-        description="图景：任务完成后的终极语义描述"
-    )
+    picture: str = Field(description="图景：任务完成后的终极语义描述")
     requirements: list[str] = Field(
         default_factory=list,
         description="需求：客观、可量化的指标或验证脚本",
@@ -78,9 +76,7 @@ class StatusPlaneEntry(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     task_id: str = Field(description="任务标识符")
-    todo_progress: tuple[int, int] = Field(
-        description="Todo 完成进度 (completed, total)"
-    )
+    todo_progress: tuple[int, int] = Field(description="Todo 完成进度 (completed, total)")
     status: TaskStatus = Field(description="任务状态")
     gotchas: list[str] = Field(
         default_factory=list,

@@ -61,19 +61,19 @@ graph TB
 
     subgraph TIERS["任务检验（Judge Agent）"]
         J["Judge Agent\n任务检验执行器"]
-        T0["Constraints 检查"]
-        T1["Todo 完成检查"]
-        T2["Requirements 满足检查"]
-        T3["语义对齐检查"]
+        C["Constraints 检查"]
+        T["Todo 完成检查"]
+        R["Requirements 满足检查"]
+        S["语义对齐检查"]
     end
 
     PRC --> TASK
     TASK --> SP
     TASK --> DP
-    J --> T0
-    J --> T1
-    J --> T2
-    J -.->|按需触发| T3
+    J --> C
+    J --> T
+    J --> R
+    J -.->|按需触发| S
     SP --> J
 
     classDef prc fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
@@ -84,7 +84,7 @@ graph TB
     classDef state fill:#f3e5f5,stroke:#6a1b9a,stroke-width:1px;
     class PRC,task,TR,ST prc;
     class SP,DP plane;
-    class T0,T1,T2,T3 tier;
+    class C,T,R,S tier;
     class J judge;
     class ST state;
 ```

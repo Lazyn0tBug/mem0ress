@@ -112,16 +112,18 @@ def _build_briefing(
     ]
     if data_plane_summary:
         lines.append(f"\nData Plane 摘要:\n{data_plane_summary}")
-    lines.extend([
-        "",
-        "产出摘要:",
-        artifact_summary,
-        "",
-        "请执行跨平面语义对齐判断：",
-        "1. 对比 picture 与实际产出是否语义对齐",
-        "2. 检查 constraints 是否被违背",
-        "3. 判断是否偏离目标",
-        "",
-        "判断结果由 Agent 自主决策，mem0ress 不调用任何外部模型。",
-    ])
+    lines.extend(
+        [
+            "",
+            "产出摘要:",
+            artifact_summary,
+            "",
+            "请执行跨平面语义对齐判断：",
+            "1. 对比 picture 与实际产出是否语义对齐",
+            "2. 检查 constraints 是否被违背",
+            "3. 判断是否偏离目标",
+            "",
+            "判断结果由 Agent 自主决策，mem0ress 不调用任何外部模型。",
+        ]
+    )
     return "\n".join(lines)
