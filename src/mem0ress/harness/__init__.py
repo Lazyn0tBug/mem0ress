@@ -17,6 +17,7 @@ mem0ress does not call any LLM or external model.
 
 from __future__ import annotations
 
+import shlex
 import subprocess
 
 from pydantic import BaseModel, Field
@@ -127,9 +128,17 @@ class HarnessRunner:
             if req.startswith("shell:"):
                 cmd = req[6:].strip()
                 try:
+                    # Use shell=False + shlex.split to prevent shell injection.
+                    # Commands are user-authored via Requirements, so we sanitize
+                    # by splitting into argv — prevents embedded pipes, redirects,
+                    # and subshells from being interpreted.
+                    args = shlex.split(cmd)
+                    if not args:
+                        failed.append(f"命令为空: {cmd}")
+                        continue
                     result = subprocess.run(
-                        cmd,
-                        shell=True,
+                        args,
+                        shell=False,
                         capture_output=True,
                         text=True,
                         timeout=30,

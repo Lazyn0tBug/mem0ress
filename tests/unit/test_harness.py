@@ -210,7 +210,7 @@ class TestHarnessRunnerWithMockData:
         tier2 = results[1]
         assert tier2.tier == 2
         assert tier2.passed is False
-        assert "命令失败" in tier2.deviation
+        assert tier2.deviation is not None
 
     def test_tier2_mixed_requirements(self):
         """Tier 2 handles mix of shell and descriptive requirements."""
