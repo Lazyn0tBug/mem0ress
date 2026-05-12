@@ -475,7 +475,7 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 * **Tier 0: `Constraints` 约束检查。** 检查 `Constraints` 是否被逾越，若有逾越报告违反事实，由主 Agent 决定是否修复及如何修复。
 * **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭；处于 CREATED 或 IN_PROGRESS 状态则视为未完成。
 * **Tier 2: `Requirements` 满足检查。** 验证每个 Requirement 是否达标。
-* **Tier 3: 语义对齐检查。** 读取 `Picture` 与实际产出，执行语义对齐判断。Tier 3 需要 Agent 主动判断本次检验是否需要语义对齐，以下情况适用：`Picture` 涉及主观判断或利益相关者感知时；`Constraints` 与 `Picture` 之间存在语义歧义时；Agent 或利益相关者显式请求时。
+* **Tier 3: 语义对齐检查。** 读取 `Picture` 与实际产出，执行语义对齐判断。Tier 3 不是默认执行的关卡，而是由 Agent 根据任务属性显式启用。以下三种情况必须启用：Picture 涉及主观判断或利益相关者感知时；Constraints 与 Picture 之间存在语义歧义时；Agent 或利益相关者显式请求时。
 
 例如：一个 `Picture` 是"用户无需输入密码即可登录"的 OAuth 任务，Tier 1 检查了所有 Todo 是否完成，Tier 2 验证了"支持 Google OAuth"和"支持 GitHub OAuth"这两个 `Requirements` 都满足，但 Tier 3 额外检查了"实际登录流程中用户确实没有被要求输入密码"——这个检查无法通过代码结构验证，必须看实际行为，属于语义对齐。
 
