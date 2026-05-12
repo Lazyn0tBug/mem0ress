@@ -505,6 +505,7 @@ Task 生命周期包含五种状态：
 
 检验完成后 Agent 自主决策下一步。
 
+**completion_summary 协议：** 任务标记为 COMPLETED 时，必须向父任务写回一条 completion_summary，写入父任务的 session.md，作为该父任务本轮认知构建的输入之一。completion_summary 包含三个字段：`task_id`（子任务 ID）、`picture`（子任务原始 Picture 的摘要）、`outcome`（子任务完成时的实际产出说明）。写回时机是子任务状态转换为 COMPLETED 的那一轮次结束之后、下轮次开始之前。父任务不主动读取子任务的状态平面，只通过 completion_summary 被动接收子任务完成通知——这是父子任务通信通道的具体实现形式。
 
 ---
 
