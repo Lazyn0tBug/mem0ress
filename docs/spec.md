@@ -1,7 +1,7 @@
 ---
 title: 认知对齐平面(Cognitive Alignment Plane)
 version: 0.6 (Master Blueprint)
-definition: 辅助 AI Agent 构建目标态势并校准执行偏差的轻量级工具框架
+definition: 基于本地文件系统的 Task-local Agent 状态框架
 ---
 
 # mem0ress: 认知对齐平面(Cognitive Alignment Plane)架构规约
@@ -178,19 +178,33 @@ graph TD
     class root,A,A1,A2,A3,A1a,A1b task;
 ```
 
-### 3.2 选择PRC作为任务信息模型
+### 3.2 选择单任务 Agent 责任模型
+
+mem0ress 采用单任务 Agent 责任模型（One-Agent-One-Task Cognitive Responsibility Model）。
+
+在 mem0ress 中，Agent 在任意时刻只绑定一个活跃 Task。该 Agent 的认知平面只围绕当前 Task 的本地文档组装，包括 `task.md`、`session.md`、`gotchas.md` 和 `judge.md`。任务树表达的是任务之间的分解关系、依赖关系和完成关系，而不是单个 Agent 的全局上下文窗口。
+
+这意味着，一个 Agent 不需要也不应该在每一轮执行中读取整棵任务树。父任务、子任务、兄弟任务都不是默认上下文。它们只有在与当前 Task 的判断有关时，才以摘要形式进入当前 Task 的状态平面。
+
+因此，mem0ress 的认知边界不是 Project，也不是完整任务树，而是当前 Task。
+
+Task 是 Agent 的最小认知闭包。每个 Task 都拥有独立的 Picture、Requirements、Constraints、Todos、Session、Gotchas 和 Judge 文件。Agent 对该 Task 的目标达成负责，而不是对整棵任务树负责。
+
+任务树提供组织结构，Task 提供认知边界。
+
+### 3.3 选择PRC作为任务信息模型
 
 任务作为信息的完整单元，需要结构化的要素来承载其边界——模型既在创建时锚定完成标准，也在检验时提供判断依据。因此为每个任务定义三个要素：`Picture`（语义成功状态）、`Requirements`（可验证条件）、`Constraints`（不可逾越底线）。
 
 定义顺序：先定 `Picture`，再从 `Picture` 推导出 `Requirements` 和 `Constraints`。三者都定义完之后检查有没有矛盾——若存在矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，模型写入 task.md。
 
-### 3.3 选择双重平面来呈现认知
+### 3.4 选择双重平面来呈现认知
 
 任务需要同时掌握两个不同维度的事实：做到了什么（数据层面）和推进到哪里（执行层面）。两个问题认知性质不同，必须分开处理。详见 §4.2。
 
 三个核心动作按固定顺序执行：认知构建 → 任务检验 → 状态更新。认知构建先于任务检验，任务检验先于状态更新。
 
-### 3.4 选择状态变更驱动认知构建
+### 3.5 选择状态变更驱动认知构建
 
 每轮次结束时，Agent 感知本轮任务内容的状态变更，并基于此更新对任务的认知。系统检测本轮中发生的任务相关变化——Todo 完成状态变化、`Constraints` 违反记录、`Requirements` 满足情况、任务状态转移、子任务关闭、新偏差追加——并将这些变化写入 Session 快照。Plane Assembler 从 Session 中提取最新快照，组装为状态平面挂载到 Agent 上下文，使 Agent 在下一轮开始时立即掌握当前任务态势。
 
@@ -361,15 +375,13 @@ mem0ress 采用纯文本持久化 + 运行时组装的数据模型。认知数�
 * **task.md**：任务声明，`Picture`/`Requirements`/`Constraints` 的唯一真源。任务创建时写入，运行时以它为准。
 * **session.md**：轮次快照序列，含 data_plane 快照。每轮次结束后按时间追加，不改变 task.md。
 * **gotchas.md**：偏差记录，带外追加，不阻塞主流程。偏差确认后追加。
-* **judge.md**：Judge Agent 任务文件，与 Task 生命周期同步。judge.md 与 Task 节点并列平铺于同一任务目录下，不属于 Task 的物理子节点——它属于 Judge Agent 的物理文件，与 Task 同级并行。任务创建时生成，检验后追加。
-
-task.md 是锚，模型从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载任务检验逻辑，与 Task 生命周期同步。
+* **judge.md**：Judge Agent 检验记录，与 Task 生命周期同步。任务创建时生成，检验后追加。
 
 纯文本持久化有三个原因：消除隐藏状态（所有数据可直接读取和修改，外部工具 git、grep、编辑器可直接操作）、时间切片而非可变状态（快照追加，不存在数据汤问题）、与 Agent 工具生态无缝衔接（文件工具天然支持，无需额外 SDK）。
 
 ```mermaid
 %% label：.mem0ress 文件树与概念映射
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#fff3e0' } } }%%
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#fff3e0', 'tertiaryColor': '#fafafa' } } }%%
 graph TD
     ROOT[".mem0ress/tasks/"]
     TMPL["task.md"]
@@ -387,7 +399,7 @@ graph TD
     TMPL -.->|提供三要素供平面组装| SP
 
     classDef dir fill:#c8e6c9,stroke:#388e3c,stroke-width:2px;
-    classDef file fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef file fill:#e3f5fd,stroke:#1565c0,stroke-width:2px;
     classDef judge fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
     classDef plane fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
     classDef ref fill:#fff3e0,stroke:#ff8f00,stroke-width:1px,stroke-dasharray:5,5;
@@ -396,21 +408,26 @@ graph TD
     class JDG judge;
     class SP plane;
 ```
-Task、Session、Gotchas、Judge 文件的模板见`docs/templates`。
+
+**协议规范**（见 `docs/templates/`）：
+
+|| 文件 | 用途 |
+|---|------|------|
+| PROTOCOL.md | 行为契约：参与方职责、文件权限、执行循环、不支持场景 |
+| SCHEMA.md | 字段定义：Turn 编号规则、VERIFYING 约束、ID 体系 |
+| EXAMPLE.md | 完整示例：OAuth 任务全流程（失败-修正-重试） |
+| judge.md | Tier 3 prompt 工程：维度分解、证据锚定、失效模式 |
 
 ```plaintext
 .mem0ress/tasks/
 └── {task_id}/
-    ├── `task.md`       # 任务声明（`Picture`/`Requirements`/`Constraints`/Todo）
+    ├── task.md       # 任务声明（Picture/Requirements/Constraints/Todo）
     ├── session.md    # 轮次快照序列（含 data_plane 快照）
     ├── gotchas.md    # 偏差记录（追加式）
-    └── judge.md      # Judge Agent task 文件
+    └── judge.md      # Judge Agent 检验记录
 ```
 
-具体各文档的内容格式和字段说明见 `docs/templates/`。
-
 **设计局限**：不支持需要事务语义的多步原子操作，所有一致性保证依赖调用方遵守组装协议。
-
 ---
 
 ## 5. 逻辑与流程设计 
