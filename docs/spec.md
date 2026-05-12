@@ -1,7 +1,7 @@
 ---
 title: 认知对齐平面(Cognitive Alignment Plane)
 version: 0.6 (Master Blueprint)
-definition: 辅助 AI Agent 构建目标态势并校准执行偏差的轻量级工具框架
+definition: 基于本地文件系统的 Task-local Agent 状态框架
 ---
 
 # mem0ress: 认知对齐平面(Cognitive Alignment Plane)架构规约
@@ -178,25 +178,43 @@ graph TD
     class root,A,A1,A2,A3,A1a,A1b task;
 ```
 
-### 3.2 选择PRC作为任务信息模型
+### 3.2 选择单任务 Agent 责任模型
+
+mem0ress 采用单任务 Agent 责任模型（One-Agent-One-Task Cognitive Responsibility Model）。
+
+在 mem0ress 中，Agent 在任意时刻只绑定一个活跃 Task。该 Agent 的认知平面只围绕当前 Task 的本地文档组装，包括 `task.md`、`session.md`、`gotchas.md` 和 `judge.md`。任务树表达的是任务之间的分解关系、依赖关系和完成关系，而不是单个 Agent 的全局上下文窗口。
+
+这意味着，一个 Agent 不需要也不应该在每一轮执行中读取整棵任务树。父任务、子任务、兄弟任务都不是默认上下文。它们只有在与当前 Task 的判断有关时，才以摘要形式进入当前 Task 的状态平面。
+
+因此，mem0ress 的认知边界不是 Project，也不是完整任务树，而是当前 Task。
+
+Task 是 Agent 的最小认知闭包。每个 Task 都拥有独立的 Picture、Requirements、Constraints、Todos、Session、Gotchas 和 Judge 文件。Agent 对该 Task 的目标达成负责，而不是对整棵任务树负责。
+
+任务树提供组织结构，Task 提供认知边界。
+
+**Logical Agent 与 Runtime Worker 的区分：** mem0ress 中的 Agent 概念有两个层面。Logical Agent 是认知责任的归属者——创建 Task 的 Agent 对该 Task 的 Picture 达成负有认知责任，这个关系在 Task 创建时锁定，不随运行时 worker 的切换而改变。Runtime Worker 是实际执行任务的运行时实体——它读取当前 Task 的本地文档，执行动作，更新 Todo，在轮次结束时触发状态快照。mem0ress 只规定认知平面围绕哪个 Task 组装（Logical Agent 的绑定关系），不规定执行由哪个 Runtime Worker 承担。同一 Logical Agent 在不同轮次可能由不同的 Runtime Worker 承接，但只要认知边界锁定在 Task 层面，状态平面的组装就不受影响。
+
+**Task 是认知边界，不是资源单位：** mem0ress 中的 Task 边界是认知边界，对应文件系统的目录结构。任务树表达的是任务之间的组织结构和依赖关系，不是单个 Agent 的全局上下文窗口。Agent 对当前 Task 的 Picture 达成负责，不需要也不应该主动加载整棵任务树——除非当前 Task 的 Picture 判断确实需要父任务或子任务的信息，此时这些信息以摘要形式进入状态平面。认知边界与资源分配是两个独立维度，mem0ress 只管前者。
+
+### 3.3 选择PRC作为任务信息模型
 
 任务作为信息的完整单元，需要结构化的要素来承载其边界——模型既在创建时锚定完成标准，也在检验时提供判断依据。因此为每个任务定义三个要素：`Picture`（语义成功状态）、`Requirements`（可验证条件）、`Constraints`（不可逾越底线）。
 
 定义顺序：先定 `Picture`，再从 `Picture` 推导出 `Requirements` 和 `Constraints`。三者都定义完之后检查有没有矛盾——若存在矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，模型写入 task.md。
 
-### 3.3 选择双重平面来呈现认知
+### 3.4 选择双重平面来呈现认知
 
 任务需要同时掌握两个不同维度的事实：做到了什么（数据层面）和推进到哪里（执行层面）。两个问题认知性质不同，必须分开处理。详见 §4.2。
 
 三个核心动作按固定顺序执行：认知构建 → 任务检验 → 状态更新。认知构建先于任务检验，任务检验先于状态更新。
 
-### 3.4 选择状态变更驱动认知构建
+### 3.5 选择状态变更驱动认知构建
 
 每轮次结束时，Agent 感知本轮任务内容的状态变更，并基于此更新对任务的认知。系统检测本轮中发生的任务相关变化——Todo 完成状态变化、`Constraints` 违反记录、`Requirements` 满足情况、任务状态转移、子任务关闭、新偏差追加——并将这些变化写入 Session 快照。Plane Assembler 从 Session 中提取最新快照，组装为状态平面挂载到 Agent 上下文，使 Agent 在下一轮开始时立即掌握当前任务态势。
 
 认知构建以轮次为周期，感知→构建→挂载构成完整闭环。只记录导致目标推进或路径修正的状态变更，不记录过程录像。
 
-**纯文本持久化的设计理由：** 见 §4.4 文档数据模型。
+**纯文本持久化的设计理由：** 见 §4.5 文档数据模型。
 
 mem0ress 只管一件事：认知的生命周期管理，也就是任务的创建、检验与认知态势的构建。大模型沙箱隔离、并发控制这些，都交给宿主操作系统。
 
@@ -273,7 +291,17 @@ graph TD
 
 `Picture` / `Requirements` / `Constraints` 存在于 task.md 里，不在别处重复记录。状态平面只展示摘要，不展开全文。
 
-### 4.2 双重平面
+### 4.2 父子任务边界（Parent-Child Boundary）
+
+父子任务之间只有一条通信通道：父任务的 Picture 拆解为子任务的创建。父任务不读取子任务的状态平面，子任务不读取父任务的状态平面。两者各有各的认知边界，物理隔离，互不渗透。
+
+这条边界的意义是认知去中心化：父任务不需要知道子任务执行细节，只需要知道子任务是否完成（COMPLETED 或 ABANDONED）。子任务不需要知道父任务的全貌，只需要知道自己的 Picture。状态平面的组装始终以当前 Task 为圆心，不向上追溯，不向下广播。
+
+唯一例外：当父任务的 Picture 判断需要子任务的产出作为输入时，子任务的完成状态（而非状态平面内容）才以指针形式进入父任务的状态平面。这是信息流的单向注入，不是双向渗透。
+
+子任务创建后，父任务对子任务的认知就锁定在"子任务 ID + 初始 Picture + 最终状态"这条最小记录上。中间过程不进入父任务的任何文档。
+
+### 4.3 双重平面
 
 状态平面和数据平面是 mem0ress 提供的两类互补视图——前者回答"我在哪、做到哪了"，后者回答"当前操作的是哪个版本的代码"。
 
@@ -329,7 +357,7 @@ graph LR
 
 状态平面的当下性由数据平面保障。数据平面（Git）可追溯、可 revert，而状态平面以数据平面的当前版本为数据基础——外部状态（API 响应、第三方服务、协作者输入）不会因数据 revert 而回退，因此认知无法回退，只能基于当下向前构建。Session 的版本快照模型支撑这一点：每个快照记录的是"那一轮的状态"，而不是"历史的累积"。回溯只能是数据层面的 revert，认知永远是前向的。
 
-### 4.3 任务生命周期
+### 4.4 任务生命周期
 
 任务从创建到结束经历五种状态：CREATED（模型已定义，所有 Todo 未开始）、IN_PROGRESS（至少有一个 Todo 已完成）、VERIFYING（任务检验进行中，瞬态）、COMPLETED（目标达成）、ABANDONED（目标放弃）。
 
@@ -352,7 +380,7 @@ stateDiagram-v2
 
 **任务检验**在认知构建之后执行，判断当前状态是否满足 Picture。详见 §5.3。
 
-### 4.4 文档数据模型
+### 4.5 文档数据模型
 
 mem0ress 采用纯文本持久化 + 运行时组装的数据模型。认知数据以 Markdown 文件形式存储在文件系统，运行时由系统按需组装为状态平面。
 
@@ -361,15 +389,13 @@ mem0ress 采用纯文本持久化 + 运行时组装的数据模型。认知数�
 * **task.md**：任务声明，`Picture`/`Requirements`/`Constraints` 的唯一真源。任务创建时写入，运行时以它为准。
 * **session.md**：轮次快照序列，含 data_plane 快照。每轮次结束后按时间追加，不改变 task.md。
 * **gotchas.md**：偏差记录，带外追加，不阻塞主流程。偏差确认后追加。
-* **judge.md**：Judge Agent 任务文件，与 Task 生命周期同步。judge.md 与 Task 节点并列平铺于同一任务目录下，不属于 Task 的物理子节点——它属于 Judge Agent 的物理文件，与 Task 同级并行。任务创建时生成，检验后追加。
-
-task.md 是锚，模型从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载任务检验逻辑，与 Task 生命周期同步。
+* **judge.md**：Judge Agent 检验记录，与 Task 生命周期同步。任务创建时生成，检验后追加。
 
 纯文本持久化有三个原因：消除隐藏状态（所有数据可直接读取和修改，外部工具 git、grep、编辑器可直接操作）、时间切片而非可变状态（快照追加，不存在数据汤问题）、与 Agent 工具生态无缝衔接（文件工具天然支持，无需额外 SDK）。
 
 ```mermaid
 %% label：.mem0ress 文件树与概念映射
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#fff3e0' } } }%%
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#fff3e0', 'tertiaryColor': '#fafafa' } } }%%
 graph TD
     ROOT[".mem0ress/tasks/"]
     TMPL["task.md"]
@@ -387,7 +413,7 @@ graph TD
     TMPL -.->|提供三要素供平面组装| SP
 
     classDef dir fill:#c8e6c9,stroke:#388e3c,stroke-width:2px;
-    classDef file fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef file fill:#e3f5fd,stroke:#1565c0,stroke-width:2px;
     classDef judge fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
     classDef plane fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
     classDef ref fill:#fff3e0,stroke:#ff8f00,stroke-width:1px,stroke-dasharray:5,5;
@@ -396,21 +422,26 @@ graph TD
     class JDG judge;
     class SP plane;
 ```
-Task、Session、Gotchas、Judge 文件的模板见`docs/templates`。
+
+**协议规范**（见 `docs/templates/`）：
+
+|| 文件 | 用途 |
+|---|------|------|
+| PROTOCOL.md | 行为契约：参与方职责、文件权限、执行循环、不支持场景 |
+| SCHEMA.md | 字段定义：Turn 编号规则、VERIFYING 约束、ID 体系 |
+| EXAMPLE.md | 完整示例：OAuth 任务全流程（失败-修正-重试） |
+| judge.md | Tier 3 prompt 工程：维度分解、证据锚定、失效模式 |
 
 ```plaintext
 .mem0ress/tasks/
 └── {task_id}/
-    ├── `task.md`       # 任务声明（`Picture`/`Requirements`/`Constraints`/Todo）
+    ├── task.md       # 任务声明（Picture/Requirements/Constraints/Todo）
     ├── session.md    # 轮次快照序列（含 data_plane 快照）
     ├── gotchas.md    # 偏差记录（追加式）
-    └── judge.md      # Judge Agent task 文件
+    └── judge.md      # Judge Agent 检验记录
 ```
 
-具体各文档的内容格式和字段说明见 `docs/templates/`。
-
 **设计局限**：不支持需要事务语义的多步原子操作，所有一致性保证依赖调用方遵守组装协议。
-
 ---
 
 ## 5. 逻辑与流程设计 
@@ -423,11 +454,13 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务检验
 
 Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械步（Todo）。这些 Todo 构成了后续检验进度的基准线。
 
+**Todo 与 Subtask 的边界：** Todo 是任务内部的机械步，不是独立的认知单元。Subtask 是独立的 Task，有自己的 Picture/Requirements/Constraints 三要素，是完整的认知闭包。区分标准是：是否有独立的 Picture——有独立 Picture 的是 Subtask，没有独立 Picture 的是 Todo。父任务的 Todo 完成后，父任务本身即进入 VERIFYING 状态；父任务的 Subtask 完成后，只向父任务写回 completion_summary，不改变父任务的状态。
+
 ### 5.2 认知构建
 
 认知构建是轮次结束后生成状态平面快照的动作。它在任何节点（刚启动时、执行中、或检验失败后）都需要执行，为 Agent 提供当前任务的可判断状态。
 
-状态平面是认知构建的产出物，具有以下特性：只输出当前状态，不做偏差判断；实时扫描，每次调用直接读文件系统，不缓存；全面覆盖，显示所有任务，不隐藏任何节点；非侵入，只读不写，不改变任何状态。
+状态平面是认知构建的产出物，具有以下特性：只输出当前状态，不做偏差判断；实时扫描，每次调用直接读文件系统，不缓存；状态平面是当下组装的结果，不是被维护的缓存——不存在任何时刻的状态被后续快照覆盖的可能性；全面覆盖，显示所有任务，不隐藏任何节点；非侵入，只读不写，不改变任何状态。
 
 状态平面的显示内容包括：任务树结构（父子关系）；每个任务的 todo 完成度（如 "2/3 Todos 完成"）；任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）；偏差记录（Gotchas）指针；Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）。`Picture`/`Requirements`/`Constraints` 从 task.md 获取，不显示在状态平面中。
 
@@ -444,7 +477,7 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 * **Tier 0: `Constraints` 约束检查。** 检查 `Constraints` 是否被逾越，若有逾越报告违反事实，由主 Agent 决定是否修复及如何修复。
 * **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭；处于 CREATED 或 IN_PROGRESS 状态则视为未完成。
 * **Tier 2: `Requirements` 满足检查。** 验证每个 Requirement 是否达标。
-* **Tier 3: 语义对齐检查。** 读取 `Picture` 与实际产出，执行语义对齐判断。Tier 3 需要 Agent 主动判断本次检验是否需要语义对齐，以下情况适用：`Picture` 涉及主观判断或利益相关者感知时；`Constraints` 与 `Picture` 之间存在语义歧义时；Agent 或利益相关者显式请求时。
+* **Tier 3: 语义对齐检查。** 读取 `Picture` 与实际产出，执行语义对齐判断。Tier 3 不是默认执行的关卡，而是由 Agent 根据任务属性显式启用。以下三种情况必须启用：Picture 涉及主观判断或利益相关者感知时；Constraints 与 Picture 之间存在语义歧义时；Agent 或利益相关者显式请求时。
 
 例如：一个 `Picture` 是"用户无需输入密码即可登录"的 OAuth 任务，Tier 1 检查了所有 Todo 是否完成，Tier 2 验证了"支持 Google OAuth"和"支持 GitHub OAuth"这两个 `Requirements` 都满足，但 Tier 3 额外检查了"实际登录流程中用户确实没有被要求输入密码"——这个检查无法通过代码结构验证，必须看实际行为，属于语义对齐。
 
@@ -468,12 +501,13 @@ Task 生命周期包含五种状态：
 - **COMPLETED**：目标达成，认知生命周期结束
 - **ABANDONED**：目标放弃，记录 Gotcha 经验
 
-状态转换规则：CREATED → IN_PROGRESS（任意 Todo 被标记为完成）；CREATED → ABANDONED（任务废弃）；IN_PROGRESS → COMPLETED（检验通过）；IN_PROGRESS → ABANDONED（任务废弃）。状态机见 §4.3 图示。
+状态转换规则：CREATED → IN_PROGRESS（任意 Todo 被标记为完成）；CREATED → ABANDONED（任务废弃）；IN_PROGRESS → COMPLETED（检验通过）；IN_PROGRESS → ABANDONED（任务废弃）。状态机见 §4.4 图示。
 
 **决策执行：**
 
 检验完成后 Agent 自主决策下一步。
 
+**completion_summary 协议：** 任务标记为 COMPLETED 时，必须向父任务写回一条 completion_summary，写入父任务的 session.md，作为该父任务本轮认知构建的输入之一。completion_summary 包含三个字段：`task_id`（子任务 ID）、`picture`（子任务原始 Picture 的摘要）、`outcome`（子任务完成时的实际产出说明）。写回时机是子任务状态转换为 COMPLETED 的那一轮次结束之后、下轮次开始之前。父任务不主动读取子任务的状态平面，只通过 completion_summary 被动接收子任务完成通知——这是父子任务通信通道的具体实现形式。
 
 ---
 
