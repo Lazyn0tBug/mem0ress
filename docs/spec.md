@@ -454,6 +454,8 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务检验
 
 Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械步（Todo）。这些 Todo 构成了后续检验进度的基准线。
 
+**Todo 与 Subtask 的边界：** Todo 是任务内部的机械步，不是独立的认知单元。Subtask 是独立的 Task，有自己的 Picture/Requirements/Constraints 三要素，是完整的认知闭包。区分标准是：是否有独立的 Picture——有独立 Picture 的是 Subtask，没有独立 Picture 的是 Todo。父任务的 Todo 完成后，父任务本身即进入 VERIFYING 状态；父任务的 Subtask 完成后，只向父任务写回 completion_summary，不改变父任务的状态。
+
 ### 5.2 认知构建
 
 认知构建是轮次结束后生成状态平面快照的动作。它在任何节点（刚启动时、执行中、或检验失败后）都需要执行，为 Agent 提供当前任务的可判断状态。
