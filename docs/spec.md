@@ -236,7 +236,9 @@ mem0ress 的概念体系围绕任务展开。本章描述任务的核心概念�
 
 **Requirements（需求）**是任务完成的可验证标准。Requirements 将 Picture 转化为具体的检验点，但 Requirements 满足不等于任务满足——Requirements 是 Picture 满足的必要条件，而非充分条件。任务满足等价于 Picture 满足。Agent 依据 Picture 推导 Requirements，利益相关者确认。每个 Requirement 都必须有明确的验收标准——"界面美观大方"这种依赖主观判断的不是有效的 Requirements。
 
-**Constraints（约束）**是任务的外部属性，为任务的过程和结果定义边界条件。Constraints 不是任务的第三层组成部分，而是贯穿任务全程的约束线。违反 Constraints 即使 Requirements 全部满足、Picture 看似达成，任务也不算完成。Agent 联合领域知识推导 Constraints，利益相关者确认。违反时系统必须能检测到并拦住——如果系统感知不到，就不适合作为 Constraints，应该放到 Requirements 里。
+**Constraints（约束）**是任务的外部属性，为任务的过程和结果定义边界条件。Constraints 不是任务的第三层组成部分，而是贯穿任务全程的约束线。违反 Constraints 即使 Requirements 全部满足、Picture 看似达成，任务也不算完成。Agent 联合领域知识推导 Constraints，利益相关者确认。
+
+Constraints 分为两类：**Hard Constraints** 和 **Soft Constraints**。Hard Constraints 违反后必须阻断任务完成，系统必须能自动检测并拦住——如果无法自动检测，就不适合作为 Hard Constraint，应该放到 Requirements 里。Soft Constraints 违反后触发警告，但不强制阻断任务完成，由 Agent 或利益相关者判断是否接受。区分标准是：能否自动检测并执行强制拦截——能的是 Hard，不能的是 Soft。
 
 **三者的逻辑关系：**
 
@@ -474,7 +476,7 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 
 任务检验按顺序执行以下四层关卡。其中 Tier 0/1/2 为客观检验条件，由 Judge Agent 自动执行并判断是否通过，无需主 Agent 主观决策；Tier 3 为语义对齐关卡，由 Agent 根据任务属性决定是否启用。
 
-* **Tier 0: `Constraints` 约束检查。** 检查 `Constraints` 是否被逾越，若有逾越报告违反事实，由主 Agent 决定是否修复及如何修复。
+* **Tier 0: Hard Constraints 约束检查。** 检查 Hard Constraints 是否被逾越，若有逾越报告违反事实，由主 Agent 决定是否修复及如何修复。Soft Constraints 的警告状态在 Tier 0 中记录但不阻断。
 * **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭；处于 CREATED 或 IN_PROGRESS 状态则视为未完成。
 * **Tier 2: `Requirements` 满足检查。** 验证每个 Requirement 是否达标。
 * **Tier 3: 语义对齐检查。** 读取 `Picture` 与实际产出，执行语义对齐判断。Tier 3 不是默认执行的关卡，而是由 Agent 根据任务属性显式启用。以下三种情况必须启用：Picture 涉及主观判断或利益相关者感知时；Constraints 与 Picture 之间存在语义歧义时；Agent 或利益相关者显式请求时。
