@@ -192,6 +192,10 @@ Task 是 Agent 的最小认知闭包。每个 Task 都拥有独立的 Picture、
 
 任务树提供组织结构，Task 提供认知边界。
 
+**Logical Agent 与 Runtime Worker 的区分：** mem0ress 中的 Agent 概念有两个层面。Logical Agent 是认知责任的归属者——创建 Task 的 Agent 对该 Task 的 Picture 达成负有认知责任，这个关系在 Task 创建时锁定，不随运行时 worker 的切换而改变。Runtime Worker 是实际执行任务的运行时实体——它读取当前 Task 的本地文档，执行动作，更新 Todo，在轮次结束时触发状态快照。mem0ress 只规定认知平面围绕哪个 Task 组装（Logical Agent 的绑定关系），不规定执行由哪个 Runtime Worker 承担。同一 Logical Agent 在不同轮次可能由不同的 Runtime Worker 承接，但只要认知边界锁定在 Task 层面，状态平面的组装就不受影响。
+
+**Task 是认知边界，不是资源单位：** mem0ress 中的 Task 边界是认知边界，对应文件系统的目录结构。任务树表达的是任务之间的组织结构和依赖关系，不是单个 Agent 的全局上下文窗口。Agent 对当前 Task 的 Picture 达成负责，不需要也不应该主动加载整棵任务树——除非当前 Task 的 Picture 判断确实需要父任务或子任务的信息，此时这些信息以摘要形式进入状态平面。认知边界与资源分配是两个独立维度，mem0ress 只管前者。
+
 ### 3.3 选择PRC作为任务信息模型
 
 任务作为信息的完整单元，需要结构化的要素来承载其边界——模型既在创建时锚定完成标准，也在检验时提供判断依据。因此为每个任务定义三个要素：`Picture`（语义成功状态）、`Requirements`（可验证条件）、`Constraints`（不可逾越底线）。
