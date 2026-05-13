@@ -1,0 +1,60 @@
+# mem0ress Protocol Manifest
+# 此文件是 mem0ress runtime 的机器可读契约
+# 声明当前 workspace 实际采用的协议版本和功能开关
+# 语义基准：docs/spec.md（协议语义以 spec.md 为准，此文件只声明实例配置）
+
+protocol:
+  name: mem0ress
+  version: "0.1-alpha"              # 协议版本，与 spec.md 版本号对齐
+  spec_ref: "./docs/spec.md"        # 协议语义基准文件路径
+
+workspace:
+  mode: local_fs                    # 当前仅支持本地文件系统
+  task_boundary: strict_task_local  # Agent 认知边界不默认跨 Task 展开
+  projection_mode: faithful_projection  # 直接组装当前 Task 状态平面，不做相关性排序
+
+runtime:
+  logical_agent_model: one_agent_one_task  # 任意时刻只绑定一个 Task
+  worker_model: runtime_worker      # Runtime Worker 可按需加载不同 Task
+  parallel_writes: false           # v0.1-alpha 不支持多 Worker 并发写
+
+files:
+  # 五个协议文件名固定，不可自定义
+  task: task.md                    # 任务声明
+  session: session.md               # 执行快照
+  gotchas: gotchas.md              # 偏差记录
+  judge: judge.md                  # 检验报告
+  completion_summary: completion_summary.md  # 子任务关闭摘要
+
+states:
+  # 状态机只表达生命周期阶段，不表达运行时细节
+  # 阻塞、等待用户、外部依赖等信息通过 gotchas / constraints / session 表达
+  active:
+    - CREATED      # 任务已创建，尚未进入执行循环
+    - IN_PROGRESS  # 任务正在执行、修正与认知演化中
+    - VERIFYING    # 正在进行 Judge 与完成性验证（瞬态，检验完成必须离开）
+    - COMPLETED    # 已达到关闭条件并完成归档
+    - ABANDONED    # 任务被取消、失效或主动终止
+  transient:
+    - VERIFYING
+
+judge:
+  enabled: true
+  tiers:
+    - tier0  # Constraints 约束检查
+    - tier1  # Todo 完成检查
+    - tier2  # Requirements 满足检查
+    - tier3  # Picture Alignment Check（Requirements 无法穷尽的语义偏差）
+  tier3:
+    mode: residual_gap_detection  # 检查 Picture Claims 的证据覆盖缺口
+    uncertainty_allowed: true     # 证据不足必须返回 UNCERTAIN，不得强行 PASS
+
+features:
+  completion_summary: required     # 子任务关闭时必须生成 completion_summary.md
+  child_task_visibility: summary_only  # 父任务只读子任务 completion_summary，不读 session
+  parent_task_visibility: false   # 子任务不读取父任务状态平面
+  gotcha_resolution: allowed      # 允许追加 gotcha 解决记录，不删除历史
+
+compatibility:
+  min_agent_version: "0.1.0"  # 不兼容更低版本
+  schema_validation: strict    # 文件格式严格校验，缺少必填字段视为协议违规

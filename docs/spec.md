@@ -1,6 +1,6 @@
 ---
 title: 认知对齐平面(Cognitive Alignment Plane)
-version: 0.6 (Master Blueprint)
+version: 0.6 (Architecture Specification)
 definition: 基于本地文件系统的 Task-local Agent 状态框架
 ---
 
@@ -113,6 +113,27 @@ graph TB
 第五章描述任务执行循环的三个核心动作——认知构建、任务检验、状态更新——以及它们如何依赖快照协议在每一轮中运转。
 
 附录提供状态机、节点类型和技术细节的完整参考。
+
+## 附录 0: MVP Scope（v0.1 边界定义）
+
+**v0.1-alpha 必须支持：**
+- 本地文件系统（`.mem0ress/` 目录结构）
+- Task-local 状态平面（单任务认知边界）
+- 五个核心文档：`task.md` / `session.md` / `gotchas.md` / `judge.md` / `completion_summary.md`
+- One-Agent-One-Task 责任模型
+- Judge Tier 0 / Tier 1 / Tier 2
+- Tier 3 结构化输出协议（Picture Claims / Evidence Mapping / Residual Gap / UNCERTAIN）
+- 双重平面（状态平面 + 数据平面）
+- 父子任务两条通信通道
+
+**v0.1-alpha 不支持（列入 v0.2 路线图）：**
+- 多 Worker 并发写入
+- 全自动任务拆分
+- 多 Agent 调度
+- 数据库后端
+- 向量记忆
+- 完整 Schema 校验（SCHEMA.md）
+- VSCode / GitHub / Slack 工具集成
 
 ## 2. 核心洞察
 
@@ -293,7 +314,12 @@ graph TD
 
 ### 4.2 父子任务边界（Parent-Child Boundary）
 
-父子任务之间只有一条通信通道：父任务的 Picture 拆解为子任务的创建。父任务不读取子任务的状态平面，子任务不读取父任务的状态平面。两者各有各的认知边界，物理隔离，互不渗透。
+父子任务之间存在两条合法通信通道：
+
+1. **创建通道**：父任务将自身 Picture 的一部分拆解为子任务的初始 Picture；
+2. **关闭通道**：子任务完成后向父任务暴露 completion_summary，作为父任务后续认知构建的输入。
+
+除此之外，父任务不读取子任务完整 session、gotchas、judge 或状态平面；子任务也不继承父任务完整状态平面。
 
 这条边界的意义是认知去中心化：父任务不需要知道子任务执行细节，只需要知道子任务是否完成（COMPLETED 或 ABANDONED）。子任务不需要知道父任务的全貌，只需要知道自己的 Picture。状态平面的组装始终以当前 Task 为圆心，不向上追溯，不向下广播。
 
@@ -430,7 +456,10 @@ graph TD
 | PROTOCOL.md | 行为契约：参与方职责、文件权限、执行循环、不支持场景 |
 | SCHEMA.md | 字段定义：Turn 编号规则、VERIFYING 约束、ID 体系 |
 | EXAMPLE.md | 完整示例：OAuth 任务全流程（失败-修正-重试） |
+| PROTOCOL.md | Implementer Guide：参与方速查、轮次序列图示、Tier 速查表、默认值（VERIFYING 超时 180s） |
 | judge.md | Tier 3 prompt 工程：维度分解、证据锚定、失效模式 |
+
+**文件读写权限：** 每个文件有唯一的写入方。主 Agent 读写 task.md（覆盖写 + Todo 更新），追加写 session.md 和 gotchas.md；Judge Agent 只追加写 judge.md，只读取 task.md、session.md、gotchas.md。写入规则：session.md / gotchas.md / judge.md 只追加不修改历史；task.md 是唯一允许覆盖写的文件；task.md 的 Picture / Requirements / Constraints 一旦写入不允许修改。
 
 ```plaintext
 .mem0ress/tasks/
@@ -444,11 +473,77 @@ graph TD
 **设计局限**：不支持需要事务语义的多步原子操作，所有一致性保证依赖调用方遵守组装协议。
 ---
 
-## 5. 逻辑与流程设计 
+## 5. 逻辑与流程设计
 
 Task 的执行循环围绕三个核心动作展开：认知构建、任务检验和状态更新。这三个动作在每个轮次结束后依次执行，构成完整的感知-判断-更新闭环——每轮次结束时 Agent 感知状态变更，构建新的认知快照，与既有目标对照，检验偏差并决策下一步。
 
-### 5.1 任务创建
+### 5.1 执行循环
+
+Task 的执行循环围绕三个核心动作展开：认知构建、任务检验和状态更新。这三个动作在每个轮次结束后依次执行，构成完整的感知-判断-更新闭环。
+
+#### 5.1.1 标准轮次序列
+
+每个轮次按以下固定顺序执行，不允许跳步或乱序：
+
+```
+轮次开始
+  1. 认知构建：主 Agent 读取状态平面（PlaneAssembler 实时组装）
+  2. 执行：主 Agent 执行 Todo；可选：带外追加 gotchas.md
+  3. Session 写入：主 Agent 追加 session.md 快照；更新 task.md Todo 状态
+  4. 检验触发（条件触发，非每轮必须）：
+     主 Agent 设 status → VERIFYING
+     宿主框架启动 Judge Agent
+     Judge Agent 执行四层检验
+     Judge Agent 写入 judge.md
+     主 Agent 读取 judge.md 结论
+     主 Agent 退出 VERIFYING 状态
+  5. 决策：主 Agent 自主决策下一步
+轮次结束
+```
+
+#### 5.1.2 参与方与职责边界
+
+协议有三个参与方，职责严格隔离，不允许跨越。
+
+**主 Agent（Main Agent）**负责执行任务，包括：创建任务、拆解 Todo、推进执行、写入 session 快照、触发 Judge、读取 Judge 结论、自主决策下一步（修正 / 完成 / 废弃）。主 Agent 不执行检验逻辑，不写 judge.md。
+
+**Judge Agent（Judge Agent）**负责检验任务，包括：被动等待主 Agent 触发，读取文件系统快照，执行四层检验，将结论写入 judge.md。Judge Agent 不执行任何修复，不参与执行决策，不读取主 Agent 的执行历史，不写除 judge.md 之外的任何文件。
+
+**宿主框架（Host Framework）**负责保障协议运行的基础设施，包括：管理文件系统布局、保证 Judge Agent 与主 Agent 的上下文隔离、向 Judge Agent 注入 task_id、处理 VERIFYING 超时保护。宿主框架不参与任务执行逻辑，不干预 Judge Agent 的检验结论。
+
+#### 5.1.3 检验触发条件
+
+检验不在每个轮次都触发。主 Agent 在以下情况触发检验：
+
+1. **所有 Todo 已标记完成**（必须触发）
+2. **主 Agent 判断当前阶段性成果需要验证**（主动触发）
+3. **利益相关者显式请求检验**（按需触发）
+
+检验触发是主 Agent 的主动动作，不是系统自动行为。
+
+#### 5.1.4 VERIFYING 超时保护
+
+宿主框架负责 VERIFYING 状态的超时保护。**默认超时：180 秒。**
+
+超时后宿主框架的处理义务：
+1. 强制结束 Judge Agent 调用
+2. 在 judge.md 追加超时记录（Turn + Timestamp + `Verdict: TIMEOUT`）
+3. 将 task.md status 从 VERIFYING 恢复为 IN_PROGRESS
+4. 通知主 Agent 检验超时，由主 Agent 决定是否重试
+
+宿主框架不允许在超时后直接标记任务为 FAILED 或 COMPLETED，决策权属于主 Agent。
+
+### 5.2 认知构建
+
+认知构建是轮次结束后生成状态平面快照的动作。它在任何节点（刚启动时、执行中、或检验失败后）都需要执行，为 Agent 提供当前任务的可判断状态。
+
+状态平面是当前绑定 Task 的忠实投影，具有以下特性：只输出当前状态，不做偏差判断；实时扫描，每次调用直接读文件系统，不缓存；状态平面是当下组装的结果，不是被维护的缓存——不存在任何时刻的状态被后续快照覆盖的可能性；在当前 Task 边界内不做相关性排序、不挑选、不截断；非侵入，只读不写，不改变任何状态。状态平面不默认展开整棵任务树，也不默认读取父任务或子任务的完整状态——父子任务信息只有在当前 Task 的 Picture 判断需要时，才以摘要形式进入状态平面。
+
+状态平面的显示内容包括：任务树结构（父子关系）；每个任务的 todo 完成度（如 "2/3 Todos 完成"）；任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）；偏差记录（Gotchas）指针；Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）。`Picture`/`Requirements`/`Constraints` 从 task.md 获取，不显示在状态平面中。
+
+Session 快照是认知构建的数据来源。每个轮次的状态快照记录`code_progress`、`docs_progress`、`todos`和`status`。Session 采用版本快照模型，只追加不覆盖。
+
+### 5.3 任务创建
 
 任务创建是确立认知边界的起点。Agent 在创建任务或子任务时，首要目标不是写代码，而是明确定义任务的 `Picture`、`Requirements` 和 `Constraints`。模型的定义应从 `Picture` 开始——先定义 `Picture` 作为目标锚，再从中推导出 `Requirements` 和 `Constraints`。冲突检测在三者全部定义后进行——若 `Requirements` 与 `Constraints` 相互矛盾，在多轮沟通中引导协作者修正，直到矛盾消除，模型写入 task.md。
 
@@ -456,17 +551,13 @@ Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械
 
 **Todo 与 Subtask 的边界：** Todo 是任务内部的机械步，不是独立的认知单元。Subtask 是独立的 Task，有自己的 Picture/Requirements/Constraints 三要素，是完整的认知闭包。区分标准是：是否有独立的 Picture——有独立 Picture 的是 Subtask，没有独立 Picture 的是 Todo。父任务的 Todo 完成后，父任务本身即进入 VERIFYING 状态；父任务的 Subtask 完成后，只向父任务写回 completion_summary，不改变父任务的状态。
 
-### 5.2 认知构建
+**任务创建顺序：** 任务创建必须按以下顺序进行，不允许跳步：Step 1 定义 Picture → Step 2 从 Picture 推导 Requirements → Step 3 从 Picture 推导 Constraints → Step 4 冲突检测（Requirements 与 Constraints 是否矛盾）→ Step 5 若有矛盾与利益相关者协商直到矛盾消除 → Step 6 拆解 Todos → Step 7 写入 task.md，初始化 session.md / gotchas.md / judge.md（空文件）。Step 4 不可跳过——矛盾的 Requirements / Constraints 写入后，Judge 永远无法通过。
 
-认知构建是轮次结束后生成状态平面快照的动作。它在任何节点（刚启动时、执行中、或检验失败后）都需要执行，为 Agent 提供当前任务的可判断状态。
+**Requirements 合法性检查：** 在 Step 2 完成后，对每条 Requirement 执行合法性检查——必须可独立验证（存在可运行的验证命令或明确的数值指标），验收标准必须在 task.md 创建时就能确定（不允许"完成后再定"），不合法的 Requirement 不允许写入。
 
-状态平面是认知构建的产出物，具有以下特性：只输出当前状态，不做偏差判断；实时扫描，每次调用直接读文件系统，不缓存；状态平面是当下组装的结果，不是被维护的缓存——不存在任何时刻的状态被后续快照覆盖的可能性；全面覆盖，显示所有任务，不隐藏任何节点；非侵入，只读不写，不改变任何状态。
+**子任务创建：** 子任务是独立的任务节点，拥有独立的 PRC 模型和四个协议文件。父任务的完成以所有直接子任务关闭（COMPLETED 或 ABANDONED）为前提。主 Agent 不允许在子任务处于 CREATED 或 IN_PROGRESS 状态时完成父任务。
 
-状态平面的显示内容包括：任务树结构（父子关系）；每个任务的 todo 完成度（如 "2/3 Todos 完成"）；任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）；偏差记录（Gotchas）指针；Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）。`Picture`/`Requirements`/`Constraints` 从 task.md 获取，不显示在状态平面中。
-
-Session 快照是认知构建的数据来源。每个轮次的状态快照记录`code_progress`、`docs_progress`、`todos`和`status`。Session 采用版本快照模型，只追加不覆盖。
-
-### 5.3 任务检验
+### 5.4 任务检验
 
 任务检验在认知构建之后执行，负责判断当前状态是否满足 `Picture`。检验在轮次结束后自动触发，是只读操作，不执行写操作。
 
@@ -477,7 +568,7 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 * **Tier 0: `Constraints` 约束检查。** 检查 `Constraints` 是否被逾越，若有逾越报告违反事实，由主 Agent 决定是否修复及如何修复。
 * **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭；处于 CREATED 或 IN_PROGRESS 状态则视为未完成。
 * **Tier 2: `Requirements` 满足检查。** 验证每个 Requirement 是否达标。
-* **Tier 3: 语义对齐检查。** 读取 `Picture` 与实际产出，执行语义对齐判断。Tier 3 不是默认执行的关卡，而是由 Agent 根据任务属性显式启用。以下三种情况必须启用：Picture 涉及主观判断或利益相关者感知时；Constraints 与 Picture 之间存在语义歧义时；Agent 或利益相关者显式请求时。
+* **Tier 3: Picture Alignment Check。** Tier 3 不重复验证 Requirements（那是 Tier 2 的职责），而是检查 Requirements 无法穷尽的 Picture 剩余语义偏差。执行时，Judge Agent 将 Picture 拆解为 Picture Claims，并将 Tier 1/2 的检验结果、Constraints 状态、Data Plane 证据、未解决 Gotchas 和实际产出映射到这些 Claims 上。若存在核心 Picture Claim 缺少证据覆盖，或存在足以阻止利益相关者认可任务完成的 residual gap，则任务不得关闭。若证据不足，Tier 3 必须返回 UNCERTAIN，而不是强行 PASS 或 FAIL。
 
 例如：一个 `Picture` 是"用户无需输入密码即可登录"的 OAuth 任务，Tier 1 检查了所有 Todo 是否完成，Tier 2 验证了"支持 Google OAuth"和"支持 GitHub OAuth"这两个 `Requirements` 都满足，但 Tier 3 额外检查了"实际登录流程中用户确实没有被要求输入密码"——这个检查无法通过代码结构验证，必须看实际行为，属于语义对齐。
 
@@ -487,27 +578,47 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 
 检验通过 → Agent 可标记任务完成；检验未通过 → Agent 决定下一步（修正、重试或废弃）。
 
-### 5.4 状态更新
+**Judge Agent 上下文构成：** Judge Agent 被调用时，宿主框架注入的上下文仅包含 `task_id`（用于定位文件）和 Judge Agent 系统提示（固定，不含主 Agent 执行历史）。Judge Agent 从文件系统读取检验依据，不接收主 Agent 传递的任何运行时信息。
+
+**四层检验执行规则：**
+
+```
+Tier 0 → Tier 1 → Tier 2 → Tier 3（条件触发）
+
+任何 Tier FAIL → 立即停止 → 输出 FAILED
+所有 Tier PASS（+ Tier 3 PASS 或 SKIPPED）→ 输出 PASSED
+```
+
+**快速失败原则：** Tier 失败后不执行后续 Tier。Judge Agent 不累积所有问题再报告，而是在发现第一个阻断性问题时立即停止。理由：后续 Tier 的检验在前置 Tier 失败时结论不可信。
+
+**Tier 执行方式表：**
+
+| Tier | 名称 | 执行方式 | 依赖文件 |
+|------|------|---------|---------|
+| Tier 0 | Constraints 约束检查 | 纯逻辑：扫描 session.md + gotchas.md 中的违反记录 | task.md, session.md, gotchas.md |
+| Tier 1 | Todo & Subtask 完成检查 | 纯逻辑：读取 task.md Todo 状态 + 扫描子任务目录 | task.md |
+| Tier 2 | Requirements 验收检查 | 运行测试命令：执行可验证动作，记录命令输出 | task.md, session.md |
+| Tier 3 | 语义对齐检查 | LLM 推断：Judge Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
+
+**Tier 2 的关键约束：** Tier 2 不允许依赖 LLM 推断判断 Requirement 是否满足。每条 Requirement 必须有对应的可运行验证命令。若 Requirement 无法自动化验证，在任务创建阶段应被标记为无效 Requirement。
+
+**Judge Agent 输出约束：** Judge Agent 只报告事实，不给出修复建议，不判断"主 Agent 应该怎么做"，不修改 task.md / session.md / gotchas.md，不直接标记任务为 COMPLETED 或 ABANDONED。FAIL 结论写入 judge.md 后，Judge Agent 的职责结束，决策权回到主 Agent。
+
+### 5.5 状态更新
 
 状态更新将检验结果反映到 Task 状态，并处理决策执行。
 
-**状态机：**
+**状态机：** Task 生命周期包含五种状态，详见 §4.4 状态机图示及状态转换规则。
 
-Task 生命周期包含五种状态：
+**completion_summary 协议：** 任务标记为 COMPLETED 时，子任务目录下必须生成 `completion_summary.md`，包含三个字段：`task_id`（子任务 ID）、`picture`（子任务原始 Picture 的摘要）、`outcome`（子任务完成时的实际产出说明）。父任务的 session.md 只记录一条指针引用，格式为 `child_completion: { child_task_id, summary_ref, status }`，不吞并子任务 summary 的完整内容。写回时机是子任务状态转换为 COMPLETED 的那一轮次结束之后、下轮次开始之前。
 
-- **CREATED**：模型已定义，所有 Todo 均未开始
-- **IN_PROGRESS**：至少有一个 Todo 已完成，执行中
-- **VERIFYING**：任务检验进行中，瞬态，不能持续
-- **COMPLETED**：目标达成，认知生命周期结束
-- **ABANDONED**：目标放弃，记录 Gotcha 经验
+**主 Agent 决策空间：** 主 Agent 读取 judge.md 后可选择以下任意一条路径，无需外部批准：PASSED + 所有 Todo 完成后 → 调用 `complete_task` 进入 COMPLETED；PASSED + 发现新的 Todo → 继续执行；FAILED + 问题可修正 → 修正后重新触发检验；FAILED + 问题复杂 → 拆解子任务将问题分解；FAILED + 问题无解 → 调用 `abandon_task` 进入 ABANDONED；TIMEOUT → 重试检验或调用 `abandon_task`。主 Agent 不允许在 Judge 未通过时调用 `complete_task`。
 
-状态转换规则：CREATED → IN_PROGRESS（任意 Todo 被标记为完成）；CREATED → ABANDONED（任务废弃）；IN_PROGRESS → COMPLETED（检验通过）；IN_PROGRESS → ABANDONED（任务废弃）。状态机见 §4.4 图示。
+**ABANDONED 的处理义务：** 任务进入 ABANDONED 时，主 Agent 有以下义务：在 gotchas.md 追加废弃原因（`如何处理` 字段写"任务废弃"及原因）；确保所有直接子任务也处于终态（COMPLETED 或 ABANDONED）。ABANDONED 不需要经过 Judge 检验，主 Agent 可在任意时刻主动废弃。
 
-**决策执行：**
+**Gotcha 追加协议：** Gotcha 是带外操作，不在标准轮次序列内，不阻塞主流程。必须追加 Gotcha 的情况：session.md 的 `Constraint Violations` 字段有记录（由宿主框架自动触发）；任务进入 ABANDONED。应当追加 Gotcha 的情况：执行路径发生非预期变更（发现原 Todo 无法执行）；发现 Requirements 或 Constraints 存在歧义并已处理。写入时机：在发现偏差的当前轮次写入，不要积累到任务结束再补写。
 
-检验完成后 Agent 自主决策下一步。
-
-**completion_summary 协议：** 任务标记为 COMPLETED 时，必须向父任务写回一条 completion_summary，写入父任务的 session.md，作为该父任务本轮认知构建的输入之一。completion_summary 包含三个字段：`task_id`（子任务 ID）、`picture`（子任务原始 Picture 的摘要）、`outcome`（子任务完成时的实际产出说明）。写回时机是子任务状态转换为 COMPLETED 的那一轮次结束之后、下轮次开始之前。父任务不主动读取子任务的状态平面，只通过 completion_summary 被动接收子任务完成通知——这是父子任务通信通道的具体实现形式。
+**协议一致性保证：** mem0ress 不提供数据库级别的事务保证，一致性依赖调用方遵守以下规则——单写入方原则（每个文件只有一个写入方，不允许并发写入）；顺序追加原则（session.md / gotchas.md / judge.md 只追加不修改历史）；先写后读原则（主 Agent 写入 session.md 后再触发 Judge Agent 读取）。以下场景超出本协议当前版本的支持范围：并发子任务执行（多个子任务同时向同一父任务写入 session.md，未定义合并规则）；多 Agent 并行执行同一任务（违反单写入方原则）；事务性多步写入（若宿主框架崩溃在 session 写入和 judge 触发之间，协议不定义恢复行为）；跨 workspace 的任务依赖（协议只在单 workspace 内定义）。遇到这些场景时，宿主框架应在进入该场景前让度给人工干预。
 
 ---
 
@@ -525,13 +636,7 @@ mem0ress 的全部设计，都在试图让这个问题变得可回答。任务�
 
 #### 状态表 (State Table)
 
-| State | 说明 |
-|-------|------|
-| `CREATED` | 任务已创建，任务信息模型已定义，所有 Todo 均未开始 |
-| `IN_PROGRESS` | 任务进行中，至少有一个 Todo 已完成 |
-| `VERIFYING` | 任务检验进行中，瞬态，检验完成必须离开此状态 |
-| `COMPLETED` | 目标达成，认知生命周期结束 |
-| `ABANDONED` | 目标放弃，记录 Gotcha 经验 |
+> 完整状态定义及状态转换规则见 §4.4。
 
 #### 节点表 (Node Table)
 
