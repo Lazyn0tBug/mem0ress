@@ -509,14 +509,15 @@ cognitive_triad:
 
 ### 9.7 MVP 落地状态
 
-| Phase | 描述 | 状态 |
-|-------|------|------|
-| Phase 1 | 物理契约与类型安全（schema + fs + parser） | ✅ 完成 |
-| Phase 2 | 拦截器与态势投影（plane + intercept） | ✅ 完成 |
-| Phase 3 | 动作网关（actions + git_ops 待实现） | ✅ actions 完成 |
-| Phase 4 | 属性对齐验证（harness Tier 1/2/3） | ✅ 完成 |
-| Phase 5 | CLI 可观测性（cli.py status / init / create / done / abandon / report） | ✅ 完成 |
-| Phase 6 | `update` 命令（session 追加） | 待实现 |
-| Phase 6 | `judge` 命令（T0/T1，T2 stub） | 待实现 |
-| Phase 6 | `close` 原子化（judge → COMPLETED） | 待实现 |
-| Phase 7 | `verify_cmd` schema | 待实现 |
+|| Phase | 描述 | 状态 | 说明 |
+|-------|-------|------|------|
+| Phase 1 | 物理契约与类型安全（schema + fs + parser） | ✅ 完成 | TaskManifest / Requirement / CognitiveTriad |
+| Phase 2 | 拦截器与态势投影（plane + intercept） | ✅ 完成 | PlaneAssembler + CognitiveContext（预留给未来 Skill 集成）|
+| Phase 3 | 动作网关（actions） | ✅ 完成 | create/get/update_todo/update_cognitive_triad/add_todo/remove_todo/complete/abandon |
+| Phase 4 | 属性对齐验证（harness Tier 1/2/3） | ✅ 完成 | T0/T1 全执行，T2 stub（verify_cmd 存储但不执行）|
+| Phase 5 | CLI 可观测性 | ✅ 完成 | init / create / status / abandon / report |
+| Phase 6 | `update` 命令（session 追加） | ✅ 完成 | 追加 turn snapshot 到 session.md |
+| Phase 6 | `judge` 命令（T0/T1 执行，T2 stub） | ✅ 完成 | 执行验证，结果写入 judge.md |
+| Phase 6 | `close` 原子化（judge → COMPLETED） | ✅ 完成 | judge 失败则抛 RuntimeError，成功才改 COMPLETED |
+| Phase 7 | `verify_cmd` schema | ✅ 完成 | Requirement { id, description, verify_cmd }，向后兼容旧 string 格式 |
+| MVP 端到端验证 | 真实任务闭环测试 | ⏳ 待跑 | `uv run mem0 <cmd>` 验证 create→update→judge→close 流程 |

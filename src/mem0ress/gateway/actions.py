@@ -1,7 +1,13 @@
 """TaskService implementation - concrete implementation of TaskServiceProtocol."""
 
+from __future__ import annotations
+
 import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from mem0ress.harness import HarnessResult
 
 from mem0ress.core.schema import (
     CognitiveTriad,
@@ -294,3 +300,121 @@ class TaskServiceImpl:
         safe_write(index_path, content, expected_hash)
 
         return updated_manifest
+
+    def update_session(self, task_id: str, content: str) -> None:
+        """Append a turn snapshot to session.md.
+
+        Each snapshot records what happened in a turn, preserving the
+        "long task memory" that an Agent needs to resume after context switch.
+
+        Args:
+            task_id: Task identifier
+            content: Free-form text describing this turn's work
+
+        Raises:
+            FileNotFoundError: If task does not exist
+        """
+        task_dir = self.tasks_dir / task_id
+        if not task_dir.exists():
+            raise FileNotFoundError(f"Task '{task_id}' does not exist")
+
+        session_path = task_dir / "session.md"
+        import datetime
+
+        timestamp = datetime.datetime.now().isoformat()
+        # Count existing snapshots
+        snapshot_count = 0
+        if session_path.exists():
+            text = session_path.read_text(encoding="utf-8")
+            snapshot_count = text.count("## Turn ")
+
+        turn_marker = f"## Turn {snapshot_count + 1} @ {timestamp}\n\n{content}\n\n---\n\n"
+
+        with session_path.open("a", encoding="utf-8") as f:
+            f.write(turn_marker)
+
+    def judge_task(self, task_id: str) -> list[HarnessResult]:
+        """Run Tier 0/1/2 verification and write results to judge.md.
+
+        Returns:
+            List of HarnessResult (one per tier)
+
+        Raises:
+            FileNotFoundError: If task does not exist
+        """
+        from mem0ress.harness import HarnessRunner
+
+        index_path = self._task_index_path(task_id)
+        if not index_path.exists():
+            raise FileNotFoundError(f"Task '{task_id}' does not exist")
+
+        manifest = SubstrateParser.parse_manifest(index_path)
+        runner = HarnessRunner()
+        results = runner.verify_task(manifest)
+
+        # Write results to judge.md
+        judge_path = index_path.parent / "judge.md"
+        self._write_judge_report(judge_path, task_id, results)
+
+        return results
+
+    def _write_judge_report(
+        self, judge_path: Path, task_id: str, results: list[HarnessResult]
+    ) -> None:
+        """Write judge report to judge.md file."""
+        import datetime
+
+        timestamp = datetime.datetime.now().isoformat()
+        lines = [
+            f"# Judge Report — {task_id}",
+            "",
+            f"**Generated**: {timestamp}",
+            "",
+        ]
+
+        for result in results:
+            tier_label = f"Tier {result.tier}"
+            status = "PASS" if result.passed else "FAIL"
+            lines.append(f"## {tier_label} — {status}")
+            lines.append("")
+            lines.append(f"{result.message}")
+            if result.deviation:
+                lines.append("")
+                lines.append(f"**Deviation**: {result.deviation}")
+            lines.append("")
+
+        lines.append("---\n")
+        judge_path.write_text("\n".join(lines), encoding="utf-8")
+
+    def close_task(self, task_id: str) -> TaskManifest:
+        """Atomically close a task: judge first, then mark COMPLETED.
+
+        This is the MVP's "no bypass" rule: a task cannot be closed
+        without passing all verification tiers.
+
+        Args:
+            task_id: Task identifier
+
+        Returns:
+            Updated TaskManifest with status COMPLETED
+
+        Raises:
+            FileNotFoundError: If task does not exist
+            RuntimeError: If any verification tier fails
+        """
+        # Run verification first
+        results = self.judge_task(task_id)
+
+        # Check if all tiers passed
+        failed_tiers = [r for r in results if not r.passed]
+        if failed_tiers:
+            tier_labels = [f"Tier {r.tier}" for r in failed_tiers]
+            messages = "\n".join(f"  - {r.tier}: {r.deviation or r.message}" for r in failed_tiers)
+            raise RuntimeError(
+                f"Cannot close task '{task_id}': verification failed\n"
+                f"Failed tiers: {', '.join(tier_labels)}\n"
+                f"{messages}"
+            )
+
+        # All passed — update status to COMPLETED
+        return self.complete_task(task_id)

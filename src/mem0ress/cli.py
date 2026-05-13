@@ -5,7 +5,10 @@ Usage:
     mem0 status --root .  # Show status plane for custom root
     mem0 init             # Initialize cognitive substrate
     mem0 create <task_id> [--parent <parent_id>]
-    mem0 done <task_id>
+    mem0 update <task_id> [--content TEXT]   # Append turn snapshot to session.md
+    mem0 judge <task_id>                      # Run T0/T1/T2 verification
+    mem0 close <task_id>                      # Judge then mark COMPLETED (atomic)
+    mem0 done <task_id>                       # Alias for close
     mem0 abandon <task_id>
     mem0 report <task_id>
 """
@@ -21,7 +24,7 @@ from rich.panel import Panel
 from rich.tree import Tree
 
 from mem0ress.core.schema import TaskManifest, TaskStatus
-from mem0ress.gateway import PlaneAssembler
+from mem0ress.gateway import PlaneAssembler, TaskServiceImpl
 from mem0ress.substrate.fs import get_file_hash, safe_write
 from mem0ress.substrate.parser import SubstrateParser
 
@@ -197,20 +200,6 @@ def create(
 
 
 @app.command()
-def done(
-    task_id: str,
-    root: str = typer.Option(
-        ".mem0ress",
-        "--root",
-        "-r",
-        help="Path to cognitive substrate root directory",
-    ),
-) -> None:
-    """Mark a task as completed."""
-    _update_status(task_id, root, TaskStatus.COMPLETED, "Completed")
-
-
-@app.command()
 def abandon(
     task_id: str,
     root: str = typer.Option(
@@ -222,6 +211,148 @@ def abandon(
 ) -> None:
     """Mark a task as abandoned."""
     _update_status(task_id, root, TaskStatus.ABANDONED, "Abandoned")
+
+
+@app.command()
+def update(
+    task_id: str,
+    content: str = typer.Option(
+        "",
+        "--content",
+        "-c",
+        help="Turn snapshot content describing what happened this turn",
+    ),
+    root: str = typer.Option(
+        ".mem0ress",
+        "--root",
+        "-r",
+        help="Path to cognitive substrate root directory",
+    ),
+) -> None:
+    """Append a turn snapshot to session.md.
+
+    Records what happened in the current turn so the Agent can resume
+    after context switch without losing state.
+    """
+    substrate_root = Path(root)
+    service = TaskServiceImpl(substrate_root=substrate_root)
+
+    if not (substrate_root / "tasks" / task_id).exists():
+        console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
+        raise typer.Exit(code=1)
+
+    # If no content given, prompt the user to type it
+    if not content:
+        console.print("[dim]Type your turn summary (Ctrl+D to finish):[/dim]")
+        import sys
+
+        lines = sys.stdin.read().strip()
+        if not lines:
+            console.print("[yellow]No content provided, nothing written.[/yellow]")
+            return
+        content = lines
+
+    service.update_session(task_id, content)
+    console.print(f"[green]Turn snapshot appended for:[/green] [bold]{task_id}[/bold]")
+
+
+@app.command()
+def judge(
+    task_id: str,
+    root: str = typer.Option(
+        ".mem0ress",
+        "--root",
+        "-r",
+        help="Path to cognitive substrate root directory",
+    ),
+) -> None:
+    """Run Tier 0/1/2 verification and write results to judge.md."""
+    substrate_root = Path(root)
+    service = TaskServiceImpl(substrate_root=substrate_root)
+
+    if not (substrate_root / "tasks" / task_id).exists():
+        console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
+        raise typer.Exit(code=1)
+
+    try:
+        results = service.judge_task(task_id)
+    except FileNotFoundError:
+        console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
+        raise typer.Exit(code=1)
+
+    # Print results to console
+    for result in results:
+        tier_label = f"Tier {result.tier}"
+        status = "[green]PASS[/green]" if result.passed else "[red]FAIL[/red]"
+        console.print(f"  {tier_label}: {status}")
+        if result.message:
+            console.print(f"    {result.message}")
+        if result.deviation:
+            console.print(f"    [red]! {result.deviation}[/red]")
+
+
+@app.command()
+def close(
+    task_id: str,
+    root: str = typer.Option(
+        ".mem0ress",
+        "--root",
+        "-r",
+        help="Path to cognitive substrate root directory",
+    ),
+) -> None:
+    """Atomically close a task: judge first, then mark COMPLETED.
+
+    This is the MVP's "no bypass" rule — a task cannot be closed
+    without passing all verification tiers.
+    """
+    substrate_root = Path(root)
+    service = TaskServiceImpl(substrate_root=substrate_root)
+
+    if not (substrate_root / "tasks" / task_id).exists():
+        console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
+        raise typer.Exit(code=1)
+
+    try:
+        service.close_task(task_id)
+    except RuntimeError as e:
+        console.print(f"[red]Close failed:[/red] {e}")
+        raise typer.Exit(code=1)
+    except FileNotFoundError:
+        console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
+        raise typer.Exit(code=1)
+
+    console.print(f"[green]Task closed:[/green] [bold]{task_id}[/bold]")
+
+
+@app.command()
+def done(
+    task_id: str,
+    root: str = typer.Option(
+        ".mem0ress",
+        "--root",
+        "-r",
+        help="Path to cognitive substrate root directory",
+    ),
+) -> None:
+    """Mark a task as completed. Alias for 'close' (runs verification first)."""
+    substrate_root = Path(root)
+    service = TaskServiceImpl(substrate_root=substrate_root)
+
+    if not (substrate_root / "tasks" / task_id).exists():
+        console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
+        raise typer.Exit(code=1)
+
+    try:
+        service.close_task(task_id)
+    except RuntimeError as e:
+        console.print(f"[red]Close failed:[/red] {e}")
+        raise typer.Exit(code=1)
+    except FileNotFoundError:
+        console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
+        raise typer.Exit(code=1)
+
+    console.print(f"[green]Task closed:[/green] [bold]{task_id}[/bold]")
 
 
 def _update_status(task_id: str, root: str, new_status: TaskStatus, label: str) -> None:
