@@ -31,12 +31,11 @@ states:
   # 阻塞、等待用户、外部依赖等信息通过 gotchas / constraints / session 表达
   active:
     - CREATED      # 任务已创建，尚未进入执行循环
-    - IN_PROGRESS  # 任务正在执行、修正与认知演化中
-    - VERIFYING    # 正在进行 Judge 与完成性验证（瞬态，检验完成必须离开）
+    - IN_PROGRESS  # 任务正在执行（含 VERIFYING 子阶段），修正与认知演化中
     - COMPLETED    # 已达到关闭条件并完成归档
     - ABANDONED    # 任务被取消、失效或主动终止
   transient:
-    - VERIFYING
+    - VERIFYING    # IN_PROGRESS 的执行子阶段（不在 active 列表中）
 
 judge:
   enabled: true

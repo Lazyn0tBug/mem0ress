@@ -1,9 +1,6 @@
 ---
 description: "Judge Agent Verification — Tier 0-3 验证逻辑实例化模板，供 Judge Agent 执行检验时填写"
 type: judge
-relationships:
-  requires: ["task.md", "session.md"]
-  provides: []
 fields:
   turn:
     type: string
