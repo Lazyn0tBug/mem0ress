@@ -241,16 +241,11 @@ def update(
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
         raise typer.Exit(code=1)
 
-    # If no content given, prompt the user to type it
+    # Non-interactive: content is required
     if not content:
-        console.print("[dim]Type your turn summary (Ctrl+D to finish):[/dim]")
-        import sys
-
-        lines = sys.stdin.read().strip()
-        if not lines:
-            console.print("[yellow]No content provided, nothing written.[/yellow]")
-            return
-        content = lines
+        console.print("[red]Error:[/red] --content is required when running non-interactively.")
+        console.print("Hint: mem0 update <task_id> --content 'what happened this turn'")
+        raise typer.Exit(code=1)
 
     service.update_session(task_id, content)
     console.print(f"[green]Turn snapshot appended for:[/green] [bold]{task_id}[/bold]")
@@ -289,6 +284,10 @@ def judge(
             console.print(f"    {result.message}")
         if result.deviation:
             console.print(f"    [red]! {result.deviation}[/red]")
+
+    # Exit non-zero if any tier failed — enables agents to detect failure via exit code
+    if any(not r.passed for r in results):
+        raise typer.Exit(code=1)
 
 
 @app.command()

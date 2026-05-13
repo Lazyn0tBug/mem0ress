@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -319,8 +320,6 @@ class TaskServiceImpl:
             raise FileNotFoundError(f"Task '{task_id}' does not exist")
 
         session_path = task_dir / "session.md"
-        import datetime
-
         timestamp = datetime.datetime.now().isoformat()
         # Count existing snapshots
         snapshot_count = 0
@@ -362,8 +361,6 @@ class TaskServiceImpl:
         self, judge_path: Path, task_id: str, results: list[HarnessResult]
     ) -> None:
         """Write judge report to judge.md file."""
-        import datetime
-
         timestamp = datetime.datetime.now().isoformat()
         lines = [
             f"# Judge Report — {task_id}",

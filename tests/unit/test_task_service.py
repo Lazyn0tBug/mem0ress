@@ -223,3 +223,81 @@ class TestTaskServiceImpl:
 
         with pytest.raises(FileNotFoundError):
             service.abandon_task("nonexistent")
+
+    def test_update_session(self, tmp_path):
+        """update_session appends a turn marker to session.md with correct format."""
+        service = TaskServiceImpl(substrate_root=tmp_path)
+        service.create_task("auth_module", "用户顺畅登录")
+
+        service.update_session("auth_module", "完成了登录流程")
+
+        session_path = tmp_path / "tasks" / "auth_module" / "session.md"
+        assert session_path.exists()
+        content = session_path.read_text(encoding="utf-8")
+        assert "## Turn 1 @" in content
+        assert "完成了登录流程" in content
+
+    def test_update_session_increments_turn_counter(self, tmp_path):
+        """Multiple calls increment the turn counter."""
+        service = TaskServiceImpl(substrate_root=tmp_path)
+        service.create_task("auth_module", "用户顺畅登录")
+
+        service.update_session("auth_module", "turn 1")
+        service.update_session("auth_module", "turn 2")
+
+        session_path = tmp_path / "tasks" / "auth_module" / "session.md"
+        content = session_path.read_text(encoding="utf-8")
+        assert "## Turn 1 @" in content
+        assert "## Turn 2 @" in content
+
+    def test_update_session_nonexistent_raises(self, tmp_path):
+        service = TaskServiceImpl(substrate_root=tmp_path)
+
+        with pytest.raises(FileNotFoundError):
+            service.update_session("nonexistent", "content")
+
+    def test_judge_task_writes_judge_report(self, tmp_path):
+        """judge_task runs verification and writes results to judge.md."""
+        service = TaskServiceImpl(substrate_root=tmp_path)
+        service.create_task("auth_module", "用户顺畅登录")
+
+        results = service.judge_task("auth_module")
+
+        assert len(results) == 3  # Tier 1, 2, 3
+        judge_path = tmp_path / "tasks" / "auth_module" / "judge.md"
+        assert judge_path.exists()
+        content = judge_path.read_text(encoding="utf-8")
+        assert "# Judge Report — auth_module" in content
+
+    def test_judge_task_nonexistent_raises(self, tmp_path):
+        service = TaskServiceImpl(substrate_root=tmp_path)
+
+        with pytest.raises(FileNotFoundError):
+            service.judge_task("nonexistent")
+
+    def test_close_task_succeeds_when_all_tiers_pass(self, tmp_path):
+        """close_task marks COMPLETED when all tiers pass."""
+        service = TaskServiceImpl(substrate_root=tmp_path)
+        service.create_task("auth_module", "用户顺畅登录")
+
+        # Complete the default todo so Tier 1 passes
+        service.update_todo("auth_module", 0, True)
+
+        manifest = service.close_task("auth_module")
+        assert manifest.status == TaskStatus.COMPLETED
+
+    def test_close_task_raises_when_tier1_fails(self, tmp_path):
+        """close_task raises RuntimeError when Tier 1 (todo) check fails."""
+        service = TaskServiceImpl(substrate_root=tmp_path)
+        service.create_task("auth_module", "用户顺畅登录")
+
+        # Leave the default todo incomplete — Tier 1 must fail
+        with pytest.raises(RuntimeError) as exc_info:
+            service.close_task("auth_module")
+        assert "Tier 1" in str(exc_info.value)
+
+    def test_close_task_nonexistent_raises(self, tmp_path):
+        service = TaskServiceImpl(substrate_root=tmp_path)
+
+        with pytest.raises(FileNotFoundError):
+            service.close_task("nonexistent")

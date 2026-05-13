@@ -142,3 +142,37 @@ gotcha_refs: []
         assert reparsed.id == manifest.id
         assert reparsed.status == manifest.status
         assert len(reparsed.todos) == len(manifest.todos)
+
+    def test_parse_manifest_string_requirements_backward_compat(self, tmp_path):
+        """Old string-format requirements are wrapped as Requirement objects."""
+        task_dir = tmp_path / "auth_module"
+        task_dir.mkdir()
+        index_path = task_dir / "task.md"
+        index_path.write_text(
+            """---
+id: auth_module
+type: task
+status: created
+cognitive_triad:
+  picture: test
+  requirements:
+    - 响应 < 200ms
+    - 支持 OAuth
+  constraints: []
+gotcha_refs: []
+---
+# Todos
+- [ ] task
+""",
+            encoding="utf-8",
+        )
+
+        manifest = SubstrateParser.parse_manifest(index_path)
+
+        assert len(manifest.cognitive_triad.requirements) == 2
+        # Verify strings were converted to Requirement objects
+        assert manifest.cognitive_triad.requirements[0].id == "req_00"
+        assert manifest.cognitive_triad.requirements[0].description == "响应 < 200ms"
+        assert manifest.cognitive_triad.requirements[0].verify_cmd is None
+        assert manifest.cognitive_triad.requirements[1].id == "req_01"
+        assert manifest.cognitive_triad.requirements[1].description == "支持 OAuth"
