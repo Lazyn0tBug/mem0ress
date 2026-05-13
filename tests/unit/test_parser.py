@@ -14,7 +14,7 @@ class TestSubstrateParser:
         # Create a test file
         task_dir = tmp_path / "auth_module"
         task_dir.mkdir()
-        index_path = task_dir / "index.md"
+        index_path = task_dir / "task.md"
         index_path.write_text(
             """---
 id: auth_module
@@ -49,7 +49,7 @@ gotcha_refs: []
     def test_parse_uppercase_x(self, tmp_path):
         task_dir = tmp_path / "test_task"
         task_dir.mkdir()
-        index_path = task_dir / "index.md"
+        index_path = task_dir / "task.md"
         index_path.write_text(
             """---
 id: test_task
@@ -74,7 +74,7 @@ gotcha_refs: []
     def test_parse_whitespace_in_todo(self, tmp_path):
         task_dir = tmp_path / "test_task"
         task_dir.mkdir()
-        index_path = task_dir / "index.md"
+        index_path = task_dir / "task.md"
         index_path.write_text(
             """---
 id: test_task
@@ -108,7 +108,7 @@ gotcha_refs: []
 
         task_dir = tmp_path / "auth_module"
         task_dir.mkdir()
-        index_path = task_dir / "index.md"
+        index_path = task_dir / "task.md"
 
         manifest = TaskManifest(
             id="auth_module",

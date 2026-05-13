@@ -22,7 +22,7 @@ class TestTaskServiceImpl:
         assert len(manifest.todos) == 1
 
         # Verify directory structure
-        assert (tmp_path / "tasks" / "auth_module" / "index.md").exists()
+        assert (tmp_path / "tasks" / "auth_module" / "task.md").exists()
         assert (tmp_path / "tasks" / "auth_module" / "references").is_dir()
 
     def test_create_task_duplicate_raises(self, tmp_path):
@@ -76,7 +76,7 @@ class TestTaskServiceImpl:
         service = TaskServiceImpl(substrate_root=tmp_path)
         service.create_task("auth_module", "用户顺畅登录")
 
-        index_path = tmp_path / "tasks" / "auth_module" / "index.md"
+        index_path = tmp_path / "tasks" / "auth_module" / "task.md"
         original_hash = get_file_hash(index_path)
 
         # Simulate external modification - write a different version with a todo

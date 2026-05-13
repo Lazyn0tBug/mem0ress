@@ -49,7 +49,7 @@ class TestPlaneAssembler:
 
         # Simulate adding a gotcha - use proper YAML format matching serialize_manifest
         # Note: todos go in body, NOT in frontmatter
-        index_path = tmp_path / "tasks" / "auth_module" / "index.md"
+        index_path = tmp_path / "tasks" / "auth_module" / "task.md"
         index_path.write_text(
             "---\n"
             "id: auth_module\n"
@@ -98,7 +98,7 @@ class TestPlaneAssembler:
         subtask_dir = tmp_path / "tasks" / "auth_module" / "auth_middleware"
         subtask_dir.mkdir(parents=True, exist_ok=True)
         (subtask_dir / "references").mkdir(exist_ok=True)
-        index_path = subtask_dir / "index.md"
+        index_path = subtask_dir / "task.md"
         index_path.write_text(
             "---\n"
             "id: auth_middleware\n"

@@ -17,7 +17,7 @@ TODO_PATTERN = re.compile(r"^-\s*\[([ xX])\]\s*(.*)$", re.MULTILINE)
 
 
 class SubstrateParser:
-    """认知基座解析器：负责 Manifest (index.md) 与内存模型的双向转换."""
+    """认知基座解析器：负责 Manifest (task.md) 与内存模型的双向转换."""
 
     @staticmethod
     def parse_manifest(file_path: Path) -> TaskManifest:

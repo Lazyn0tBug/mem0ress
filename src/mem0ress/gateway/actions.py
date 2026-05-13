@@ -32,13 +32,13 @@ class TaskServiceImpl:
         self.tasks_dir = substrate_root / "tasks"
 
     def _task_index_path(self, task_id: str) -> Path:
-        """Get path to task's index.md."""
-        return self.tasks_dir / task_id / "index.md"
+        """Get path to task's task.md."""
+        return self.tasks_dir / task_id / "task.md"
 
     def create_task(self, task_id: str, picture: str) -> TaskManifest:
         """Create a new task with given ID and picture."""
         task_dir = self.tasks_dir / task_id
-        index_path = task_dir / "index.md"
+        index_path = task_dir / "task.md"
 
         if index_path.exists():
             raise TaskExistsError(f"Task '{task_id}' already exists")
@@ -153,7 +153,7 @@ class TaskServiceImpl:
             return []
 
         manifests = []
-        for index_path in self.tasks_dir.rglob("index.md"):
+        for index_path in self.tasks_dir.rglob("task.md"):
             try:
                 manifest = SubstrateParser.parse_manifest(index_path)
                 manifests.append(manifest)

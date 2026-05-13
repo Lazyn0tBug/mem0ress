@@ -27,7 +27,7 @@ class TestTaskLifecycleIntegration:
         assert retrieved.cognitive_triad.picture == manifest.cognitive_triad.picture
 
         # Verify directory structure
-        assert (tmp_path / "tasks" / "auth_module" / "index.md").exists()
+        assert (tmp_path / "tasks" / "auth_module" / "task.md").exists()
         assert (tmp_path / "tasks" / "auth_module" / "references").is_dir()
 
     def test_update_todo_workflow(self, tmp_path):
@@ -79,7 +79,7 @@ class TestTaskLifecycleIntegration:
         service = TaskServiceImpl(substrate_root=tmp_path)
         service.create_task("auth_module", "用户顺畅登录")
 
-        index_path = tmp_path / "tasks" / "auth_module" / "index.md"
+        index_path = tmp_path / "tasks" / "auth_module" / "task.md"
 
         # Simulate external modification by directly writing to file
         # This changes the file hash

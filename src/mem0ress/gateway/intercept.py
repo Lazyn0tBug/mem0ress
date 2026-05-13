@@ -94,7 +94,7 @@ def snapshot_session(
     else:
         # Infer from manifest if not provided
         try:
-            manifest_path = tasks_dir / task_id / "index.md"
+            manifest_path = tasks_dir / task_id / "task.md"
             manifest = SubstrateParser.parse_manifest(manifest_path)
             for t in manifest.todos:
                 todos_lines.append(f'  - text: "{t.text}", done: {t.done}')

@@ -69,7 +69,7 @@ class TestTaskCognitionPersistence:
         # === Phase 5: Return to auth_module, add Gotcha record ===
         # Simulate adding a Gotcha - write deviation to gotcha_refs
         manifest = service.get_task("auth_module")
-        index_path = tmp_path / "tasks" / "auth_module" / "index.md"
+        index_path = tmp_path / "tasks" / "auth_module" / "task.md"
         from mem0ress.substrate.parser import SubstrateParser
         from mem0ress.core.schema import TaskManifest
 

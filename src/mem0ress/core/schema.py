@@ -40,7 +40,7 @@ class TodoItem(BaseModel):
 
 
 class TaskManifest(BaseModel):
-    """Task manifest - index.md 的内存映射."""
+    """Task manifest - task.md 的内存映射."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 

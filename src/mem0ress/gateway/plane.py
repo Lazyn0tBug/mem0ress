@@ -89,7 +89,7 @@ class PlaneAssembler:
         # Build StatusPlaneEntry tree
         entries = []
         for task_path in sorted(root_tasks):
-            manifest = SubstrateParser.parse_manifest(task_path / "index.md")
+            manifest = SubstrateParser.parse_manifest(task_path / "task.md")
             entry = self._build_entry(
                 manifest,
                 subtasks_by_parent.get(task_path.parts[-1], []),
@@ -99,9 +99,9 @@ class PlaneAssembler:
         return StatusPlane(entries=entries)
 
     def _scan_tasks(self, tasks_dir: Path) -> list[Path]:
-        """Recursively find all task index.md files."""
+        """Recursively find all task task.md files."""
         result = []
-        for index_path in tasks_dir.rglob("index.md"):
+        for index_path in tasks_dir.rglob("task.md"):
             # Skip references/ subdirectories
             if "references" in index_path.parts:
                 continue
@@ -120,7 +120,7 @@ class PlaneAssembler:
         subtasks = []
         for subtask_path in sorted(subtask_paths):
             try:
-                subtask_manifest = SubstrateParser.parse_manifest(subtask_path / "index.md")
+                subtask_manifest = SubstrateParser.parse_manifest(subtask_path / "task.md")
                 subtasks.append(self._build_entry(subtask_manifest, []))
             except Exception:
                 # Parse failure - include error entry
