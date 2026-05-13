@@ -119,7 +119,7 @@ graph TB
 **v0.1-alpha 必须支持：**
 - 本地文件系统（`.mem0ress/` 目录结构）
 - Task-local 状态平面（单任务认知边界）
-- 五个核心文档：`task.md` / `session.md` / `gotchas.md` / `judge.md` / `completion_summary.md`
+- 五个核心文档：`task.md` / `session.md` / `gotchas.md` / `judge.md`（`completion_summary.md` 可选）
 - One-Agent-One-Task 责任模型
 - Judge Tier 0 / Tier 1 / Tier 2
 - Tier 3 结构化输出协议（Picture Claims / Evidence Mapping / Residual Gap / UNCERTAIN）
@@ -312,20 +312,36 @@ graph TD
 
 `Picture` / `Requirements` / `Constraints` 存在于 task.md 里，不在别处重复记录。状态平面只展示摘要，不展开全文。
 
-### 4.2 父子任务边界（Parent-Child Boundary）
+## 4.2 父子任务边界与拓扑即协议
 
-父子任务之间存在两条合法通信通道：
+### Spatial Topology Principle
 
-1. **创建通道**：父任务将自身 Picture 的一部分拆解为子任务的初始 Picture；
-2. **关闭通道**：子任务完成后向父任务暴露 completion_summary，作为父任务后续认知构建的输入。
+mem0ress 的父子任务关系由目录拓扑天然表达，不由 frontmatter 字段定义。
 
-除此之外，父任务不读取子任务完整 session、gotchas、judge 或状态平面；子任务也不继承父任务完整状态平面。
+```
+tasks/
+└── build_auth/
+    ├── task.md
+    └── children/
+        ├── oauth_google/
+        └── oauth_github/
+```
 
-这条边界的意义是认知去中心化：父任务不需要知道子任务执行细节，只需要知道子任务是否完成（COMPLETED 或 ABANDONED）。子任务不需要知道父任务的全貌，只需要知道自己的 Picture。状态平面的组装始终以当前 Task 为圆心，不向上追溯，不向下广播。
+`oauth_google/` 的父目录 `build_auth/` 即为其父任务，无需 `parent_id` 字段重复声明。
 
-唯一例外：当父任务的 Picture 判断需要子任务的产出作为输入时，子任务的完成状态（而非状态平面内容）才以指针形式进入父任务的状态平面。这是信息流的单向注入，不是双向渗透。
+这一原则的意义是**避免双重真相**：若同时存在目录拓扑和 `parent_id` 字段，"谁才是真相"会成为问题，协议必须处理一致性校验和冲突解决，复杂度不必要地上升。拓扑即协议是 mem0ress 区别于传统 workflow 系统（需要 `parent_id` 指针）的核心特征。
 
-子任务创建后，父任务对子任务的认知就锁定在"子任务 ID + 初始 Picture + 最终状态"这条最小记录上。中间过程不进入父任务的任何文档。
+task_id 作为稳定身份标识仍然需要，因为目录名可能因 rename / move / archive 变化，但 task_id 是稳定 identity。
+
+父任务与子任务之间的协作边界：
+
+| 父任务可依赖 | 父任务不可依赖 |
+|------------|-------------|
+| child lifecycle state（COMPLETED / ABANDONED） | child todos / session / gotchas / judge |
+| child deliverables（future 扩展字段） | child 内部执行过程 |
+| child task_id + picture | child 状态平面内容 |
+
+子任务关闭时，可选择生成 closure note（completion_summary），但这仅作为人类可读归档，不构成 runtime 依赖通道。父任务的认知不依赖子任务内部执行过程。
 
 ### 4.3 双重平面
 
@@ -549,7 +565,7 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 
 Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械步（Todo）。这些 Todo 构成了后续检验进度的基准线。
 
-**Todo 与 Subtask 的边界：** Todo 是任务内部的机械步，不是独立的认知单元。Subtask 是独立的 Task，有自己的 Picture/Requirements/Constraints 三要素，是完整的认知闭包。区分标准是：是否有独立的 Picture——有独立 Picture 的是 Subtask，没有独立 Picture 的是 Todo。父任务的 Todo 完成后，父任务本身即进入 VERIFYING 状态；父任务的 Subtask 完成后，只向父任务写回 completion_summary，不改变父任务的状态。
+**Todo 与 Subtask 的边界：** Todo 是任务内部的机械步，不是独立的认知单元。Subtask 是独立的 Task，有自己的 Picture/Requirements/Constraints 三要素，是完整的认知闭包。区分标准是：是否有独立的 Picture——有独立 Picture 的是 Subtask，没有独立 Picture 的是 Todo。父任务的 Todo 完成后，父任务本身即进入 VERIFYING 状态；父任务的 Subtask 完成后，只向父任务传递完成信号，不改变父任务的状态。
 
 **任务创建顺序：** 任务创建必须按以下顺序进行，不允许跳步：Step 1 定义 Picture → Step 2 从 Picture 推导 Requirements → Step 3 从 Picture 推导 Constraints → Step 4 冲突检测（Requirements 与 Constraints 是否矛盾）→ Step 5 若有矛盾与利益相关者协商直到矛盾消除 → Step 6 拆解 Todos → Step 7 写入 task.md，初始化 session.md / gotchas.md / judge.md（空文件）。Step 4 不可跳过——矛盾的 Requirements / Constraints 写入后，Judge 永远无法通过。
 
@@ -610,7 +626,7 @@ Tier 0 → Tier 1 → Tier 2 → Tier 3（条件触发）
 
 **状态机：** Task 生命周期包含五种状态，详见 §4.4 状态机图示及状态转换规则。
 
-**completion_summary 协议：** 任务标记为 COMPLETED 时，子任务目录下必须生成 `completion_summary.md`，包含三个字段：`task_id`（子任务 ID）、`picture`（子任务原始 Picture 的摘要）、`outcome`（子任务完成时的实际产出说明）。父任务的 session.md 只记录一条指针引用，格式为 `child_completion: { child_task_id, summary_ref, status }`，不吞并子任务 summary 的完整内容。写回时机是子任务状态转换为 COMPLETED 的那一轮次结束之后、下轮次开始之前。
+**子任务关闭协议：** 子任务进入 COMPLETED 时，父任务的认知锁定在"子任务 ID + 最终状态（COMPLETED / ABANDONED）"这条最小记录上。子任务可选择生成 closure note 作为人类可读归档，不影响父任务的状态平面组装。
 
 **主 Agent 决策空间：** 主 Agent 读取 judge.md 后可选择以下任意一条路径，无需外部批准：PASSED + 所有 Todo 完成后 → 调用 `complete_task` 进入 COMPLETED；PASSED + 发现新的 Todo → 继续执行；FAILED + 问题可修正 → 修正后重新触发检验；FAILED + 问题复杂 → 拆解子任务将问题分解；FAILED + 问题无解 → 调用 `abandon_task` 进入 ABANDONED；TIMEOUT → 重试检验或调用 `abandon_task`。主 Agent 不允许在 Judge 未通过时调用 `complete_task`。
 

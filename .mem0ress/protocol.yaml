@@ -50,8 +50,8 @@ judge:
     uncertainty_allowed: true     # 证据不足必须返回 UNCERTAIN，不得强行 PASS
 
 features:
-  completion_summary: required     # 子任务关闭时必须生成 completion_summary.md
-  child_task_visibility: summary_only  # 父任务只读子任务 completion_summary，不读 session
+  completion_summary: optional     # 子任务关闭时可生成 closure note，不作为 runtime 依赖
+  child_task_visibility: status_only   # 父任务只读子任务 status（COMPLETED/ABANDONED），不读 session
   parent_task_visibility: false   # 子任务不读取父任务状态平面
   gotcha_resolution: allowed      # 允许追加 gotcha 解决记录，不删除历史
 

@@ -4,7 +4,7 @@
 > 谁在什么时机做什么、按什么顺序、对哪些文件有什么权限。
 >
 > 字段格式定义见 SCHEMA.md。
-> 文件模板见 task.md / session.md / judge.md / gotchas.md / data_plane.md。
+> 文件模板见 task.md / session.md / judge.md / gotchas.md。
 
 ---
 

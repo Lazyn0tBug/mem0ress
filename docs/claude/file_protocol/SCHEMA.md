@@ -69,7 +69,7 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 |-----|------|------|------|
 | `task_id` | string | ✅ | 见 §1.2 |
 | `status` | enum | ✅ | 见 §2.1 |
-| `parent_id` | string \| null | ✅ | 父任务 task_id，根任务填 null |
+| `parent_id` | — | — | 由目录拓扑表达，不由 frontmatter 字段定义 |
 | `created_at` | timestamp | ✅ | 见 §1.1 |
 
 ### 2.1 status 枚举
@@ -135,7 +135,8 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 | `Todos` | list | ✅ | 全量 Todo 列表当前状态，不只记录本轮变化 |
 | `Code Progress` | string | ✅ | 本轮代码层面推进，无进展写"—" |
 | `Docs Progress` | string | ✅ | 本轮文档层面推进，无进展写"—" |
-| `Data Plane` | object | ✅ | 见 data_plane.md |
+| `Evidence` | list[object] | ✅ | 结构化证据：type/ref/purpose，purpose 绑定 Picture Claim |
+| `Workspace Snapshot` | object | ✅ | 工作区快照：commit_id + note |
 | `Constraint Violations` | string | ✅ | 无违反写"—"，有则描述事实 |
 
 **Todos 写法约定：**

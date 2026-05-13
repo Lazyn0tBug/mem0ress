@@ -26,7 +26,6 @@
 ---
 task_id: sso_login
 status: COMPLETED
-parent_id: null
 created_at: 2025-01-15T08:00:00Z
 ---
 

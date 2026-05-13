@@ -123,9 +123,7 @@
 
 ### 缺口
 
-1. **[P0] `data_plane` 引用不一致**
-   - 被 session.md、task.md 引用，但从未定义
-   - 需要在 templates 目录新增 `data_plane.md` 或在 arch.md 中明确定义
+1. **[P0] `data_plane` 引用不一致** — 已解决（v0.1-alpha 不引入独立 data_plane.md，session.md 内嵌 evidence 字段替代）
 
 2. **[P1] Todo 格式不一致**
    - task.md: `- [ ] Req 1:` / `- [ ] Todo 1:`（带复选框，无 id）
@@ -144,7 +142,7 @@
 
 | # | 问题 | 建议 |
 |---|------|------|
-| P0-1 | `data_plane` 被引用但从未定义 | 在 `docs/templates/` 目录下新增 `data_plane.md` 模板，定义其结构和用途 |
+| P0-1 | `data_plane` 被引用但从未定义 | ✅ 已解决：删除独立 data_plane.md，session.md 内嵌 evidence 字段替代 |
 
 ### P1（影响规范可信度的缺口）
 
@@ -169,7 +167,7 @@
 
 | # | 问题 | 答案 | 来源 |
 |---|------|------|------|
-| Q1 | `data_plane` 的正确定义在哪里？ | 经确认：新增 data_plane.md 模板定义其结构和用途 | 已解决（新增 data_plane.md） |
+| Q1 | `data_plane` 的正确定义在哪里？ | ✅ 已解决：v0.1-alpha 不引入独立 data_plane.md，session.md 内嵌 `evidence` 字段替代 `data_plane` | 用户确认 |
 | Q2 | `cognitive_triad` 字段是否应该添加到 task.md frontmatter？ | 经确认：保留声明，补全字段，与 body 格式保持一致 | 已解决 |
 | Q3 | Subtask 的生命周期由哪个模块管理？主任务如何感知 subtask 的 ABANDONED？ | 经确认：Subtask 与 Task 同构，层级关系由目录层级天然形成，状态同步不由模板层定义 | 用户确认 |
 | Q4 | "水化"操作的工具链是什么？ | 经确认：水化操作不在模板层定义，由 Judge Agent 的实现层决定 | 用户确认 |

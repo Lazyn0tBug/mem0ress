@@ -23,12 +23,11 @@
 ## task.md
 
 ```markdown
----
+```
 task_id: sso_login
 status: COMPLETED
-parent_id: null
 created_at: 2025-01-15T08:00:00Z
----
+```
 
 # Task: 企业工作台 OAuth 单点登录
 

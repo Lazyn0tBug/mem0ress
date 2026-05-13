@@ -3,7 +3,7 @@ description: "Task Manifest — 定义任务的认知目标、验收标准和执
 type: task
 status: CREATED
 relationships:
-  requires: ["session.md", "data_plane.md", "judge.md"]
+  requires: ["session.md", "judge.md"]
   provides: []
 fields:
   cognitive_triad:

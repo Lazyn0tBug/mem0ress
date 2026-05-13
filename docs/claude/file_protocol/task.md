@@ -1,7 +1,6 @@
 ---
 task_id: "{task_id}"
 status: CREATED
-parent_id: null
 created_at: YYYY-MM-DDTHH:mm:ssZ
 ---
 
