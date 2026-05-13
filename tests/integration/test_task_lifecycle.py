@@ -3,7 +3,7 @@
 
 import pytest
 
-from mem0ress.core.schema import TaskStatus
+from mem0ress.core.schema import Requirement, TaskStatus
 from mem0ress.gateway.plane import PlaneAssembler
 from mem0ress.gateway.actions import TaskServiceImpl
 
@@ -60,12 +60,15 @@ class TestTaskLifecycleIntegration:
         updated = service.update_cognitive_triad(
             "auth_module",
             "用户安全登录",
-            requirements=["响应 < 100ms", "支持OAuth"],
+            requirements=[
+                Requirement(id="req_01", description="响应 < 100ms", verify_cmd=None),
+                Requirement(id="req_02", description="支持OAuth", verify_cmd=None),
+            ],
             constraints=["不可明文存储密码", "必须加密传输"],
         )
 
         assert updated.cognitive_triad.picture == "用户安全登录"
-        assert "响应 < 100ms" in updated.cognitive_triad.requirements
+        assert any(r.description == "响应 < 100ms" for r in updated.cognitive_triad.requirements)
         assert "不可明文存储密码" in updated.cognitive_triad.constraints
 
         # Verify persistence

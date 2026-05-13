@@ -3,7 +3,7 @@
 
 import pytest
 
-from mem0ress.core.schema import CognitiveTriad, TaskStatus, TodoItem
+from mem0ress.core.schema import CognitiveTriad, Requirement, TaskStatus, TodoItem
 from mem0ress.substrate.parser import SubstrateParser
 
 
@@ -115,7 +115,9 @@ gotcha_refs: []
             status=TaskStatus.IN_PROGRESS,
             cognitive_triad=CognitiveTriad(
                 picture="用户顺畅登录",
-                requirements=["响应 < 200ms"],
+                requirements=[
+                    Requirement(id="req_01", description="响应 < 200ms", verify_cmd=None),
+                ],
                 constraints=["不可明文存储密码"],
             ),
             gotcha_refs=[],

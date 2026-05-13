@@ -3,7 +3,7 @@
 
 import pytest
 
-from mem0ress.core.schema import TaskManifest, TaskStatus, TodoItem
+from mem0ress.core.schema import Requirement, TaskManifest, TaskStatus, TodoItem
 from mem0ress.gateway.actions import TaskExistsError, TaskServiceImpl
 from mem0ress.substrate.fs import ConflictError, get_file_hash, safe_write
 from mem0ress.substrate.parser import SubstrateParser
@@ -112,12 +112,15 @@ class TestTaskServiceImpl:
         updated = service.update_cognitive_triad(
             "auth_module",
             "用户安全登录",
-            requirements=["响应 < 100ms"],
+            requirements=[
+                Requirement(id="req_01", description="响应 < 100ms", verify_cmd=None),
+            ],
             constraints=["不可明文存储密码"],
         )
 
         assert updated.cognitive_triad.picture == "用户安全登录"
-        assert updated.cognitive_triad.requirements == ["响应 < 100ms"]
+        assert updated.cognitive_triad.requirements[0].id == "req_01"
+        assert updated.cognitive_triad.requirements[0].description == "响应 < 100ms"
         assert updated.cognitive_triad.constraints == ["不可明文存储密码"]
 
     def test_get_all_tasks(self, tmp_path):

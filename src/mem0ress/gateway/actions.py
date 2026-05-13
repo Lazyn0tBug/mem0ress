@@ -5,6 +5,7 @@ from pathlib import Path
 
 from mem0ress.core.schema import (
     CognitiveTriad,
+    Requirement,
     TaskManifest,
     TaskStatus,
     TodoItem,
@@ -115,7 +116,7 @@ class TaskServiceImpl:
         self,
         task_id: str,
         picture: str,
-        requirements: list[str],
+        requirements: list[Requirement],
         constraints: list[str],
     ) -> TaskManifest:
         """Update the cognitive triad (picture, requirements, constraints)."""

@@ -3,6 +3,7 @@
 from mem0ress.core.schema import (
     CognitiveTriad,
     Gotcha,
+    Requirement,
     TaskManifest,
     TaskStatus,
     TodoItem,
@@ -26,11 +27,14 @@ class TestCognitiveTriad:
     def test_valid_model(self):
         triad = CognitiveTriad(
             picture="用户能顺畅登录",
-            requirements=["响应 < 200ms"],
+            requirements=[
+                Requirement(id="req_01", description="响应 < 200ms", verify_cmd=None),
+            ],
             constraints=["不可明文存储密码"],
         )
         assert triad.picture == "用户能顺畅登录"
-        assert triad.requirements == ["响应 < 200ms"]
+        assert triad.requirements[0].id == "req_01"
+        assert triad.requirements[0].description == "响应 < 200ms"
         assert triad.constraints == ["不可明文存储密码"]
 
     def test_empty_lists(self):

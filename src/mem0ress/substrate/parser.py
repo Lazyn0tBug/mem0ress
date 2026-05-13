@@ -7,6 +7,7 @@ import yaml
 
 from mem0ress.core.schema import (
     CognitiveTriad,
+    Requirement,
     TaskManifest,
     TaskStatus,
     TodoItem,
@@ -51,13 +52,32 @@ class SubstrateParser:
         triad_data = data.get("cognitive_triad", {})
         task_id = file_path.parent.name  # filesystem is source of truth
 
+        # Parse requirements: support both old string format and new Requirement objects
+        raw_requirements = triad_data.get("requirements", [])
+        requirements: list[Requirement] = []
+        for i, req in enumerate(raw_requirements):
+            if isinstance(req, str):
+                # Backward compat: plain string → wrap as Requirement
+                requirements.append(
+                    Requirement(id=f"req_{i:02d}", description=req, verify_cmd=None)
+                )
+            elif isinstance(req, dict):
+                requirements.append(
+                    Requirement(
+                        id=req.get("id", f"req_{i:02d}"),
+                        description=req.get("description", ""),
+                        verify_cmd=req.get("verify_cmd"),
+                    )
+                )
+            # else: skip invalid entries
+
         return TaskManifest(
             id=task_id,
             type=data.get("type", "task"),
             status=TaskStatus(data.get("status", "created")),
             cognitive_triad=CognitiveTriad(
                 picture=triad_data.get("picture", ""),
-                requirements=triad_data.get("requirements", []),
+                requirements=requirements,
                 constraints=triad_data.get("constraints", []),
             ),
             gotcha_refs=data.get("gotcha_refs", []),

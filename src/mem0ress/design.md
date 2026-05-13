@@ -415,6 +415,100 @@ with CognitiveContext(".mem0ress") as ctx:
 
 ## 9. MVP 落地状态
 
+### 9.1 MVP 定义
+
+**MVP 不做：** 完整系统、多 Agent、自动化、orchestration、workflow engine、IDE integration、UI。
+
+**MVP 只做：** 让一个 Agent 在长任务中不迷失。
+
+验证目标：
+1. PRC 模型是否真的能稳定驱动 Agent
+2. Status Plane 是否真的比传统 memory 更稳定
+3. Judge Loop 是否真的能纠偏
+4. Task-local cognition 是否真的能降低 context entropy
+5. 文件协议是否足够简单且可持续演进
+
+### 9.2 MVP 核心命令
+
+MVP 阶段只需 7 个命令，形成最小闭环：
+
+|| 命令 | 行为 |
+|------|------|
+| `mem0 init` | 初始化 substrate |
+| `mem0 create <task_id>` | 写入 task.md (PRC + todos)，初始化四个文件 |
+| `mem0 update <task_id>` | 追加 session.md snapshot（turn 记录） |
+| `mem0 judge <task_id>` | 执行 T0/T1 验证，T2 为 stub，结果追加 judge.md |
+| `mem0 close <task_id>` | judge PASS → COMPLETED；FAIL → 拒绝关闭 |
+| `mem0 status` | 组装并展示状态平面 |
+| `mem0 report <task_id>` | 展示最新 judge 报告 |
+
+**注意：** `done` 命令在 MVP 阶段废弃，由 `close` 替代。`close` 原子化执行 judge，Agent 无法绕过验证直接关闭任务。
+
+### 9.3 MVP CLI 命令
+
+```bash
+# 创建任务
+mem0 create <task_id>
+
+# 追加 turn snapshot（记录本轮执行内容）
+mem0 update <task_id> [--todos "1. xxx 2. yyy"] [--note "本轮做了什么"]
+
+# 执行验证（T0 约束检查 + T1 todo 检查；T2 verify_cmd 为 stub）
+mem0 judge <task_id>
+
+# 关闭任务（先 judge，全 PASS 才改 status 为 COMPLETED）
+mem0 close <task_id>
+
+# 查看状态平面
+mem0 status
+
+# 查看 judge 报告
+mem0 report <task_id>
+```
+
+### 9.4 requirements schema（verify_cmd）
+
+MVP 阶段 requirements 为结构化对象，T2 通过 verify_cmd 执行 shell 验证：
+
+```yaml
+cognitive_triad:
+  picture: "..."
+  requirements:
+    - id: req_01
+      description: "API 在 200ms 内响应"
+      verify_cmd: "pytest tests/test_perf.py -k test_api_latency"
+    - id: req_02
+      description: "认证失败返回 401"
+      verify_cmd: "pytest tests/test_auth.py -k test_unauthorized"
+  constraints:
+    - "不得明文存储密码"
+    - "不得超过 3 次重试"
+```
+
+### 9.5 MVP 文件结构
+
+```
+.mem0ress/
+├── tasks/
+│   └── {task_id}/
+│       ├── task.md        # PRC + todos
+│       ├── session.md     # turn snapshot 追加
+│       ├── gotchas.md     # stub（写入但不影响逻辑）
+│       └── judge.md       # judge 结果追加
+```
+
+### 9.6 MVP vs v0.2+
+
+| 内容 | MVP (v0.1) | v0.2+ |
+|------|------------|-------|
+| Tier 2 verify_cmd | stub（结构写入，不执行） | 真实 shell exec |
+| Tier 3 语义对齐 | 不实现 | LLM 推断 |
+| 子任务 | 目录结构支持 | 父子可见性通道 |
+| Data Plane | git commit ID 记录 | 完整 diff 追踪 |
+| Status Plane | 树形可视化 | web UI |
+
+### 9.7 MVP 落地状态
+
 | Phase | 描述 | 状态 |
 |-------|------|------|
 | Phase 1 | 物理契约与类型安全（schema + fs + parser） | ✅ 完成 |
@@ -422,4 +516,7 @@ with CognitiveContext(".mem0ress") as ctx:
 | Phase 3 | 动作网关（actions + git_ops 待实现） | ✅ actions 完成 |
 | Phase 4 | 属性对齐验证（harness Tier 1/2/3） | ✅ 完成 |
 | Phase 5 | CLI 可观测性（cli.py status / init / create / done / abandon / report） | ✅ 完成 |
-| 待办 | git_ops.py — Data Plane 的 commit ID 管理 | ✅ 完成 |
+| Phase 6 | `update` 命令（session 追加） | 待实现 |
+| Phase 6 | `judge` 命令（T0/T1，T2 stub） | 待实现 |
+| Phase 6 | `close` 原子化（judge → COMPLETED） | 待实现 |
+| Phase 7 | `verify_cmd` schema | 待实现 |

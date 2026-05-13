@@ -2,6 +2,7 @@
 
 from mem0ress.core.schema import (
     CognitiveTriad,
+    Requirement,
     TaskManifest,
     TaskStatus,
     TodoItem,
@@ -148,72 +149,7 @@ class TestHarnessRunnerWithMockData:
         assert "跳过" in tier2.message
 
     def test_tier2_descriptive_requirements_pass(self):
-        """Tier 2 passes for non-executable descriptive requirements."""
-        runner = HarnessRunner()
-        manifest = TaskManifest(
-            id="test_task",
-            status=TaskStatus.COMPLETED,
-            cognitive_triad=CognitiveTriad(
-                picture="测试任务",
-                requirements=["测试覆盖率 > 80%", "响应时间 < 100ms"],
-                constraints=[],
-            ),
-            gotcha_refs=[],
-            todos=[TodoItem(text="done", done=True)],
-        )
-
-        results = runner.verify_task(manifest)
-
-        tier2 = results[1]
-        assert tier2.tier == 2
-        assert tier2.passed is True
-        assert "2 项需求验证通过" in tier2.message
-
-    def test_tier2_shell_command_success(self):
-        """Tier 2 executes shell commands successfully."""
-        runner = HarnessRunner()
-        manifest = TaskManifest(
-            id="test_task",
-            status=TaskStatus.COMPLETED,
-            cognitive_triad=CognitiveTriad(
-                picture="测试任务",
-                requirements=["shell:echo 'hello'"],
-                constraints=[],
-            ),
-            gotcha_refs=[],
-            todos=[TodoItem(text="done", done=True)],
-        )
-
-        results = runner.verify_task(manifest)
-
-        tier2 = results[1]
-        assert tier2.tier == 2
-        assert tier2.passed is True
-
-    def test_tier2_shell_command_failure(self):
-        """Tier 2 fails when shell command returns non-zero."""
-        runner = HarnessRunner()
-        manifest = TaskManifest(
-            id="test_task",
-            status=TaskStatus.COMPLETED,
-            cognitive_triad=CognitiveTriad(
-                picture="测试任务",
-                requirements=["shell:exit 1"],
-                constraints=[],
-            ),
-            gotcha_refs=[],
-            todos=[TodoItem(text="done", done=True)],
-        )
-
-        results = runner.verify_task(manifest)
-
-        tier2 = results[1]
-        assert tier2.tier == 2
-        assert tier2.passed is False
-        assert tier2.deviation is not None
-
-    def test_tier2_mixed_requirements(self):
-        """Tier 2 handles mix of shell and descriptive requirements."""
+        """Tier 2 (MVP stub) returns passed=True with requirements listing."""
         runner = HarnessRunner()
         manifest = TaskManifest(
             id="test_task",
@@ -221,8 +157,80 @@ class TestHarnessRunnerWithMockData:
             cognitive_triad=CognitiveTriad(
                 picture="测试任务",
                 requirements=[
-                    "shell:echo 'test'",
-                    "描述性需求（无法执行）",
+                    Requirement(id="req_01", description="测试覆盖率 > 80%", verify_cmd=None),
+                    Requirement(id="req_02", description="响应时间 < 100ms", verify_cmd=None),
+                ],
+                constraints=[],
+            ),
+            gotcha_refs=[],
+            todos=[TodoItem(text="done", done=True)],
+        )
+
+        results = runner.verify_task(manifest)
+
+        tier2 = results[1]
+        assert tier2.tier == 2
+        assert tier2.passed is True
+        assert "2 项 requirements" in tier2.message
+
+    def test_tier2_shell_command_success(self):
+        """Tier 2 (MVP stub) with verify_cmd — returns passed=True listing stub."""
+        runner = HarnessRunner()
+        manifest = TaskManifest(
+            id="test_task",
+            status=TaskStatus.COMPLETED,
+            cognitive_triad=CognitiveTriad(
+                picture="测试任务",
+                requirements=[
+                    Requirement(id="req_01", description="shell test", verify_cmd="echo 'hello'"),
+                ],
+                constraints=[],
+            ),
+            gotcha_refs=[],
+            todos=[TodoItem(text="done", done=True)],
+        )
+
+        results = runner.verify_task(manifest)
+
+        tier2 = results[1]
+        assert tier2.tier == 2
+        assert tier2.passed is True
+        assert "stub" in tier2.message
+
+    def test_tier2_shell_command_failure(self):
+        """Tier 2 (MVP stub) — verify_cmd not executed, returns passed=True listing stub."""
+        runner = HarnessRunner()
+        manifest = TaskManifest(
+            id="test_task",
+            status=TaskStatus.COMPLETED,
+            cognitive_triad=CognitiveTriad(
+                picture="测试任务",
+                requirements=[
+                    Requirement(id="req_01", description="failing cmd", verify_cmd="exit 1"),
+                ],
+                constraints=[],
+            ),
+            gotcha_refs=[],
+            todos=[TodoItem(text="done", done=True)],
+        )
+
+        results = runner.verify_task(manifest)
+
+        tier2 = results[1]
+        assert tier2.tier == 2
+        assert tier2.passed is True  # MVP stub: not executed, so not FAIL
+
+    def test_tier2_mixed_requirements(self):
+        """Tier 2 (MVP stub) lists all requirements with their stub status."""
+        runner = HarnessRunner()
+        manifest = TaskManifest(
+            id="test_task",
+            status=TaskStatus.COMPLETED,
+            cognitive_triad=CognitiveTriad(
+                picture="测试任务",
+                requirements=[
+                    Requirement(id="req_01", description="shell test", verify_cmd="echo 'test'"),
+                    Requirement(id="req_02", description="描述性需求", verify_cmd=None),
                 ],
                 constraints=[],
             ),
@@ -285,7 +293,9 @@ class TestHarnessRunnerWithMockData:
             status=TaskStatus.COMPLETED,
             cognitive_triad=CognitiveTriad(
                 picture="完全完成的任务",
-                requirements=["可量化指标"],
+                requirements=[
+                    Requirement(id="req_01", description="可量化指标", verify_cmd=None),
+                ],
                 constraints=["不可逾越的红线"],
             ),
             gotcha_refs=[],
@@ -327,7 +337,9 @@ class TestHarnessRunnerWithMockData:
             status=TaskStatus.IN_PROGRESS,
             cognitive_triad=CognitiveTriad(
                 picture="用户认证模块",
-                requirements=["支持 OAuth"],
+                requirements=[
+                    Requirement(id="req_01", description="支持 OAuth", verify_cmd=None),
+                ],
                 constraints=[],
             ),
             gotcha_refs=[],

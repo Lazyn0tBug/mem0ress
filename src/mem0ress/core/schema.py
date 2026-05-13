@@ -14,13 +14,26 @@ class TaskStatus(StrEnum):
     ABANDONED = "abandoned"
 
 
+class Requirement(BaseModel):
+    """Single requirement with optional verify_cmd for Tier 2 execution."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: str = Field(description="Requirement ID (e.g., req_01)")
+    description: str = Field(description="Human-readable requirement description")
+    verify_cmd: str | None = Field(
+        default=None,
+        description="Shell command for Tier 2 verification (MVP: stub, not executed)",
+    )
+
+
 class CognitiveTriad(BaseModel):
     """Cognitive triad: picture, requirements, and constraints."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     picture: str = Field(description="图景：任务完成后的终极语义描述")
-    requirements: list[str] = Field(
+    requirements: list[Requirement] = Field(
         default_factory=list,
         description="需求：客观、可量化的指标或验证脚本",
     )

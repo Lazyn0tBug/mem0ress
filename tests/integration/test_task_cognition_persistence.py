@@ -3,6 +3,7 @@
 import pytest
 from pathlib import Path
 
+from mem0ress.core.schema import Requirement
 from mem0ress.gateway.actions import TaskServiceImpl
 from mem0ress.gateway.plane import PlaneAssembler
 from mem0ress.harness import HarnessRunner
@@ -30,7 +31,10 @@ class TestTaskCognitionPersistence:
         service.update_cognitive_triad(
             "auth_module",
             picture="用户顺畅登录",
-            requirements=["响应 < 100ms", "支持 OAuth2"],
+            requirements=[
+                Requirement(id="req_01", description="响应 < 100ms", verify_cmd=None),
+                Requirement(id="req_02", description="支持 OAuth2", verify_cmd=None),
+            ],
             constraints=["不可明文存储密码", "必须加密传输"],
         )
         service.update_todo("auth_module", 0, True)  # Mark first todo done
@@ -40,7 +44,9 @@ class TestTaskCognitionPersistence:
         service.update_cognitive_triad(
             "api_gateway",
             picture="高性能 API 网关",
-            requirements=["QPS > 10000"],
+            requirements=[
+                Requirement(id="req_01", description="QPS > 10000", verify_cmd=None),
+            ],
             constraints=["必须使用 HTTP/2"],
         )
 
@@ -49,7 +55,10 @@ class TestTaskCognitionPersistence:
         service.update_cognitive_triad(
             "auth_module",
             picture="用户顺畅登录",
-            requirements=["响应 < 100ms", "支持 OAuth2"],
+            requirements=[
+                Requirement(id="req_01", description="响应 < 100ms", verify_cmd=None),
+                Requirement(id="req_02", description="支持 OAuth2", verify_cmd=None),
+            ],
             constraints=[
                 "不可明文存储密码",
                 "必须加密传输",
@@ -62,7 +71,10 @@ class TestTaskCognitionPersistence:
         service.update_cognitive_triad(
             "database",
             picture="关系型数据库",
-            requirements=["支持 ACID", "支持事务"],
+            requirements=[
+                Requirement(id="req_01", description="支持 ACID", verify_cmd=None),
+                Requirement(id="req_02", description="支持事务", verify_cmd=None),
+            ],
             constraints=["必须使用 InnoDB"],
         )
 
@@ -95,7 +107,11 @@ class TestTaskCognitionPersistence:
         service.update_cognitive_triad(
             "api_gateway",
             picture="API 网关 v2",
-            requirements=["支持 GraphQL", "支持 REST", "支持 gRPC"],
+            requirements=[
+                Requirement(id="req_01", description="支持 GraphQL", verify_cmd=None),
+                Requirement(id="req_02", description="支持 REST", verify_cmd=None),
+                Requirement(id="req_03", description="支持 gRPC", verify_cmd=None),
+            ],
             constraints=["必须使用 HTTP/3"],
         )
 
@@ -106,9 +122,11 @@ class TestTaskCognitionPersistence:
         assert final_manifest.cognitive_triad.picture == "用户顺畅登录"
 
         # --- Requirements 验证 ---
-        assert len(final_manifest.cognitive_triad.requirements) == 2
-        assert "响应 < 100ms" in final_manifest.cognitive_triad.requirements
-        assert "支持 OAuth2" in final_manifest.cognitive_triad.requirements
+        reqs = final_manifest.cognitive_triad.requirements
+        assert len(reqs) == 2
+        req_descs = {r.description for r in reqs}
+        assert "响应 < 100ms" in req_descs
+        assert "支持 OAuth2" in req_descs
 
         # --- Constraints 验证 ---
         constraints = final_manifest.cognitive_triad.constraints
@@ -161,7 +179,9 @@ class TestTaskCognitionPersistence:
         service.update_cognitive_triad(
             "task_a",
             picture="任务 A 的 picture",
-            requirements=["A 的需求"],
+            requirements=[
+                Requirement(id="req_01", description="A 的需求", verify_cmd=None),
+            ],
             constraints=["A 的约束"],
         )
 
@@ -169,7 +189,9 @@ class TestTaskCognitionPersistence:
         service.update_cognitive_triad(
             "task_b",
             picture="任务 B 的 picture",
-            requirements=["B 的需求"],
+            requirements=[
+                Requirement(id="req_01", description="B 的需求", verify_cmd=None),
+            ],
             constraints=["B 的约束"],
         )
 
@@ -177,7 +199,10 @@ class TestTaskCognitionPersistence:
         service.update_cognitive_triad(
             "task_a",
             picture="A 被大幅修改后的 picture",
-            requirements=["A 的新需求1", "A 的新需求2"],
+            requirements=[
+                Requirement(id="req_01", description="A 的新需求1", verify_cmd=None),
+                Requirement(id="req_02", description="A 的新需求2", verify_cmd=None),
+            ],
             constraints=["A 的新约束1", "A 的新约束2", "A 的新约束3"],
         )
 
@@ -185,6 +210,6 @@ class TestTaskCognitionPersistence:
         manifest_b = service.get_task("task_b")
         assert manifest_b.cognitive_triad.picture == "任务 B 的 picture"
         assert len(manifest_b.cognitive_triad.requirements) == 1
-        assert manifest_b.cognitive_triad.requirements[0] == "B 的需求"
+        assert manifest_b.cognitive_triad.requirements[0].description == "B 的需求"
         assert len(manifest_b.cognitive_triad.constraints) == 1
         assert manifest_b.cognitive_triad.constraints[0] == "B 的约束"

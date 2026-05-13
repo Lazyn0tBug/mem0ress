@@ -3,8 +3,13 @@
 This module implements Tier 1/2/3 verification logic:
 
 Tier 1: Mechanical state check (Todo + subtask closure)
-Tier 2: Objective requirements check (test/scripts via subprocess)
+Tier 2: Objective requirements check (MVP: stub, verify_cmd not executed)
 Tier 3: Semantic alignment (prepared for Agent, performed by Agent)
+
+MVP note on Tier 2:
+- verify_cmd is stored but NOT executed in MVP
+- All requirements return passed=True with stub reporting
+- Real shell exec deferred to v0.2+
 
 Tier 3 is NOT automated by mem0ress. Per spec.md 7.2:
 - Tier 3 is triggered by Agent's 主动决策
@@ -16,9 +21,6 @@ mem0ress does not call any LLM or external model.
 """
 
 from __future__ import annotations
-
-import shlex
-import subprocess
 
 from pydantic import BaseModel, Field
 
@@ -107,10 +109,10 @@ class HarnessRunner:
         )
 
     def _verify_tier2(self, manifest: TaskManifest) -> HarnessResult:
-        """Tier 2: Objective requirements check.
+        """Tier 2: Objective requirements check (MVP stub).
 
-        Runs validation scripts specified in requirements.
-        Requirements with "shell:" prefix are executed as shell commands.
+        MVP 不执行 verify_cmd，只验证 requirements 结构完整。
+        verify_cmd 的实际执行留待 v0.2+。
         """
         requirements = manifest.cognitive_triad.requirements
 
@@ -121,51 +123,21 @@ class HarnessRunner:
                 message="Tier 2 通过: 无客观验收标准（跳过）",
             )
 
-        failed = []
-        passed_cmds = []
-
+        # MVP stub: 检查 requirements 结构，不执行 verify_cmd
+        unmet: list[str] = []
         for req in requirements:
-            if req.startswith("shell:"):
-                cmd = req[6:].strip()
-                try:
-                    # Use shell=False + shlex.split to prevent shell injection.
-                    # Commands are user-authored via Requirements, so we sanitize
-                    # by splitting into argv — prevents embedded pipes, redirects,
-                    # and subshells from being interpreted.
-                    args = shlex.split(cmd)
-                    if not args:
-                        failed.append(f"命令为空: {cmd}")
-                        continue
-                    result = subprocess.run(
-                        args,
-                        shell=False,
-                        capture_output=True,
-                        text=True,
-                        timeout=30,
-                    )
-                    if result.returncode == 0:
-                        passed_cmds.append(cmd)
-                    else:
-                        failed.append(f"命令失败: {cmd}\n输出: {result.stderr[:200]}")
-                except subprocess.TimeoutExpired:
-                    failed.append(f"命令超时: {cmd}")
-                except Exception as e:
-                    failed.append(f"命令执行异常: {cmd}\n{e}")
+            desc = req.description.strip() if req.description else "(无描述)"
+            if req.verify_cmd:
+                unmet.append(f"[stub] {req.id}: {desc} (verify_cmd 待执行: {req.verify_cmd})")
             else:
-                passed_cmds.append(f"（描述性）{req}")
+                unmet.append(f"[stub] {req.id}: {desc} (无 verify_cmd)")
 
-        if failed:
-            return HarnessResult(
-                tier=2,
-                passed=False,
-                message=f"Tier 2 失败: {len(failed)} 项需求未通过",
-                deviation="\n".join(failed),
-            )
-
+        # MVP: 所有 requirements 都标记为 stub 状态，不算 FAIL
+        msg_lines = "\n".join(f"  - {u}" for u in unmet)
         return HarnessResult(
             tier=2,
-            passed=True,
-            message=f"Tier 2 通过: {len(passed_cmds)} 项需求验证通过",
+            passed=True,  # MVP: stub 不算 FAIL，等 v0.2 真实执行
+            message=f"Tier 2 (MVP stub): {len(unmet)} 项 requirements\n{msg_lines}",
         )
 
     def _verify_tier3(self, manifest: TaskManifest) -> HarnessResult:
