@@ -4,8 +4,8 @@ Usage:
     mem0 status           # Show cognitive status plane
     mem0 status --root .  # Show status plane for custom root
     mem0 init             # Initialize cognitive substrate
-    mem0 create <task_id> [--parent <parent_id>]
-    mem0 update <task_id> [--content TEXT]   # Append turn snapshot to session.md
+    mem0 create [--picture TEXT] [--requirements TEXT] [--constraints TEXT]
+    mem0 update [--content TEXT]   # Append turn snapshot to session.md
     mem0 judge <task_id>                      # Run T0/T1/T2 verification
     mem0 close <task_id>                      # Judge then mark COMPLETED (atomic)
     mem0 done <task_id>                       # Alias for close
@@ -23,8 +23,10 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.tree import Tree
 
+from mem0ress.core.id_gen import generate_task_id
 from mem0ress.core.schema import TaskManifest, TaskStatus
 from mem0ress.gateway import PlaneAssembler, TaskServiceImpl
+from mem0ress.gateway.current_task import CurrentTaskManager
 from mem0ress.substrate.fs import get_file_hash, safe_write
 from mem0ress.substrate.parser import SubstrateParser
 
@@ -134,25 +136,37 @@ def init(
 
 @app.command()
 def create(
-    task_id: str,
+    picture: str = typer.Option(
+        "",
+        "--picture",
+        "-p",
+        help="Semantic goal description — what success looks like",
+    ),
+    requirements: str = typer.Option(
+        "",
+        "--requirements",
+        "-r",
+        help="YAML list of requirements",
+    ),
+    constraints: str = typer.Option(
+        "",
+        "--constraints",
+        "-c",
+        help="YAML list of constraints",
+    ),
     root: str = typer.Option(
         ".mem0ress",
         "--root",
         "-r",
         help="Path to cognitive substrate root directory",
     ),
-    parent: str = typer.Option(
-        None,
-        "--parent",
-        "-p",
-        help="Parent task ID (creates subtask)",
-    ),
 ) -> None:
-    """Create a new task.
+    """Create a new task with auto-generated 6-char task_id.
 
     Creates task directory with task.md, session.md, gotchas.md, judge.md.
-    If --parent is specified, creates a subtask under the parent's directory.
+    Updates .current_task to point to the new task.
     """
+
     substrate_root = Path(root)
     tasks_dir = substrate_root / "tasks"
 
@@ -161,11 +175,20 @@ def create(
         console.print("[dim]Run 'mem0 init' first to initialize the substrate.[/dim]")
         raise typer.Exit(code=1)
 
+    # Auto-generate task_id
+    task_id = generate_task_id()
+
+    # Check for existing active task — warn if non-empty
+    ctm = CurrentTaskManager(substrate_root=substrate_root)
+    existing_task_id, existing_activated_at = ctm.read()
+    if existing_task_id:
+        console.print(
+            f"[yellow]Warning: overwriting non-empty .current_task "
+            f"(was {existing_task_id!r} since {existing_activated_at})[/yellow]"
+        )
+
     # Determine target directory
-    if parent:
-        target_dir = tasks_dir / parent / task_id
-    else:
-        target_dir = tasks_dir / task_id
+    target_dir = tasks_dir / task_id
 
     if target_dir.exists():
         console.print(f"[yellow]Task already exists:[/yellow] [bold]{task_id}[/bold]")
@@ -174,9 +197,17 @@ def create(
     # Create directories
     target_dir.mkdir(parents=True)
 
-    # Write task.md
-    task_path = target_dir / "task.md"
-    task_path.write_text(TEMPLATE_INDEX.format(task_id=task_id), encoding="utf-8")
+    # Write task.md via TaskServiceImpl for SubstrateParser compatibility
+    service = TaskServiceImpl(substrate_root=substrate_root)
+    try:
+        service.create_task(task_id=task_id, picture=picture)
+    except Exception as e:
+        # Clean up directory on failure
+        import shutil
+
+        shutil.rmtree(target_dir, ignore_errors=True)
+        console.print(f"[red]Failed to create task:[/red] {e}")
+        raise typer.Exit(code=1) from e
 
     # Write session.md
     session_path = target_dir / "session.md"
@@ -190,13 +221,14 @@ def create(
     judge_path = target_dir / "judge.md"
     judge_path.write_text(TEMPLATE_JUDGE, encoding="utf-8")
 
-    if parent:
-        console.print(
-            f"[green]Created subtask[/green] [bold]{task_id}[/bold]"
-            f"[green] under[/green] [bold]{parent}[/bold]"
-        )
-    else:
-        console.print(f"[green]Created task[/green] [bold]{task_id}[/bold]")
+    # Update .current_task pointer
+    ctm.activate_on_create(task_id)
+
+    console.print(f"[green]Created task[/green] [bold]{task_id}[/bold]")
+
+    # If picture was provided, show what was set
+    if picture:
+        console.print(f"  Picture: {picture}")
 
 
 @app.command()
@@ -215,7 +247,7 @@ def abandon(
 
 @app.command()
 def update(
-    task_id: str,
+    task_id: str | None = None,
     content: str = typer.Option(
         "",
         "--content",
@@ -233,18 +265,27 @@ def update(
 
     Records what happened in the current turn so the Agent can resume
     after context switch without losing state.
+
+    If task_id is not provided, uses the active task from .current_task.
     """
     substrate_root = Path(root)
     service = TaskServiceImpl(substrate_root=substrate_root)
 
-    if not (substrate_root / "tasks" / task_id).exists():
+    # Resolve task_id: explicit or from .current_task
+    if task_id is None:
+        ctm = CurrentTaskManager(substrate_root=substrate_root)
+        task_id, _ = ctm.read()
+        if task_id is None:
+            console.print("[red]No active task.[/red] Provide task_id or create a task first.")
+            raise typer.Exit(code=1)
+    elif not (substrate_root / "tasks" / task_id).exists():
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
         raise typer.Exit(code=1)
 
     # Non-interactive: content is required
     if not content:
         console.print("[red]Error:[/red] --content is required when running non-interactively.")
-        console.print("Hint: mem0 update <task_id> --content 'what happened this turn'")
+        console.print("Hint: mem0 update --content 'what happened this turn'")
         raise typer.Exit(code=1)
 
     service.update_session(task_id, content)
@@ -253,7 +294,7 @@ def update(
 
 @app.command()
 def judge(
-    task_id: str,
+    task_id: str | None = None,
     root: str = typer.Option(
         ".mem0ress",
         "--root",
@@ -261,11 +302,22 @@ def judge(
         help="Path to cognitive substrate root directory",
     ),
 ) -> None:
-    """Run Tier 0/1/2 verification and write results to judge.md."""
+    """Run Tier 0/1/2 verification and write results to judge.md.
+
+    If task_id is not provided, uses the active task from .current_task.
+    Output is plain text (no ANSI markup) for agent consumption.
+    """
     substrate_root = Path(root)
     service = TaskServiceImpl(substrate_root=substrate_root)
 
-    if not (substrate_root / "tasks" / task_id).exists():
+    # Resolve task_id: explicit or from .current_task
+    if task_id is None:
+        ctm = CurrentTaskManager(substrate_root=substrate_root)
+        task_id, _ = ctm.read()
+        if task_id is None:
+            console.print("[red]No active task.[/red] Provide task_id or create a task first.")
+            raise typer.Exit(code=1)
+    elif not (substrate_root / "tasks" / task_id).exists():
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
         raise typer.Exit(code=1)
 
@@ -275,24 +327,28 @@ def judge(
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
         raise typer.Exit(code=1)
 
-    # Print results to console
+    # Print results to console (plain text, no ANSI markup)
+    all_passed = True
     for result in results:
         tier_label = f"Tier {result.tier}"
-        status = "[green]PASS[/green]" if result.passed else "[red]FAIL[/red]"
-        console.print(f"  {tier_label}: {status}")
+        status_str = "PASS" if result.passed else "FAIL"
+        print(f"  {tier_label}: {status_str}", end="")
         if result.message:
-            console.print(f"    {result.message}")
+            print(f" — {result.message}", end="")
         if result.deviation:
-            console.print(f"    [red]! {result.deviation}[/red]")
+            print(f" — {result.deviation}", end="")
+        print()
+        if not result.passed:
+            all_passed = False
 
-    # Exit non-zero if any tier failed — enables agents to detect failure via exit code
-    if any(not r.passed for r in results):
+    # Exit non-zero if any tier failed
+    if not all_passed:
         raise typer.Exit(code=1)
 
 
 @app.command()
 def close(
-    task_id: str,
+    task_id: str | None = None,
     root: str = typer.Option(
         ".mem0ress",
         "--root",
@@ -304,11 +360,21 @@ def close(
 
     This is the MVP's "no bypass" rule — a task cannot be closed
     without passing all verification tiers.
+
+    If task_id is not provided, uses the active task from .current_task.
+    On success, clears the .current_task pointer.
     """
     substrate_root = Path(root)
     service = TaskServiceImpl(substrate_root=substrate_root)
 
-    if not (substrate_root / "tasks" / task_id).exists():
+    # Resolve task_id: explicit or from .current_task
+    if task_id is None:
+        ctm = CurrentTaskManager(substrate_root=substrate_root)
+        task_id, _ = ctm.read()
+        if task_id is None:
+            console.print("[red]No active task.[/red] Provide task_id or create a task first.")
+            raise typer.Exit(code=1)
+    elif not (substrate_root / "tasks" / task_id).exists():
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
         raise typer.Exit(code=1)
 
@@ -321,12 +387,17 @@ def close(
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
         raise typer.Exit(code=1)
 
+    # Clear .current_task on successful close
+    ctm = CurrentTaskManager(substrate_root=substrate_root)
+    ctm.activate_on_close()
+
     console.print(f"[green]Task closed:[/green] [bold]{task_id}[/bold]")
+    console.print("Status: COMPLETED")
 
 
 @app.command()
 def done(
-    task_id: str,
+    task_id: str | None = None,
     root: str = typer.Option(
         ".mem0ress",
         "--root",
@@ -334,11 +405,21 @@ def done(
         help="Path to cognitive substrate root directory",
     ),
 ) -> None:
-    """Mark a task as completed. Alias for 'close' (runs verification first)."""
+    """Mark a task as completed. Alias for 'close' (runs verification first).
+
+    If task_id is not provided, uses the active task from .current_task.
+    """
     substrate_root = Path(root)
     service = TaskServiceImpl(substrate_root=substrate_root)
 
-    if not (substrate_root / "tasks" / task_id).exists():
+    # Resolve task_id: explicit or from .current_task
+    if task_id is None:
+        ctm = CurrentTaskManager(substrate_root=substrate_root)
+        task_id, _ = ctm.read()
+        if task_id is None:
+            console.print("[red]No active task.[/red] Provide task_id or create a task first.")
+            raise typer.Exit(code=1)
+    elif not (substrate_root / "tasks" / task_id).exists():
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
         raise typer.Exit(code=1)
 
@@ -350,6 +431,10 @@ def done(
     except FileNotFoundError:
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
         raise typer.Exit(code=1)
+
+    # Clear .current_task on successful close
+    ctm = CurrentTaskManager(substrate_root=substrate_root)
+    ctm.activate_on_close()
 
     console.print(f"[green]Task closed:[/green] [bold]{task_id}[/bold]")
 
