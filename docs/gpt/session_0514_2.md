@@ -1,616 +1,856 @@
-mem0ress Spec Revision
-Agent-Native Cognition Runtime
-Revision Draft
-Section: Core Philosophy
-1. Design Principle
-mem0ress is a cognition protocol runtime.
+# mem0ress Specification
 
-The system exists to stabilize long-horizon task cognition
-across agent execution.
+## rev-0.3
+
+### Protocol-Native Recoverable Cognition System
+
+---
+
+# 1. Introduction
+
+Most current agent systems are designed around one of two models:
+
+* workflow orchestration
+* persistent memory accumulation
+
+These systems typically assume that continuity emerges from either:
+
+* retaining enough execution state
+* replaying enough history
+* preserving enough conversational context
+
+mem0ress takes a fundamentally different direction.
+
+The core assumption of mem0ress is:
+
+```text id="qj1kwe"
+cognition continuity should emerge from protocol reconstruction,
+not from historical replay.
+```
+
+This changes the role of:
+
+* memory
+* runtime
+* skills
+* tools
+* execution history
+* verification
+
+Instead of treating cognition as an opaque runtime state, mem0ress treats cognition as something reconstructable through protocol surfaces.
+
+The system therefore focuses on:
+
+* recoverable cognition
+* semantic continuity
+* append-only cognition deltas
+* isolated verification
+* deterministic execution boundaries
+
+---
+
+# 2. System Definition
+
+mem0ress is:
+
+```text id="1m3fga"
+a protocol-native recoverable cognition system
+```
+
+designed to preserve:
+
+```text id="7v4uok"
+recoverable task cognition continuity
+```
+
+through:
+
+* protocol reconstruction
+* deterministic runtime execution
+* append-only cognition deltas
+* isolated verification
 
 mem0ress is NOT:
 
-a workflow engine
+* an orchestration framework
+* a generalized AI operating system
+* a multi-agent coordination layer
+* a persistent memory engine
+* a capability routing framework
 
-an orchestration framework
+This distinction is important.
 
-a centralized memory system
+The system is intentionally constrained.
 
-a symbolic reasoning engine
+The protocol itself is the primary cognition substrate.
 
-an autonomous planner
+---
 
-The system prioritizes:
+# 3. Foundational Principle
 
+Traditional agent systems often operate under the assumption:
+
+```text id="r7zvkt"
+memory is the cognition substrate
+```
+
+Under this model:
+
+* more memory means better continuity
+* longer transcripts mean better recovery
+* preserving history means preserving cognition
+
+mem0ress rejects this assumption.
+
+Instead:
+
+```text id="i7l6mj"
+protocol is the cognition substrate
+```
+
+This means cognition continuity should be achievable through:
+
+* structured protocol artifacts
+* semantic compression
+* deterministic reconstruction
+* recovery-oriented state surfaces
+
+rather than through:
+
+* transcript replay
+* hidden runtime state
+* persistent conversational accumulation
+
+This principle drives the entire architecture.
+
+---
+
+# 4. System Goal
+
+The purpose of mem0ress is not to preserve everything.
+
+The purpose is:
+
+```text id="9c0bqg"
 recoverable cognition continuity
-over:
+```
 
-execution automation
-2. Primary Goal
-The primary purpose of mem0ress is:
+This distinction matters.
 
-preserving stable task cognition
-through protocolized recovery surfaces
-The system is designed to reduce:
-
-semantic drift
-
-context fragmentation
-
-cognition loss
-
-long-horizon instability
-
-Section: Cognitive Ownership Model
-1. Ownership Separation
-mem0ress explicitly separates:
-
-deterministic protocol execution
-
-non-deterministic semantic cognition
-
-This separation is a foundational architectural principle.
-
-2. Runtime Responsibility
-The runtime owns deterministic protocol behavior.
-
-This includes:
-
-persistence
-
-protocol validation
-
-markdown parsing
-
-snapshot append
-
-state transition
-
-plane assembly
-
-evidence collection
-
-objective execution
-
-The runtime MUST remain deterministic.
-
-The runtime MUST NOT perform semantic reasoning.
-
-3. Agent Responsibility
-The agent owns semantic cognition.
-
-This includes:
-
-semantic interpretation
-
-ambiguity resolution
-
-picture alignment
-
-task evolution
-
-semantic drift correction
-
-completion judgment
-
-recovery planning
-
-execution prioritization
-
-Semantic authority always belongs to the agent.
-
-4. Runtime Provides Evidence, Not Meaning
-The runtime MAY provide structured evidence.
-
-Example:
-
-missing_requirements:
-- oauth_session_persistence
-
-constraint_violations:
-- introduced_new_database
-However, the runtime MUST NOT conclude:
-
-- task is semantically complete
-- implementation quality is sufficient
-- explanation is conceptually aligned
-- architecture is correct
-Meaning belongs to the agent.
-
-Section: Cognition Compression Model
-1. Compression Philosophy
-mem0ress does NOT preserve full execution history.
-
-The system preserves:
-
-stable cognition
-
-semantic continuity
-
-recovery-critical information
-
-execution alignment
-
-The system MUST avoid degenerating into conversation persistence.
-
-2. Snapshot Philosophy
-Snapshots are:
-
-cognitive deltas
-NOT:
-
-execution transcripts
-Snapshots SHOULD contain:
-
-meaningful progress
-
-important decisions
-
-newly discovered constraints
-
-semantic risks
-
-recovery-critical discoveries
-
-Snapshots SHOULD NOT contain:
-
-verbose reasoning chains
-
-full execution traces
-
-low-signal exploration
-
-discarded attempts
-
-temporary chain-of-thought
-
-3. Stable Cognition
-Stable cognition represents information required for:
-
-long-horizon continuity
-
-semantic recovery
-
-alignment preservation
-
-Examples:
-
-architectural decisions
-
-clarified requirements
-
-stable constraints
-
-persistent gotchas
-
-task direction updates
-
-Stable cognition SHOULD persist.
-
-4. Transient Cognition
-Transient cognition represents short-lived execution state.
-
-Examples:
-
-temporary hypotheses
-
-exploratory reasoning
-
-local debugging attempts
-
-ephemeral planning
-
-intermediate chain-of-thought
-
-Transient cognition SHOULD decay.
-
-The runtime SHOULD NOT preserve transient cognition by default.
-
-5. Compression Objective
-The system continuously compresses:
-
-execution history
-  ↓
-cognitive deltas
-  ↓
-stable cognition
 The system optimizes for:
 
-cognition density
-NOT:
+* interruption recovery
+* context reconstruction
+* semantic continuity
+* verification isolation
+* recoverable execution
 
-historical completeness
-Section: Plane Model
-1. Plane Philosophy
-A plane is a cognition recovery surface.
+The system does NOT optimize for:
 
-A plane is NOT a raw aggregation of protocol artifacts.
+* historical completeness
+* full execution replay
+* exhaustive memory persistence
+* transcript reconstruction
 
-The purpose of a plane is to:
+A recoverable system is not necessarily a historically complete system.
 
-recover task cognition
+---
 
-stabilize execution continuity
+# 5. Architecture
 
-reduce context entropy
+The architecture is intentionally simple.
 
-preserve semantic alignment
+```text id="cnrj4m"
+Hermes Agent
+    ↓
+mem0ress Skill
+    ↓
+Slash Commands
+    ↓
+Runtime
+    ↓
+Filesystem Protocol
+    ↓
+Judge Agent
+```
 
-2. Plane Layering
-Core Plane
-Contains stable cognition.
+Each layer has strict responsibility boundaries.
 
-Includes:
+The architecture avoids:
 
-picture
+* hidden orchestration
+* dynamic routing
+* opaque memory layers
+* planner-centric execution
 
-active requirements
+because these tend to blur cognition ownership.
 
-active constraints
+---
 
-unresolved blockers
+# 6. Ownership Boundaries
 
-persistent gotchas
+One of the most important architectural constraints is:
 
-current task direction
+```text id="wbh2zx"
+semantic authority must remain explicit
+```
 
-The Core Plane SHOULD always load.
+The system therefore separates responsibility clearly.
 
-Progress Plane
-Contains recent execution evolution.
+| Layer          | Responsibility             |
+| -------------- | -------------------------- |
+| Hermes         | semantic cognition         |
+| mem0ress Skill | protocol lifecycle surface |
+| Runtime        | deterministic execution    |
+| Judge Agent    | isolated verification      |
 
-Includes:
+This separation prevents:
 
-recent snapshots
+* runtime cognition leakage
+* orchestration drift
+* hidden planning layers
+* semantic ambiguity
 
-recent decisions
+---
 
-recently completed todos
+# 7. Semantic Authority
 
-newly discovered information
+Semantic authority belongs ONLY to Hermes.
 
-The Progress Plane MAY be windowed.
+Hermes decides:
 
-Evidence Plane
-Contains deterministic evidence.
+* what matters
+* what progress means
+* what should be verified
+* what should be persisted
 
-Includes:
-
-test results
-
-validation output
-
-protocol violations
-
-execution artifacts
-
-The Evidence Plane SHOULD remain objective.
-
-Recovery Plane
-Contains cognition recovery guidance.
-
-Includes:
-
-known confusion points
-
-recovery hints
-
-semantic drift warnings
-
-unresolved ambiguity
-
-The Recovery Plane exists to accelerate cognition reconstruction.
-
-3. Plane Optimization
-Planes SHOULD optimize for:
-
-recovery quality
-
-token efficiency
-
-semantic continuity
-
-cognition stability
-
-Planes SHOULD avoid:
-
-historical reconstruction
-
-raw execution persistence
-
-conversation replay
-
-Section: Recovery Stability Model
-1. Recovery Philosophy
-Recovery does NOT mean reconstructing exact reasoning history.
-
-Recovery means:
-
-restoring stable task cognition
-The system prioritizes:
-
-semantic continuity
-
-execution alignment
-
-recoverable direction
-
-NOT:
-
-exact thought reconstruction
-
-2. Recovery Failure
-Recovery failure occurs when the agent can no longer:
-
-identify task direction
-
-align with the picture
-
-understand active constraints
-
-determine meaningful next actions
-
-Recovery failure is a cognition failure,
-not a storage failure.
-
-3. Recovery Degradation
-Recovery quality MAY degrade when:
-
-snapshots become noisy
-
-planes become oversized
-
-cognition becomes fragmented
-
-semantic drift accumulates
-
-stable cognition is not compressed
-
-4. Recovery Priority
-The system SHOULD optimize for:
-
-recoverable cognition
-rather than:
-
-perfect historical reconstruction
-Section: Task Evolution Rules
-1. Task Evolution Philosophy
-Tasks MAY evolve during execution.
-
-However:
-
-task evolution MUST preserve:
-
-semantic continuity
-
-picture alignment
-
-recoverability
-
-2. Allowed Evolution
-Allowed evolution includes:
-
-requirement clarification
-
-todo refinement
-
-implementation restructuring
-
-recovery-driven adjustment
-
-subtask extraction
-
-3. Forbidden Evolution
-Forbidden evolution includes:
-
-silent scope expansion
-
-picture replacement
-
-unrelated architecture redesign
-
-hidden semantic mutation
-
-uncontrolled requirement growth
-
-4. Scope Mutation Rule
-Semantic scope expansion SHOULD:
-
-create explicit subtasks
-
-record cognition deltas
-
-preserve original task identity
-
-The runtime MUST NOT silently mutate task semantics.
-
-Section: Skill Philosophy
-1. Skill Definition
-Skills are cognitive operators.
-
-Skills exist between:
-
-agent cognition
-    ↕
-skill layer
-    ↕
-deterministic runtime
-Skills are NOT command wrappers.
-
-2. Skill Purpose
-Skills exist to:
-
-recover cognition
-
-stabilize semantic continuity
-
-compress execution into stable cognition
-
-expose recoverable task state
-
-assist cognition alignment
-
-3. Skill Constraints
-Skills SHOULD NOT:
-
-expose raw runtime mechanics
-
-centralize semantic authority
-
-become workflow orchestrators
-
-become hidden planners
-
-reconstruct full conversation history
-
-4. Skill Lifecycle
-Skills participate in cognition continuity.
-
-A skill lifecycle follows:
-
-recover cognition
-  ↓
-assess semantic state
-  ↓
-perform operation
-  ↓
-collect evidence
-  ↓
-record cognition delta
-  ↓
-propose next recovery state
-Section: Runtime Boundary
-1. Runtime Philosophy
-The runtime is a deterministic protocol executor.
-
-The runtime is NOT a semantic cognition system.
-
-2. Runtime Responsibilities
-The runtime is responsible for:
-
-protocol persistence
-
-deterministic validation
-
-state transition
-
-plane assembly
-
-evidence collection
-
-objective execution
-
-3. Runtime Constraints
-The runtime MUST NOT:
-
-autonomously plan
-
-autonomously reprioritize
-
-reinterpret requirements
-
-rewrite task direction
-
-expand semantic scope
-
-perform semantic completion judgment
-
-Section: Autonomy Boundary
-1. Design Principle
-mem0ress stabilizes cognition.
-
-mem0ress does NOT replace agent reasoning.
-
-2. Runtime Autonomy
 The runtime MUST remain deterministic.
 
-The runtime MUST NOT become:
+The runtime MUST NOT:
 
-an autonomous planner
+* reinterpret semantics
+* autonomously plan
+* synthesize cognition
+* become orchestration logic
 
-a workflow controller
+This constraint exists to prevent the runtime from slowly becoming:
 
-a semantic orchestrator
+```text id="u5v1tw"
+a hidden agent system
+```
 
-a centralized cognition authority
+which is a common failure mode in many AI frameworks.
 
-3. Skill Autonomy
-Skills MAY assist cognition recovery.
+---
 
-Skills MUST NOT:
+# 8. Skill Model
 
-replace semantic reasoning
+## 8.1 Unified Skill Constraint
 
-centralize cognition ownership
+mem0ress exposes:
 
-hide autonomous orchestration
+```text id="5wy1jw"
+ONE unified cognition skill
+```
 
-override agent interpretation
+NOT:
 
-4. Semantic Authority
-The agent always retains authority over:
+```text id="k4qk6e"
+multiple independent skills
+```
 
-semantic interpretation
+For example:
 
-ambiguity resolution
+```text id="rbclwq"
+/cog.recover
+/cog.snapshot
+/cog.verify
+```
 
-completion judgment
+are NOT separate skills.
 
-task direction
+They are:
 
-semantic alignment
+* protocol operations
+* lifecycle mutations
+* cognition surface operators
 
-Section: Failure Conditions
-1. Architectural Failure
-The system SHOULD be considered architecturally degraded if:
+This distinction is critical.
 
-session artifacts become conversation history
+The system intentionally avoids:
 
-planes continuously expand without compression
+* capability graphs
+* planner-driven tool routing
+* multi-skill orchestration
+* dynamic agent composition
 
-cognition recovery requires full chat replay
+because those patterns tend to evolve toward:
 
-runtime accumulates semantic authority
+```text id="c9z4hy"
+workflow-centric agent systems
+```
 
-skills become orchestration systems
+instead of:
 
-protocol artifacts become execution transcripts
+```text id="x4q8dr"
+protocol-native cognition systems
+```
 
-2. Recovery Failure
-The system SHOULD be considered operationally degraded if:
+---
 
-long-horizon cognition becomes unrecoverable
+## 8.2 Skill Philosophy
 
-semantic drift accumulates across execution
+The skill exists ONLY to expose:
 
-task direction cannot be reconstructed
+```text id="8hplrt"
+protocol lifecycle operations
+```
 
-recovery planes lose alignment value
+The skill is NOT:
 
-stable cognition becomes fragmented
+* a utility collection
+* a workflow engine
+* a planner surface
+* a routing layer
 
-Section: Explicit Non-Goals
-mem0ress is NOT:
+The skill should remain extremely thin.
 
-a workflow engine
+Its purpose is protocol exposure, not cognition ownership.
 
-an orchestration framework
+---
 
-a centralized memory database
+# 9. Slash Command Model
 
-an autonomous agent runtime
+Slash commands are defined as:
 
-a generalized planning system
+```text id="s8t2pa"
+protocol lifecycle operators
+```
 
-a symbolic reasoning framework
+Each command maps directly to a protocol phase.
 
-a hidden orchestration layer
+Commands are NOT:
 
-a chain-of-thought persistence system
+* tools
+* autonomous workers
+* planners
+* subsystems
 
-The system exists to stabilize:
+This is important because command inflation often leads to:
 
-recoverable task cognition
-NOT to maximize:
+* orchestration layers
+* hidden routing
+* capability composition
+* planner dependency
 
-execution automation
+The MVP intentionally avoids this direction.
+
+---
+
+# 10. MVP Command Surface
+
+| Slash Command | Protocol Role               |
+| ------------- | --------------------------- |
+| /cog.recover  | cognition reconstruction    |
+| /cog.status   | recoverable state rendering |
+| /cog.snapshot | cognition delta append      |
+| /cog.gotcha   | recovery mutation           |
+| /cog.verify   | Judge trigger               |
+| /cog.decide   | post-verification decision  |
+
+These commands collectively expose the recoverable cognition lifecycle.
+
+---
+
+# 11. Lifecycle Model
+
+## 11.1 Execution Lifecycle
+
+```text id="1rj82m"
+1. Recover Cognition
+2. Execute Work
+3. Append Snapshot
+4. Trigger Verification
+5. Read Judge Verdict
+6. Decide Next Action
+```
+
+This lifecycle is intentionally minimal.
+
+The MVP does not attempt to model:
+
+* autonomous decomposition
+* planning graphs
+* recursive orchestration
+* distributed coordination
+
+The goal is validating cognition recovery.
+
+---
+
+## 11.2 Lifecycle Authority
+
+| Phase        | Authority |
+| ------------ | --------- |
+| cognition    | Hermes    |
+| execution    | runtime   |
+| verification | Judge     |
+| decision     | Hermes    |
+
+This separation ensures:
+
+* recoverability
+* isolation
+* deterministic execution boundaries
+
+---
+
+# 12. Protocol Surface
+
+The protocol is the core system surface.
+
+Not memory.
+
+Not orchestration.
+
+Not runtime state.
+
+The protocol is the reconstructable cognition substrate.
+
+---
+
+## 12.1 Core Protocol Files
+
+```text id="d3a1vu"
+task.md
+session.md
+gotchas.md
+judge.md
+```
+
+These files collectively form the recoverable cognition surface.
+
+---
+
+## 12.2 task.md
+
+task.md is the:
+
+```text id="jlwm06c"
+semantic authority surface
+```
+
+It defines:
+
+* picture
+* requirements
+* constraints
+* todos
+
+task.md should remain stable and high-signal.
+
+It represents the intended cognition target.
+
+---
+
+## 12.3 session.md
+
+session.md is:
+
+```text id="jlwm06d"
+append-only cognition delta stream
+```
+
+NOT:
+
+```text id="’wini06q"
+execution transcript
+```
+
+This is one of the most important constraints in the system.
+
+session.md exists to preserve:
+
+* semantic progress
+* meaningful discoveries
+* architectural decisions
+* cognition mutations
+
+NOT:
+
+* raw execution
+* verbose reasoning
+* transcript history
+* chain-of-thought
+
+---
+
+## 12.4 gotchas.md
+
+gotchas.md stores:
+
+```text id="jlwm06e"
+recovery-critical discoveries
+```
+
+Examples include:
+
+* ambiguity
+* unstable assumptions
+* semantic drift risks
+* unresolved blockers
+* architectural traps
+
+gotchas improve future recovery quality.
+
+---
+
+## 12.5 judge.md
+
+judge.md is the:
+
+```text id="’wini06r"
+isolated verification surface
+```
+
+It stores:
+
+* verification triggers
+* verdicts
+* evidence summaries
+
+Judge outputs should remain concise and recoverable.
+
+---
+
+# 13. Snapshot Semantics
+
+## 13.1 Snapshot Definition
+
+A snapshot represents:
+
+```text id="’wini06s"
+recoverable cognition delta
+```
+
+NOT:
+
+```text id="’wini06t"
+historical replay
+```
+
+This distinction changes how snapshots are written.
+
+---
+
+## 13.2 Snapshots MUST Preserve
+
+* semantic progress
+* stable discoveries
+* architectural decisions
+* recovery-critical changes
+
+---
+
+## 13.3 Snapshots MUST Discard
+
+* raw logs
+* chain-of-thought
+* transcript replay
+* verbose execution history
+* transient reasoning
+
+---
+
+## 13.4 Snapshot Success Condition
+
+Recovery SHOULD succeed using ONLY:
+
+```text id="’wini06u"
+task.md
+recent snapshots
+gotchas.md
+latest judge verdict
+```
+
+without requiring:
+
+* transcript replay
+* runtime continuation
+* hidden memory state
+
+This is one of the primary invariants of the system.
+
+---
+
+# 14. Recoverability
+
+Recoverability is defined as:
+
+```text id="’wini06v"
+protocol-reconstructable cognition continuity
+```
+
+NOT:
+
+```text id="’wini06w"
+persistent memory retention
+```
+
+This is a major architectural distinction.
+
+Recoverability means:
+
+* cognition can resume
+* semantic continuity survives
+* interruptions are tolerable
+* reconstruction remains possible
+
+without preserving every detail.
+
+---
+
+# 15. Plane Model
+
+The MVP supports ONLY:
+
+| Plane        | Responsibility                |
+| ------------ | ----------------------------- |
+| status_plane | recoverable cognition surface |
+| data_plane   | execution artifact surface    |
+
+The MVP intentionally avoids excessive plane abstraction.
+
+---
+
+# 16. status_plane
+
+The status plane exists for:
+
+```text id="’wini06x"
+cognition recovery
+```
+
+NOT:
+
+```text id="’wini06y"
+execution monitoring
+```
+
+It includes:
+
+* picture
+* active requirements
+* active todos
+* recent meaningful deltas
+* unresolved gotchas
+* latest Judge state
+
+The status plane is the primary recovery surface.
+
+---
+
+# 17. data_plane
+
+The data plane stores:
+
+* outputs
+* artifacts
+* evidence references
+* generated assets
+
+The data plane is NOT:
+
+* runtime memory
+* generalized persistence
+* transcript storage
+
+Its role is execution artifact continuity.
+
+---
+
+# 18. Judge Model
+
+Judge is defined as:
+
+```text id="’wini06z"
+isolated verification authority
+```
+
+Judge exists to validate outcomes independently from execution runtime.
+
+---
+
+## 18.1 Judge Isolation Constraint
+
+Judge receives ONLY:
+
+```text id="’wini070"
+task_id + filesystem protocol
+```
+
+Judge MUST NOT receive:
+
+* runtime memory
+* hidden cognition state
+* chain-of-thought
+* execution replay
+
+This isolation is critical.
+
+Without isolation:
+
+* verification becomes contaminated
+* semantic leakage occurs
+* runtime state biases evaluation
+
+---
+
+## 18.2 Judge Verification Tiers
+
+| Tier   | Responsibility        |
+| ------ | --------------------- |
+| Tier 0 | constraint violations |
+| Tier 1 | todo completion       |
+| Tier 2 | automated validation  |
+| Tier 3 | semantic alignment    |
+
+The MVP may only partially implement these tiers.
+
+---
+
+# 19. Runtime Model
+
+The runtime is deterministic.
+
+This is one of the most important constraints.
+
+---
+
+## 19.1 Runtime Responsibilities
+
+* markdown parsing
+* filesystem persistence
+* protocol validation
+* snapshot append
+* Judge triggering
+* plane rendering
+
+---
+
+## 19.2 Runtime MUST NOT
+
+* own cognition authority
+* reinterpret semantics
+* autonomously plan
+* absorb orchestration
+* become hidden workflow logic
+
+This prevents runtime drift.
+
+---
+
+# 20. Filesystem Layout
+
+```text id="’wini071"
+.mem0ress/
+└── tasks/
+    └── task_x/
+        ├── task.md
+        ├── session.md
+        ├── gotchas.md
+        ├── judge.md
+        │
+        └── data/
+            ├── outputs/
+            ├── evidence/
+            └── artifacts/
+```
+
+The filesystem protocol is intentionally human-readable.
+
+---
+
+# 21. Technology Constraints
+
+| Layer      | Technology     |
+| ---------- | -------------- |
+| Runtime    | Python 3.12    |
+| Package    | pyproject.toml |
+| Dependency | uv             |
+| CLI        | Typer          |
+| Validation | Pydantic       |
+| Lint       | Ruff           |
+| Type Check | ty             |
+
+The MVP intentionally uses a lightweight stack.
+
+---
+
+# 22. MVP Constraints
+
+The MVP MUST remain intentionally minimal.
+
+---
+
+## 22.1 MVP MUST NOT Introduce
+
+* orchestration engines
+* autonomous planning
+* generalized memory systems
+* hidden cognition layers
+* distributed runtimes
+* capability routing
+* multi-agent coordination
+* planner-driven composition
+
+---
+
+## 22.2 MVP Purpose
+
+The MVP exists ONLY to validate:
+
+```text id="’wini072"
+recoverable cognition through protocol-native execution
+```
+
+NOT:
+
+```text id="’wini073"
+fully autonomous agent systems
+```
+
+---
+
+# 23. Failure Conditions
+
+The system SHOULD be considered degraded if:
+
+| Failure                         | Meaning                   |
+| ------------------------------- | ------------------------- |
+| session.md becomes transcript   | compression failure       |
+| recovery requires replay        | cognition failure         |
+| runtime absorbs reasoning       | architecture failure      |
+| Judge receives hidden state     | isolation failure         |
+| slash commands become workflows | protocol failure          |
+| skill becomes toolbox           | cognition surface failure |
+
+These failures represent architectural drift.
+
+---
+
+# 24. Final Principle
+
+mem0ress is fundamentally:
+
+```text id="’wini074"
+a cognition continuity protocol
+```
+
+NOT:
+
+```text id="’wini075"
+an AI workflow framework
+```
+
+This distinction defines the entire system direction.
