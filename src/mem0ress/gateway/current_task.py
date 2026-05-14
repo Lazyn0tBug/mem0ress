@@ -86,10 +86,8 @@ class CurrentTaskManager:
         from mem0ress.substrate.fs import get_file_hash, safe_write
 
         path = self._path()
-        if task_id:
-            content = f"task_id: {task_id}\nactivated_at: {activated_at}\n"
-        else:
-            content = f"task_id:\nactivated_at: {activated_at}\n"
+        # Quote activated_at as YAML string to preserve it as str on parse
+        content = f"task_id: {task_id}\nactivated_at: '{activated_at}'\n"
 
         # Optimistic lock: compute expected hash before write
         expected_hash = get_file_hash(path) if path.exists() else ""
@@ -107,7 +105,7 @@ class CurrentTaskManager:
         _task_id, activated_at = self.read()
         # Preserve activated_at if available
         path = self._path()
-        content = f"task_id:\nactivated_at: {activated_at}\n"
+        content = f"task_id:\nactivated_at: '{activated_at}'\n"
         from mem0ress.substrate.fs import get_file_hash, safe_write
 
         expected_hash = get_file_hash(path) if path.exists() else ""
