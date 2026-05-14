@@ -46,11 +46,11 @@ mem0ress MVP 的 CLI 已完整，但存在两个问题：
 
 ## Key Technical Decisions
 
-- **CLI 命名统一为 `cog`**：CLI `mem0` → `cog`，Skill 触发器 `/cog <command>`，一次性统一产品命名
+- **CLI 命名分两步迁移**：第一步实现 Skill（`/cog create/update/judge/close`），CLI 命令暂保持 `mem0`；第二步将 CLI 改名为 `cog`，彻底统一。分步降低破坏性，避免同时更新 Skill 和 CLI 导致调试困难
 - **TaskServiceImpl 是真实执行者**：Skill 通过 `cog create --picture X --requirements Y --constraints Z` 调用 CLI，CLI 委托 TaskServiceImpl 执行
 - **`.current_task` 是 CLI 的职责**：CLI create/update/close 命令负责维护 `.current_task`，Skill 不直接操作文件系统
-- **task_id 生成算法**：取 Unix 时间戳低 4 位 base36 + 2 位随机 alphanumeric，合计 6 位（如 `2k5m3x`）
-- **close 原子性**：Tier 2 stub 返回 SKIP（而非 PASS/FAIL），close 的成功条件改为"所有非 SKIP tier 全部 PASS"
+- **task_id 生成算法**：取 Unix 时间戳低 4 位 base36 + monotonic counter 2 位 base36，合计 6 位（如 `2k5m3x`）。Counter 保证同一进程内连续创建不碰撞；时间戳提供跨进程区分
+- **Tier 2 stub 返回 auto-PASS**：当 requirement 的 `verify_cmd` 为 `None` 或空时，该 tier 视为自动满足（PASS），不阻塞 close。简化 MVP 语义，Tier 2 真实执行纳入 v0.2
 
 ## Context & Research
 
@@ -73,38 +73,58 @@ mem0ress MVP 的 CLI 已完整，但存在两个问题：
 
 ## Implementation Units
 
-- [ ] **Unit 1: CLI 命名统一 — `mem0` → `cog`**
+- [ ] **Unit 1: 创建 `cog.md` Skill 文件（CLI 暂保持 `mem0`）**
 
-**Goal:** 将 CLI app 名称从 `mem0` 改为 `cog`，所有命令保持不变
+**Goal:** 创建 Claude Code Skill 文件，暴露 `/cog create/update/judge/close` 四个触发器。CLI 保持 `mem0` 命令不变，Skill 通过 shell 调用 `mem0 ...` CLI。此步不修改 CLI 命名。
 
-**Requirements:** R4（CLI 命令格式与 Skill 命名对齐）
+**Requirements:** R1, R2, R3, R5, R6, R7, R8, R21, R22, R23
 
-**Dependencies:** 无
+**Dependencies:** 无（Skill 调用现有 CLI，无需先改 CLI）
 
 **Files:**
-- Modify: `src/mem0ress/cli.py`（`app = typer.Typer(name="mem0")` → `app = typer.Typer(name="cog")`）
+- Create: `skills/cog.md`（repo 内参考实现：`docs/skills/cog.md` 作为文档化；实际用户级安装文件为 `~/.claude/skills/cog.md`）
 
 **Approach:**
-- 将 `cli.py:32` 的 `name="mem0"` 改为 `name="cog"`
-- 更新 `--help` 输出和所有文档引用
-- CLI 调用形式变为 `cog create`，Skill 触发器为 `/cog create`，语义对齐
+- SKILL.md 格式：YAML frontmatter + Markdown 正文
+- `name: cog`，`description: Cognitive alignment plane for AI agents`
+- `triggers`：`/cog create`、`/cog update`、`/cog judge`、`/cog close`
+- Skill 通过 shell 执行 CLI：`!cog create --picture ...`（Step 1 时仍调用 `mem0`）
+- 各命令的 Skill 描述、参数格式、输出格式
+- Skill 文件放在 `docs/skills/cog.md` 作为参考实现，真实安装到 `~/.claude/skills/cog.md`
+
+**Skill 文件结构：**
+```markdown
+---
+name: cog
+description: Cognitive alignment plane for AI agents. Track tasks, verify progress, maintain cognitive context across turns.
+triggers:
+  - /cog create
+  - /cog update
+  - /cog judge
+  - /cog close
+---
+
+# cog Skill
+...
+```
 
 **Patterns to follow:**
-- 其他 CLI app 重命名的 industry pattern（无直接先例，保持简单的字符串替换）
+- Claude Code SKILL.md 格式（参考 `~/.claude/skills/` 下其他 skill 文件的结构）
+- YAML frontmatter：`name`、`description`、`triggers` 三个必需字段
 
 **Test scenarios:**
-- Happy path: `cog --help` 输出包含 `cog` 作为 app name
-- Happy path: `cog create --help` 正常工作
+- Skill file 的 YAML frontmatter 格式正确（可通过 Python `yaml.safe_load()` 验证）
+- `triggers` 列表包含全部 4 个命令
+- Skill 文件名和内部 `name` 一致（`cog`）
 
 **Verification:**
-- `python -m mem0ress.cli --help` 显示 `cog` 作为 app name
-- 所有现有测试通过（测试使用 `mem0` 的地方需更新）
+- `python -c "import yaml; yaml.safe_load(open('docs/skills/cog.md'))"` 无报错
 
 ---
 
 - [ ] **Unit 2: task_id 自动生成算法**
 
-**Goal:** 实现 6 位 task_id 生成算法 `{base36_timestamp_low}{random_alphanumeric}`
+**Goal:** 实现 6 位 task_id 生成算法：时间戳低 4 位 base36 + monotonic counter 2 位 base36
 
 **Requirements:** R9, R10, R11
 
@@ -115,35 +135,36 @@ mem0ress MVP 的 CLI 已完整，但存在两个问题：
 
 **Approach:**
 - 独立 `generate_task_id() -> str` 函数
-- 取 `int(time.time() // 64)` 的低 4 位 base36 编码（64 秒粒度，保证低 4 位覆盖约 12 天范围）
-- 拼接 2 位 `secrets.choice(alphanumeric)` 随机字符
-- 同一进程内使用 `itertools.count` 保证连续调用不重复（通过取模确保在 base36 范围内轮转）
+- 取 `int(time.time() // 64)` 的低 4 位 base36 编码（64 秒粒度，覆盖约 12 天范围）
+- 拼接 2 位 base36 monotonic counter（`itertools.count`，取模 36²）
+- 同一进程内 counter 保证连续调用不碰撞；时间戳提供跨进程区分
 - 文件格式：纯 6 位字串，无分隔符（如 `2k5m3x`）
 
 **Technical design:**
 ```python
-import time, secrets, itertools
+import time, itertools
 
+_BASE36 = "0123456789abcdefghijklmnopqrstuvwxyz"
 _COUNTER = itertools.count(start=0)
-_ALPHANUMERIC = "0123456789abcdefghijklmnopqrstuvwxyz"
+
+def _to_base36(value: int, width: int) -> str:
+    """Convert integer to base36 string of given width."""
+    return ''.join(_BASE36[(value // 36**i) % 36] for i in range(width - 1, -1, -1))
 
 def generate_task_id() -> str:
-    ts_low = int(time.time() // 64) % (36**4)   # 4 位 base36
-    ts_part = format(ts_low, '036').lower()        # 4 字符
-    # 本地计数器防止同一进程内碰撞
-    counter = next(_COUNTER) % 36**2
-    rand_part = format(counter, '036').lower()     # 2 字符
-    return ts_part + rand_part
+    ts_low = int(time.time() // 64) % (36**4)  # 4 chars base36
+    counter = next(_COUNTER) % (36**2)          # 2 chars base36, wraps
+    return _to_base36(ts_low, 4) + _to_base36(counter, 2)
 ```
 
 **Patterns to follow:**
-- `secrets` 模块用于安全随机（优于 `random`）
 - `itertools.count` 用于进程内单调递增（确保本地唯一性）
+- `secrets` 模块不使用（counter 本身已保证唯一性，不需要随机）
 
 **Test scenarios:**
 - Happy path: 连续调用 10 次，生成的 ID 互不相同
 - Happy path: 生成的 ID 长度为 6，仅含 base36 字符（`0-9a-z`）
-- Edge case: 高频调用（1000 次）无碰撞
+- Edge case: counter 绕回（36² = 1296 次后）仍唯一（时间戳部分已变化）
 - Format: 返回值不包含空格、换行或分隔符
 
 **Verification:**
@@ -246,7 +267,7 @@ def generate_task_id() -> str:
 - `judge` 命令：若无显式 `<task_id>`，从 `.current_task` 读取；调用 `TaskServiceImpl.judge_task()`，输出纯文本结果
 - `close` 命令：若无显式 `<task_id>`，从 `.current_task` 读取；调用 `TaskServiceImpl.close_task()`（内含 judge + complete 原子操作）；成功后调用 `CurrentTaskManager.activate_on_close()` 清空 task_id
 - judge 输出改为纯文本（移除 Rich ANSI markup）
-- close 的 Tier 2 stub 处理：HarnessRunner 对无 verify_cmd 的 requirement 返回 SKIP 而非 PASS，close 判断"所有非 SKIP tier PASS"即成功
+- Tier 2 stub 行为：HarnessRunner 对无 verify_cmd 的 requirement 返回 PASS（不阻塞 close）
 
 **Patterns to follow:**
 - CLI 参数解析参考现有 `--content`/`--root` 选项模式
@@ -355,43 +376,57 @@ On failure: Reports which tier failed and why.
 
 ---
 
-- [ ] **Unit 7: Tier 2 stub 返回 SKIP，close 逻辑修正**
+- [ ] **Unit 7: CLI 命名统一 — `mem0` → `cog`（第二步）**
 
-**Goal:** 让 Tier 2 stub 不再返回无意义的 PASS，而是返回 SKIP；close 在所有非 SKIP tier 全 PASS 时成功
+**Goal:** 将 CLI app 名称从 `mem0` 改为 `cog`，与 Skill 触发器彻底对齐。Skill 已存在且调用 `cog` CLI，此步修改 CLI 名称后 Skill 直接生效。
 
-**Requirements:** R8（close 原子操作，任一 tier FAIL 则拒绝关闭）
+**Requirements:** R4（CLI 命令格式与 Skill 命名对齐）
 
-**Dependencies:** Unit 5（close 命令实现）
+**Dependencies:** Unit 1, Unit 4, Unit 5（Skill 已就位，CLI 改名后 Skill 无需修改）
 
 **Files:**
-- Modify: `src/mem0ress/harness/__init__.py`
-- Modify: `src/mem0ress/gateway/actions.py`（`close_task` 逻辑调整）
+- Modify: `src/mem0ress/cli.py`（`app = typer.Typer(name="mem0")` → `app = typer.Typer(name="cog")`）
+- Modify: `src/mem0ress/README.md`（所有 `mem0` 命令引用更新为 `cog`）
+- Modify: `src/mem0ress/design.md`（命令参考表格更新）
+- Modify: `pyproject.toml`（console_scripts 或 entry points 更新为 `cog`）
+- Modify: `docs/skills/cog.md`（Skill 中 CLI 调用从 `mem0` 改为 `cog`）
 
 **Approach:**
-- `HarnessRunner.verify_task()` 中，当 requirement 的 `verify_cmd` 为 `None` 或空字符串时，该 tier 结果为 SKIP（`passed=None` 或专门的 `skipped` 状态），而非 PASS
-- `close_task()` 判断逻辑改为：`failed = [r for r in results if not r.passed]`（仅检查 FAIL，SKIP 不算 FAIL）
-- `TierResult` 可能需要增加 `skipped` 字段或改用 `Optional[bool]`（`True=PASS, False=FAIL, None=SKIP`）
+- 将 `cli.py:32` 的 `name="mem0"` 改为 `name="cog"`
+- 更新所有 `mem0` 字符串引用：docstring、error hints、help text
+- 更新 README.md 和 design.md 中的命令引用
+- 更新 pyproject.toml console_scripts（如有 `mem0` 入口）
+- Skill 文件 `docs/skills/cog.md` 中 CLI 调用改为 `cog create ...` 等
+- 告知用户：所有脚本、别名、CI/CD 中的 `mem0` 命令需更新为 `cog`
+
+**String inventory（cli.py 中所有 `mem0` 字符串）：**
+- `cli.py:1-14` docstring 中的 usage 示例
+- `cli.py:32` `name="mem0"`
+- `cli.py:33` `help="mem0ress — ..."`
+- `cli.py:102` `'mem0 init'` error hint
+- `cli.py:161` `'mem0 init'` error hint
+- `cli.py:247` `'mem0 update <task_id>'` hint
 
 **Patterns to follow:**
-- `HarnessResult` 当前有 `passed: bool`，可考虑改为 `Optional[bool]` 或增加 `skipped: bool`
-- 现有 `judge.py` 的 tier 判断逻辑
+- CLI 重命名时的字符串替换模式
 
 **Test scenarios:**
-- Happy path: requirement 有 verify_cmd 时正常执行（stub 总是 PASS）
-- Edge case: requirement 无 verify_cmd 时返回 SKIP，不算 FAIL
-- Happy path: close 所有 non-SKIP tiers PASS 时成功（即使有 SKIP tiers）
-- Error path: 任一 non-SKIP tier FAIL 时 close 失败
+- Happy path: `cog --help` 输出包含 `cog` 作为 app name
+- Happy path: `cog create --help` 正常工作
+- Edge case: 旧 `mem0 create` 调用报错 "command not found"（预期行为）
 
 **Verification:**
-- `pytest tests/unit/test_task_service.py::TestTaskServiceImpl::test_close_task_succeeds_when_all_tiers_pass` 通过
-- `pytest tests/unit/test_task_service.py::TestTaskServiceImpl::test_close_task_raises_when_tier1_fails` 通过
+- `python -m mem0ress.cli --help` 显示 `cog` 作为 app name
+- `grep -r "mem0 " src/` 无残留（除非要保留的 deprecated alias）
+- 所有现有测试通过（测试使用 `mem0` 的地方需更新）
 
 ## System-Wide Impact
 
-- **CLI 命名变化**：`mem0` → `cog`。所有调用 `mem0 ...` 的脚本、文档、别名需要更新。这是破坏性变更，但用户明确要求统一命名。
-- **`.current_task` 文件**：所有任务创建和关闭命令现在会读写 `.mem0ress/.current_task`。旧的任务（无此文件）依然可用，但操作时会创建该文件。
-- **Skill 文件**：新增 `~/.claude/skills/cog.md`。用户需要手动安装或使用安装脚本。
-- **TaskServiceImpl 修改**：单元测试覆盖的方法（`create_task`、`update_todo`、`close_task` 等）行为不变；新增 `close_task` 对 SKIP 的处理不影响现有测试。
+- **Step 1（Skill 先）**：Skill 文件 `cog.md` 调用 CLI `mem0 ...`（此时 CLI 仍为 `mem0`）。这一步 Skill 可独立完成，无需修改 CLI
+- **Step 2（CLI 改名）**：`mem0` → `cog`。所有调用 `mem0 ...` 的脚本、文档、别名、CI/CD 需要更新。提供迁移文档：`sed -i 's/mem0 /cog /g'` 一键替换
+- **`.current_task` 文件**：所有任务创建和关闭命令现在会读写 `.mem0ress/.current_task`。旧的任务（无此文件）依然可用，但操作时会创建该文件
+- **Skill 文件**：新增 `~/.claude/skills/cog.md`。用户需要手动安装或使用安装脚本
+- **README.md / design.md**：命令参考表格中所有 `mem0` 引用需更新为 `cog`
 
 ## Risks & Dependencies
 
