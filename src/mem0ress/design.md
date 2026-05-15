@@ -1,523 +1,484 @@
----
-title: mem0ress 实现设计
-version: 0.2
-definition: 认知对齐平面的实现架构文档，描述模块划分、接口签名、错误处理和技术流程
----
+# mem0ress Design — Phase 0 实现计划
 
-# mem0ress 实现设计
-
-> **与规范的关系：** 本文档是 `docs/spec.md` 的实现承接文档。规范定义接口语义（做什么），本文档描述实现方案（如何做）。规范不引用本文档，依赖方向单一。
+> 本文档是 mem0ress 运行时的实现层规范，对应 spec.md（协议语义层）。
+> spec.md 回答"是什么"，design.md 回答"怎么做"。
 
 ---
 
-## 1. 项目目录结构
+## 1. 核心定位（本次重构的关键变化）
+
+### 1.1 三层职责划分
+
+| 层 | 名称 | 职责 |
+|---|---|---|
+| Skill | Semantic Coordination Layer | 定义语义协调协议（问什么问题、如何算补全） |
+| Agent | Semantic Reasoning | 在 Skill 引导下执行对话，补全语义 |
+| CLI | Protocol Persistence Step | 根据会话结果执行协议持久化（创建/更新文件） |
+
+### 1.2 Skill 的定义
+
+Skill = Semantic Coordination Layer，不是 Workflow Coordinator。
+
+**Skill 可以：**
+- 请求补充 Picture
+- 请求澄清 Constraints
+- 请求验证 Requirement
+- 请求 Judge 重新解释 alignment
+- 请求 Agent 生成候选方案
+
+**Skill 不得拥有：**
+- workflow DAG
+- execution pipeline
+- state machine orchestration
+- procedural execution graph
+
+### 1.3 Slash Command 的定义
+
+Slash Command = Semantic Interaction Entrypoint，不是 Command Binding。
 
 ```
-src/mem0ress/
-├── __init__.py
-├── cli.py                  # CLI 入口（typer + Rich 可视化）
-├── core/
-│   └── schema.py          # Pydantic 模型（TaskManifest、TaskStatus、CognitiveTriad 等）
-├── gateway/
-│   ├── plane.py           # PlaneAssembler — 状态平面编译（只读）
-│   ├── actions.py         # TaskServiceImpl — 写操作实现
-│   └── intercept.py       # CognitiveContext — 生命周期钩子
-├── substrate/
-│   ├── fs.py              # safe_write / get_file_hash — 乐观锁文件系统操作
-│   ├── parser.py           # SubstrateParser — Markdown ↔ Pydantic 双向转换
-│   └── git_ops.py         # Git 操作（待实现）
-└── harness/
-    └── __init__.py        # HarnessRunner — Tier 1/2/3 检验执行器
+/cog create
+  ≠ create_task()
+  = 一个认知操作开始
+
+它可能触发：
+  - 多轮交互
+  - 语义澄清
+  - 补全 Constraints
+  - Agent 提案
+  - Judge 检验 alignment
 ```
+
+### 1.4 CLI 的定义
+
+CLI = Protocol Persistence Step，不是主要交互界面。
+
+交互的终点，最后才执行文件创建/更新。
 
 ---
 
-## 2. 模块架构
+## 2. 目录结构
 
-### 2.1 模块边界
-
-| 模块 | 类型 | 公开接口 | 说明 |
-|------|------|----------|------|
-| `gateway/plane.py` | 只读 | `PlaneAssembler(substrate_root)` / `compile_status_plane() -> StatusPlane` | 扫描文件系统，编译状态平面快照，无缓存 |
-| `gateway/actions.py` | 写操作 | `TaskServiceImpl(substrate_root)` / `create_task()` / `complete_task()` / `abandon_task()` / `update_todo()` / `update_cognitive_triad()` / `get_task()` / `get_all_tasks()` / `delete_task()` / `add_todo()` / `remove_todo()` | 所有写操作通过此处，乐观锁保护 |
-| `gateway/intercept.py` | 钩子 | `CognitiveContext(substrate_root)` / `__enter__()` / `__exit__()` / `status_plane: StatusPlane` | Before Turn 挂载平面，After Turn 自动触发 Session 快照和 Tier 0 检查 |
-| `substrate/parser.py` | 解析 | `SubstrateParser.parse_manifest(path) -> TaskManifest` / `serialize_manifest(manifest, path) -> str` | Frontmatter ↔ Pydantic 双向转换 |
-| `substrate/fs.py` | 文件系统 | `safe_write(path, content, expected_hash)` / `get_file_hash(path) -> str` | 乐观锁写入，SHA-256 Hash 比对 |
-| `harness/__init__.py` | 检验 | `HarnessRunner()` / `verify_task(manifest, subtasks) -> list[HarnessResult]` / `is_complete(results) -> bool` | Tier 1/2/3 执行，结果为 `HarnessResult` 列表 |
-| `harness/judge.py` | 上下文 | `prepare_judge_context(task_id, picture, artifacts, constraints, data_plane_summary) -> JudgeResult` | Tier 3 语义对齐上下文准备（实际判断由 Agent 执行） |
-
-### 2.2 Plane Assembler（平面组装器）
-
-**职责：** 认知构建的执行单元。只读扫描文件系统，编译状态平面快照。
-
-**接口：**
-
-```python
-class PlaneAssembler:
-    def __init__(self, substrate_root: Path = Path(".mem0ress")) -> None:
-        """Args:
-            substrate_root: 认知基座根目录（默认 .mem0ress）
-        """
-
-    def compile_status_plane(self) -> StatusPlane:
-        """扫描 tasks/ 目录，编译状态平面快照。
-
-        实时扫描，每次调用直接读文件系统，不缓存。
-        只输出当前状态，不做偏差判断。
-
-        Returns:
-            StatusPlane — 使用 .render() 获取字符串格式
-        """
-```
-
-**设计原则：**
-- 纯展示，无诊断
-- 实时扫描，不缓存
-- 全面覆盖，不隐藏任何节点
-- 非侵入，只读不写
-
-### 2.3 Tool Interface（工具接口）
-
-**职责：** 认知操作的写入入口，通过 `TaskServiceImpl` 实现。
-
-**接口：**
-
-```python
-class TaskServiceImpl:
-    def __init__(self, substrate_root: Path = Path(".mem0ress")) -> None:
-        """Args:
-            substrate_root: 认知基座根目录
-        """
-
-    # 写操作
-    def create_task(self, task_id: str, picture: str) -> TaskManifest:
-        """创建新任务目录（含 task.md / session.md / gotchas.md / judge.md）。
-
-        Raises:
-            TaskExistsError: 任务已存在
-        """
-
-    def complete_task(self, task_id: str) -> TaskManifest:
-        """标记任务为 COMPLETED。乐观锁保护。
-
-        Raises:
-            FileNotFoundError: 任务不存在
-            ConflictError: 文件已被修改
-        """
-
-    def abandon_task(self, task_id: str) -> TaskManifest:
-        """标记任务为 ABANDONED。乐观锁保护。
-
-        Raises:
-            FileNotFoundError: 任务不存在
-            ConflictError: 文件已被修改
-        """
-
-    def update_todo(self, task_id: str, index: int, done: bool) -> TaskManifest:
-        """更新指定 Todo 的完成状态。乐观锁保护。
-
-        Raises:
-            FileNotFoundError: 任务不存在
-            IndexError: Todo 索引越界
-            ConflictError: 文件已被修改
-        """
-
-    def update_cognitive_triad(
-        self,
-        task_id: str,
-        picture: str,
-        requirements: list[str],
-        constraints: list[str],
-    ) -> TaskManifest:
-        """更新认知三要素（Picture / Requirements / Constraints）。
-
-        Raises:
-            FileNotFoundError: 任务不存在
-            ConflictError: 文件已被修改
-        """
-
-    def add_todo(self, task_id: str, text: str) -> TaskManifest:
-        """追加一个新 Todo 项。"""
-
-    def remove_todo(self, task_id: str, index: int) -> TaskManifest:
-        """删除指定 Todo 项。"""
-
-    # 读操作
-    def get_task(self, task_id: str) -> TaskManifest:
-        """获取指定任务的 Manifest。"""
-
-    def get_all_tasks(self) -> list[TaskManifest]:
-        """获取所有任务的 Manifest 列表。"""
-
-    def delete_task(self, task_id: str) -> None:
-        """删除任务目录及其所有文件。"""
-```
-
-**设计原则：**
-- 所有写操作均通过 `safe_write`，乐观锁 Hash 校验
-- `frozen=True` 模型，状态更新通过构造新实例实现
-- Upsert 语义：`create_task` 不存在时自动创建
-
-### 2.4 Judge Agent（任务检验执行器）
-
-**职责：** 执行任务检验，只读数据。检验完成后，结果写入 `judge.md`（每轮追加），通过 hook 返回值通知主 Agent。
-
-**Tier 执行内容：**
-
-| Tier | 检查内容 | 输入来源 |
-|------|---------|---------|
-| Tier 0 | Constraints 违反检查 | Constraints（task.md）、当前代码状态（文件系统） |
-| Tier 1 | Todo 完成 + 子任务关闭 | todos（task.md）、Session 当前快照、子任务 task.md |
-| Tier 2 | Requirements 满足检查 | Requirements（task.md）、实际产出（文件系统） |
-| Tier 3 | 语义对齐判断 | Picture（task.md）、实际产出（文件系统） |
-
-**接口：**
-
-```python
-class HarnessRunner:
-    def verify_task(
-        self,
-        manifest: TaskManifest,
-        subtasks: list[TaskManifest] | None = None,
-    ) -> list[HarnessResult]:
-        """执行 Tier 1 → 2 → 3 完整检验链路。
-
-        Tier 3 的实际判断由 Agent 执行，本方法只准备上下文。
-        Returns:
-            list[HarnessResult] — 每层一个结果
-        """
-
-    def is_complete(self, results: list[HarnessResult]) -> bool:
-        """判断所有层是否通过。"""
-
-
-class HarnessResult(BaseModel):
-    """单个 Tier 的检验结果。"""
-
-    tier: int                           # 1, 2 或 3
-    passed: bool
-    message: str                        # 人类可读的结果描述
-    deviation: str | None = None        # 失败时的偏差原因
-
-
-def prepare_judge_context(
-    task_id: str,
-    picture: str,
-    artifacts: list[Path] | None = None,
-    constraints: list[str] | None = None,
-    data_plane_summary: str | None = None,
-) -> JudgeResult:
-    """准备 Tier 3 语义对齐的判断上下文。
-
-    实际判断由 Agent 执行，本函数只准备 Briefing 文本。
-    """
-```
-
-**文件存储：**
+Phase 0 使用 `.CAP/` 作为认知基座根目录，与 spec.md 的命名约定保持一致。
 
 ```
-.mem0ress/tasks/{task_id}/
-├── task.md       # Task 定义
-├── session.md     # 轮次快照（每轮追加）
-├── gotchas.md     # 偏差记录（每条追加）
-└── judge.md       # 检验报告（每轮追加，含时间戳）
+.CAP/
+└── tasks/
+    └── {task_id}/
+        ├── task.md           # 任务清单（语义权威表面）
+        ├── session.md        # 追加式认知增量流
+        ├── gotchas.md        # 关键发现记录
+        ├── judge.md          # Judge 验证结果
+        │
+        └── data/             # data plane
+            ├── outputs/      # 执行产物
+            ├── evidence/     # 证据文件
+            └── artifacts/    # 生成物
 ```
+
+**与 spec 命名约定的对齐：**
+- `.CAP/` 而非 `.mem0ress/` —— 与 spec.md 的 Protocol 术语一致
+- `task.md` 而非 `manifest.md` —— filesystem source of truth
 
 ---
 
-## 3. 错误处理
+## 3. Skill 协议（语义协调层）
 
-### 3.1 异常体系
+Skill 通过 SKILL.md 向 Agent 描述语义协调协议，定义"可以请求什么认知操作"。
 
-```python
-# substrate/fs.py
-class ConflictError(Exception):
-    """乐观锁失败 — 文件在操作期间被外部修改。"""
+### 3.1 Skill 文件结构
 
-
-# gateway/actions.py
-class TaskExistsError(Exception):
-    """尝试创建已存在的任务。"""
+```
+skills/mem0ress/
+└── mem0ress/
+    ├── SKILL.md              # 语义协调协议描述
+    └── references/
+        └── protocol.yaml     # task.md 格式规范（从 spec §5.5 提取）
 ```
 
-### 3.2 错误传播规则
+### 3.2 Skill 定义的认知操作
 
-| 场景 | 异常 | 调用方处理 |
-|------|------|-----------|
-| 并发写冲突 | `ConflictError` | 重新读取 → 重新构造 → 重试写入 |
-| 任务不存在 | `FileNotFoundError` | 退出或提示用户 |
-| 任务已存在 | `TaskExistsError` | 提示用户 |
-| Todo 索引越界 | `IndexError` | 提示用户 |
-| Manifest 格式非法 | `ValueError` | （解析层抛出，转换为此表对应异常） |
-
-**调用方必须处理 `ConflictError` 并重试，不应该静默忽略。**
+| 操作 | 语义含义 | 触发结果 |
+|---|---|---|
+| `create` | 开始一个任务的语义初始化 | 多轮补全 picture/requirements/constraints |
+| `status` | 理解当前认知状态 | 渲染状态平面 |
+| `snapshot` | 追加认知增量 | 压缩记录到 session.md |
+| `gotcha` | 记录恢复关键发现 | 持久化到 gotchas.md |
+| `verify` | 请求 Judge 验证 alignment | 触发隔离检验 |
+| `decide` | 基于 Judge 结果决定下一步 | 读取判决，Agent 决策 |
 
 ---
 
-## 4. 认知拦截器（Gateway Interceptor）
+## 4. `/cog create` — MVP 最小实现示例
 
-`gateway/intercept.py` 的 `CognitiveContext` 是 SDK 参与 Agent 循环的唯一入口。
+### 4.1 核心概念：Semantic Coordination vs Procedural Orchestration
 
-```python
-class CognitiveContext:
-    """SDK 生命周期钩子 — 供宿主系统集成到 Event Loop。"""
+Skill 是 **Semantic Coordination Layer**，不是 Workflow Orchestrator。
 
-    def __init__(self, substrate_root: str | Path = ".mem0ress") -> None:
-        """Args:
-            substrate_root: 认知基座根目录
-        """
+| | Procedural Orchestration | Semantic Coordination |
+|---|---|---|
+| 模式 | 先做A，再做B，再做C | 当前缺什么，补什么 |
+| 控制流 | 固定流程 | 动态路由 |
+| 分派对象 | 子任务/子Agent | 认知模式切换 |
 
-    @property
-    def status_plane(self) -> StatusPlane:
-        """获取状态平面快照。只在 __enter__ 后可用。"""
-
-    def __enter__(self) -> CognitiveContext:
-        """Before Turn — 编译状态平面，供宿主注入 Agent 上下文。"""
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        """After Turn — 自动触发 Tier 0 检查和 Session 快照。"""
-```
-
-**使用方式（宿主 Event Loop）：**
-
-```python
-with CognitiveContext(".mem0ress") as ctx:
-    status_plane = ctx.status_plane  # 注入 Agent 上下文
-    # Agent 执行思考...
-# __exit__ 自动触发 Tier 0 检查 + Session 快照
-```
-
----
-
-## 5. CLI 命令
-
-| 子命令 | 参数 | 说明 |
-|--------|------|------|
-| `status` | `--root / -r` | 展示状态平面（树形可视化） |
-| `init` | `--root / -r` | 初始化认知基座 |
-| `create` | `<task_id>` / `--parent <id>` / `--root / -r` | 创建任务或子任务 |
-| `done` | `<task_id>` / `--root / -r` | 标记任务完成 |
-| `abandon` | `<task_id>` / `--root / -r` | 标记任务废弃 |
-| `report` | `<task_id>` / `--root / -r` | 显示最新 judge 报告 |
-
-所有命令默认根路径 `.mem0ress`，可通过 `--root` 覆盖。
-
----
-
-## 6. 核心机制
-
-### 6.1 乐观锁机制
-
-`substrate/fs.py` 在写入任何文件前，必须比对内容 SHA-256 Hash：
-
-```python
-def safe_write(file_path: Path, content: str, expected_hash: str) -> None:
-    """写入文件，附带乐观锁检查。
-
-    若文件存在且 Hash 不匹配，抛出 ConflictError。
-    """
-```
-
-### 6.2 SSOT 与绝对覆写
-
-- 运行时工作区内新认知直接覆写旧认知，不做合并
-- `TaskManifest` 等 Pydantic 模型为 `frozen=True`
-- 状态更新通过构造新实例实现：`TaskManifest(..., status=TaskStatus.COMPLETED)`
-
-### 6.3 零隐藏状态
-
-所有认知数据以纯文本（Markdown/YAML）存储，无二进制或隐藏状态：
-- `task.md` — Task 定义
-- `session.md` — 轮次快照（每轮追加）
-- `gotchas.md` — 偏差记录（每条追加）
-- `judge.md` — 检验报告（每轮追加，含时间戳）
-
----
-
-## 7. 数据模型
-
-### 7.1 TaskManifest（task.md 的内存映射）
-
-```python
-class TaskManifest(BaseModel):
-    """Task manifest — frozen Pydantic model."""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    id: str                              # 目录名是 source of truth
-    type: str = "task"
-    status: TaskStatus = TaskStatus.CREATED
-    cognitive_triad: CognitiveTriad       # Picture / Requirements / Constraints
-    gotcha_refs: list[str] = []         # Gotcha 引用列表
-    todos: list[TodoItem] = []           # Todo 列表
-```
-
-### 7.2 CognitiveTriad（认知三要素）
-
-```python
-class CognitiveTriad(BaseModel):
-    """Picture / Requirements / Constraints 三要素。"""
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    picture: str                         # 语义成功状态（利益相关者定义）
-    requirements: list[str] = []        # 可验证条件（Agent 推导）
-    constraints: list[str] = []         # 不可逾越红线（Agent + 领域知识）
-```
-
-### 7.3 StatusPlane（状态平面）
-
-```python
-class StatusPlane(BaseModel):
-    """认知系统的当前状态快照 — 纯展示模型，不做诊断。"""
-
-    entries: list[StatusPlaneEntry]      # 顶层任务列表
-    system_laws: tuple[str, str]         # 两条系统法则
-
-    def render(self) -> str:
-        """渲染为字符串格式，供 Agent 上下文使用。"""
-
-
-class StatusPlaneEntry(BaseModel):
-    """单个任务条目。"""
-
-    task_id: str
-    todo_progress: tuple[int, int]       # (completed, total)
-    status: TaskStatus
-    gotchas: list[str]
-    subtasks: list["StatusPlaneEntry"]
-```
-
----
-
-## 8. 技术流程
-
-### 8.1 Agent 驱动的业务闭环
+Skill 根据当前认知状态，动态引导主 Agent 进入正确的认知模式：
 
 ```
-1. 认知构建：Agent 调用 get_status_plane() → 了解当前状态
-2. 任务检验：Agent 调用 verify() → Judge Agent 执行检验，结果写入 judge.md
-3. 状态更新：Agent 根据结果决策 → complete / abandon / update_todo
-```
-
-### 8.2 宿主集成方式
-
-```
-宿主 Event Loop
+主 Agent + Judge Agent（仅此两者）
     ↓
-with CognitiveContext(".mem0ress") as ctx:
-    status_plane = ctx.status_plane  ← Before Turn：挂载状态平面
-    # Agent 执行...
-    # （__exit__ 自动触发 Tier 0 + Session 快照）
+Skill 评估认知状态
+    ↓
+Picture 不明确 → 主 Agent 进入 Clarification Mode
+Constraints 冲突 → 主 Agent 进入 Analysis Mode
+Requirements 需验证 → 主 Agent 请求 Judge Agent 验证
+    ↓
+补全完成 → CLI persistence
 ```
 
----
+### 4.2 `/cog create` 会话协议
 
-## 9. MVP 落地状态
+```
+Agent: /cog create <task_id>
+       ↓
+Skill 评估当前认知状态（三要素是否完整）
+       ↓
+缺失 Picture？
+  → 主 Agent Clarification Mode："这个任务的语义成功状态是什么？"
+       ↓
+Constraints 冲突？
+  → 主 Agent Analysis Mode："这些约束之间是否存在矛盾？"
+       ↓
+Requirements 不可验证？
+  → 主 Agent 请求 Judge Agent 确认
+       ↓
+主 Agent 确认补全完成
+       ↓
+CLI persistence：创建 .CAP/tasks/<task_id>/task.md
+```
 
-### 9.1 MVP 定义
+### 4.3 MVP 实现路径
 
-**MVP 不做：** 完整系统、多 Agent、自动化、orchestration、workflow engine、IDE integration、UI。
+**Phase 1：Skill 层（语义协调协议）**
+- [ ] 创建 `skills/mem0ress/mem0ress/SKILL.md`
+- [ ] 定义认知状态评估规则（何时需要 Clarification / Analysis / Judge）
+- [ ] 创建 `references/protocol.yaml`（从 spec §5.5 提取）
 
-**MVP 只做：** 让一个 Agent 在长任务中不迷失。
+**Phase 2：CLI 层（Persistence）**
+- [ ] 简化 `/cog create` 命令，只接收最终补全结果
+- [ ] 按 protocol.yaml 创建 task.md
+- [ ] 不做复杂交互，交给 Skill 引导的主 Agent 对话
 
-验证目标：
-1. PRC 模型是否真的能稳定驱动 Agent
-2. Status Plane 是否真的比传统 memory 更稳定
-3. Judge Loop 是否真的能纠偏
-4. Task-local cognition 是否真的能降低 context entropy
-5. 文件协议是否足够简单且可持续演进
+**Phase 3：Agent 侧**
+- [ ] Agent 加载 Skill 后，在 `/cog create` 触发时按 Skill 的认知路由进行对话
+- [ ] 对话完成后调用 CLI 命令执行持久化
 
-### 9.2 MVP 核心命令
-
-MVP 阶段只需 7 个命令，形成最小闭环：
-
-|| 命令 | 行为 |
-|------|------|
-| `mem0 init` | 初始化 substrate |
-| `mem0 create <task_id>` | 写入 task.md (PRC + todos)，初始化四个文件 |
-| `mem0 update <task_id>` | 追加 session.md snapshot（turn 记录） |
-| `mem0 judge <task_id>` | 执行 T0/T1 验证，T2 为 stub，结果追加 judge.md |
-| `mem0 close <task_id>` | judge PASS → COMPLETED；FAIL → 拒绝关闭 |
-| `mem0 status` | 组装并展示状态平面 |
-| `mem0 report <task_id>` | 展示最新 judge 报告 |
-
-**注意：** `done` 命令在 MVP 阶段废弃，由 `close` 替代。`close` 原子化执行 judge，Agent 无法绕过验证直接关闭任务。
-
-### 9.3 MVP CLI 命令
+### 4.4 CLI 命令规格（MVP）
 
 ```bash
-# 创建任务
-mem0 create <task_id>
-
-# 追加 turn snapshot（记录本轮执行内容）
-mem0 update <task_id> [--todos "1. xxx 2. yyy"] [--note "本轮做了什么"]
-
-# 执行验证（T0 约束检查 + T1 todo 检查；T2 verify_cmd 为 stub）
-mem0 judge <task_id>
-
-# 关闭任务（先 judge，全 PASS 才改 status 为 COMPLETED）
-mem0 close <task_id>
-
-# 查看状态平面
-mem0 status
-
-# 查看 judge 报告
-mem0 report <task_id>
+/cog create <task_id> \
+  --picture "语义成功状态描述" \
+  --requirements "req1; req2; ..." \
+  --constraints "红线1; 红线2; ..."
 ```
 
-### 9.4 requirements schema（verify_cmd）
+MVP 阶段：CLI 只做参数接收和文件创建，语义补全路由交给 Skill 引导的对话。
 
-MVP 阶段 requirements 为结构化对象，T2 通过 verify_cmd 执行 shell 验证：
+---
+
+## 5. 文件协议（Phase 0）
+
+### 5.1 task.md
+
+Semantic authority surface（语义权威表面），格式由 `references/protocol.yaml` 定义。
 
 ```yaml
+---
+id: {task_id}
+type: task
+status: created
 cognitive_triad:
-  picture: "..."
+  picture: "{语义目标描述}"
   requirements:
     - id: req_01
-      description: "API 在 200ms 内响应"
-      verify_cmd: "pytest tests/test_perf.py -k test_api_latency"
-    - id: req_02
-      description: "认证失败返回 401"
-      verify_cmd: "pytest tests/test_auth.py -k test_unauthorized"
+      description: "{需求描述}"
+      verify_cmd: null  # MVP: stub
   constraints:
-    - "不得明文存储密码"
-    - "不得超过 3 次重试"
+    - "{约束1}"
+    - "{约束2}"
+gotcha_refs: []
+---
+# Todos
+- [ ] {todo_1}
+- [x] {todo_2}
 ```
 
-### 9.5 MVP 文件结构
+### 5.2 session.md
 
-```
-.mem0ress/
-├── tasks/
-│   └── {task_id}/
-│       ├── task.md        # PRC + todos
-│       ├── session.md     # turn snapshot 追加
-│       ├── gotchas.md     # stub（写入但不影响逻辑）
-│       └── judge.md       # judge 结果追加
+Append-only cognition delta stream（追加式认知增量流）。
+
+```markdown
+## Turn N @ {timestamp}
+
+{压缩后的语义增量}
 ```
 
-### 9.6 MVP vs v0.2+
+**压缩规则（MVP Phase 0）：**
+- 不持久化 chain-of-thought
+- 不持久化原始执行日志
+- 只记录：发现、决策、进展
 
-| 内容 | MVP (v0.1) | v0.2+ |
-|------|------------|-------|
-| Tier 2 verify_cmd | stub（结构写入，不执行） | 真实 shell exec |
-| Tier 3 语义对齐 | 不实现 | LLM 推断 |
-| 子任务 | 目录结构支持 | 父子可见性通道 |
-| Data Plane | git commit ID 记录 | 完整 diff 追踪 |
-| Status Plane | 树形可视化 | web UI |
+### 5.3 gotchas.md
 
-### 9.7 MVP 落地状态
+Recovery-critical discoveries（恢复关键发现）。
 
-|| Phase | 描述 | 状态 | 说明 |
-|-------|-------|------|------|
-| Phase 1 | 物理契约与类型安全（schema + fs + parser） | ✅ 完成 | TaskManifest / Requirement / CognitiveTriad |
-| Phase 2 | 拦截器与态势投影（plane + intercept） | ✅ 完成 | PlaneAssembler + CognitiveContext（预留给未来 Skill 集成）|
-| Phase 3 | 动作网关（actions） | ✅ 完成 | create/get/update_todo/update_cognitive_triad/add_todo/remove_todo/complete/abandon |
-| Phase 4 | 属性对齐验证（harness Tier 1/2/3） | ✅ 完成 | T0/T1 全执行，T2 stub（verify_cmd 存储但不执行）|
-| Phase 5 | CLI 可观测性 | ✅ 完成 | init / create / status / abandon / report |
-| Phase 6 | `update` 命令（session 追加） | ✅ 完成 | 追加 turn snapshot 到 session.md |
-| Phase 6 | `judge` 命令（T0/T1 执行，T2 stub） | ✅ 完成 | 执行验证，结果写入 judge.md |
-| Phase 6 | `close` 原子化（judge → COMPLETED） | ✅ 完成 | judge 失败则抛 RuntimeError，成功才改 COMPLETED |
-| Phase 7 | `verify_cmd` schema | ✅ 完成 | Requirement { id, description, verify_cmd }，向后兼容旧 string 格式 |
-| MVP 端到端验证 | 真实任务闭环测试 | ⏳ 待跑 | `uv run mem0 <cmd>` 验证 create→update→judge→close 流程 |
+```markdown
+## Gotcha N @ {timestamp}
+
+{关键发现内容}
+```
+
+### 5.4 judge.md
+
+Judge verification surface（Judge 验证表面）。
+
+```markdown
+# Judge Report — {task_id}
+
+**Generated**: {timestamp}
+
+## Tier 0 — PASS/FAIL
+{message}
+
+## Tier 1 — PASS/FAIL
+{message}
+
+## Tier 3 — (Agent 自主判断)
+{reasoning}
+```
+
+---
+
+## 6. 生命周期（Phase 0）
+
+```
+1. /cog create          → Skill 引导补全 picture/requirements/constraints
+2. Execute Work         → (Agent 自主执行)
+3. /cog snapshot        → 追加认知增量到 session.md
+4. /cog gotcha          → 记录关键发现（可选）
+5. /cog verify          → 触发 Judge 隔离验证
+6. /cog decide          → 基于判决结果决定下一步
+```
+
+---
+
+## 7. 其他命令规格
+
+### 7.1 `/cog status`
+
+渲染当前状态平面（Tree 可视化）。
+
+```
+输入: /cog status [--root .CAP]
+输出: Rich tree
+  ■ {task_id} [{done}/{total}] {STATUS}
+     ! {gotcha}
+     └─ {subtask}
+```
+
+### 7.2 `/cog recover`
+
+解析协议文件，重建认知表面，返回给 Agent 恢复所需的关键信息。
+
+```
+输入: /cog recover [--root .CAP]
+输出:
+  picture: {picture}
+  active requirements: [{id}: {description}]
+  active todos: [{text}]
+  unresolved gotchas: [{content}]
+  recent deltas: [{turn} {content}]
+  latest verification state: {status}
+```
+
+### 7.3 `/cog snapshot`
+
+追加认知增量到 session.md。
+
+```
+输入: /cog snapshot {content} [--root .CAP]
+规则:
+  - 必须压缩（不得包含原始日志、chain-of-thought）
+  - 必须有语义（记录发现、决策、进展）
+  - 追加不覆盖
+格式:
+  ## Turn N @ {timestamp}
+  {content}
+```
+
+### 7.4 `/cog gotcha`
+
+追加关键发现到 gotchas.md。
+
+```
+输入: /cog gotcha {content} [--root .CAP]
+适用场景:
+  - 语义模糊
+  - 不稳定假设
+  - 漂移风险
+  - 未解 blocker
+格式:
+  ## Gotcha N @ {timestamp}
+  {content}
+```
+
+### 7.5 `/cog verify`
+
+触发 Judge 隔离验证。
+
+```
+输入: /cog verify [--root .CAP]
+隔离保证:
+  - Judge 只接收 task_id + filesystem protocol
+  - Judge 不得接收 runtime memory / hidden state / full history
+Tier 执行:
+  - Tier 0: constraint violations（同步执行）
+  - Tier 1: todo completion（同步执行）
+  - Tier 2: verify_cmd（MVP: stub 不执行，v0.2+ 实现）
+  - Tier 3: semantic alignment（Agent 自主判断）
+输出:
+  Tier 0: PASS/FAIL
+  Tier 1: PASS/FAIL
+  Tier 2: (stub)
+  Tier 3: (Agent 判断请求)
+```
+
+### 7.6 `/cog decide`
+
+读取 judge.md 判决结果，Agent 决定下一步动作。
+
+```
+输入: /cog decide [--root .CAP]
+决策权永远属于 Hermes，skill 不得自主决定。
+输出:
+  - 最新 judge 判决摘要
+  - Tier 0/1 是否通过
+  - Tier 3 判决状态
+  - 下一步建议（给 Agent 参考，不是指令）
+```
+
+---
+
+## 8. 实现步骤
+
+### Step 1: 目录改名 + data plane 结构
+
+- [ ] 将 `.mem0ress/` 改为 `.CAP/`
+- [ ] 在 `init` 命令中创建 `data/outputs/`, `data/evidence/`, `data/artifacts/` 目录
+- [ ] 将 `--root` 默认值从 `.mem0ress` 改为 `.CAP`
+
+### Step 2: `/cog recover` 命令
+
+- [ ] 实现 `RecoveredCognition` 数据类
+- [ ] 实现 `recover_cognition()` 函数，解析 task.md + session.md + gotchas.md
+- [ ] 添加 CLI 命令 `/cog recover`
+
+### Step 3: `/cog gotcha` 命令
+
+- [ ] 实现 `append_gotcha()` 函数
+- [ ] 添加 CLI 命令 `/cog gotcha`
+- [ ] 模板：`gotchas.md`
+
+### Step 4: `/cog decide` 命令
+
+- [ ] 实现 `read_judge_verdict()` 函数
+- [ ] 添加 CLI 命令 `/cog decide`
+- [ ] 输出格式化判决摘要
+
+### Step 5: Skill 层（语义协调协议）
+
+- [ ] 创建 `skills/mem0ress/mem0ress/SKILL.md`
+- [ ] 创建 `skills/mem0ress/mem0ress/references/protocol.yaml`
+- [ ] 定义 `create` 的对话协议（三要素补全）
+- [ ] 定义其他命令的语义协调协议
+
+### Step 6: 验证 + 清理
+
+- [ ] 运行 `ty check src/`
+- [ ] 运行 `ruff check src/`
+- [ ] 运行 `pytest tests/`
+- [ ] 提交
+
+---
+
+## 9. 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| Runtime | Python 3.12 |
+| 依赖管理 | uv |
+| 项目管理 | pyproject.toml |
+| CLI | Typer |
+| 验证模型 | Pydantic |
+| Lint | Ruff |
+| 类型检查 | ty |
+| 可视化 | Rich |
+
+---
+
+## 10. 验证场景
+
+### Scenario A — 白皮书写作
+
+```
+/cog recover
+    ↓
+write section
+    ↓
+/cog snapshot
+    ↓
+identify ambiguity
+    ↓
+/cog gotcha
+    ↓
+/cog verify
+```
+
+成功标准：
+- 白皮书存活于中断
+- 认知从协议重建
+- gotchas 改善连续性
+
+### Scenario B — 软件开发
+
+```
+/cog recover
+    ↓
+implement feature
+    ↓
+/cog snapshot
+    ↓
+run tests
+    ↓
+/cog verify
+    ↓
+/cog decide
+```
+
+成功标准：
+- 实现存活于 context reset
+- snapshots 保持压缩
+- Judge 验证保持隔离
+- runtime 保持确定性
+
+---
+
+## 11. 失败条件
+
+| 失败 | 含义 |
+|------|------|
+| session.md 变成 transcript | 压缩失败 |
+| recovery 需要完整回放 | 认知失败 |
+| runtime 吸收 reasoning | 架构失败 |
+| Judge 收到 hidden state | 隔离失败 |
+| slash commands 变成 workflows | 协议失败 |
+| Skill 变成 workflow coordinator | CAP 回归 orchestration 框架 |
