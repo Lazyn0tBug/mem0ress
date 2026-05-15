@@ -335,6 +335,16 @@ task_id 作为稳定身份标识仍然需要，因为目录名可能因 rename /
 
 #### 4.2.2 协作边界
 
+父任务与子任务之间的协作边界：
+
+| 父任务可依赖 | 父任务不可依赖 |
+|------------|-------------|
+| child lifecycle state（COMPLETED / ABANDONED） | child todos / session / gotchas / judge |
+| child deliverables（future 扩展字段） | child 内部执行过程 |
+| child task_id + picture | child 状态平面内容 |
+
+子任务关闭时，可选择生成 closure note（completion_summary），但这仅作为人类可读归档，不构成 runtime 依赖通道。父任务的认知不依赖子任务内部执行过程。
+
 ### 4.3 双重平面
 
 任务需要同时掌握两个不同维度的事实：做到了什么（数据层）和推进到哪里（认知层）。两个维度认知性质不同，必须分开处理。数据平面以 Git 为底层，可追溯、可 revert；状态平面以数据平面为数据基础，外部状态不会因数据 revert 而回退，因此认知只能基于当下向前构建。
