@@ -74,10 +74,10 @@ graph TB
 
     subgraph TIERS["任务检验（Judge Agent）"]
         J["Judge Agent\n任务检验执行器"]
-        C["Constraints 约束检查"]
-        T["Todo 完成检查"]
-        R["Requirements 满足检查"]
-        S["语义对齐检查"]
+        C["约束检查"]
+        T["进度检查"]
+        R["验收检查"]
+        S["语义对齐"]
     end
 
     PRC --> TASK
@@ -603,16 +603,16 @@ Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械
 
 任务检验在认知构建之后执行，负责判断当前状态是否满足 `Picture`。检验在轮次结束后自动触发，是只读操作，不执行写操作。
 
-**四层关卡（Tiers）：**
+**四层检验关卡：**
 
-任务检验按顺序执行以下四层关卡。其中 Tier 0/1/2 为客观检验条件，由 Judge Agent 自动执行并判断是否通过，无需主 Agent 主观决策；Tier 3 为语义对齐关卡，由 Agent 根据任务属性决定是否启用。
+任务检验按顺序执行以下四层关卡。其中约束检查/进度检查/验收检查（对应内部 Tier 0/1/2）为客观检验条件，由 Judge Agent 自动执行并判断是否通过，无需主 Agent 主观决策；语义对齐关卡（对应内部 Tier 3）为语义对齐关卡，由 Agent 根据任务属性决定是否启用。
 
-* **Tier 0: `Constraints` 约束检查。** 检查 `Constraints` 是否被逾越，若有逾越报告违反事实，由主 Agent 决定是否修复及如何修复。
-* **Tier 1: Todo 完成检查。** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭；处于 CREATED 或 IN_PROGRESS 状态则视为未完成。
-* **Tier 2: `Requirements` 满足检查。** 验证每个 Requirement 是否达标。
-* **Tier 3: Picture Alignment Check。** Tier 3 不重复验证 Requirements（那是 Tier 2 的职责），而是检查 Requirements 无法穷尽的 Picture 剩余语义偏差。执行时，Judge Agent 将 Picture 拆解为 Picture Claims，并将 Tier 1/2 的检验结果、Constraints 状态、Data Plane 证据、未解决 Gotchas 和实际产出映射到这些 Claims 上。若存在核心 Picture Claim 缺少证据覆盖，或存在足以阻止利益相关者认可任务完成的 residual gap，则任务不得关闭。若证据不足，Tier 3 必须返回 UNCERTAIN，而不是强行 PASS 或 FAIL。
+* **约束检查：** 检查 `Constraints` 是否被逾越，若有逾越报告违反事实，由主 Agent 决定是否修复及如何修复。
+* **进度检查：** 检查所有 Todo 步是否已完成、所有直接子任务是否已关闭。子任务处于 COMPLETED 或 ABANDONED 状态即为已关闭；处于 CREATED 或 IN_PROGRESS 状态则视为未完成。
+* **验收检查：** 验证每个 Requirement 是否达标。
+* **语义对齐检查：** 验收检查不重复验证 Requirements（那是进度检查的职责），而是检查 Requirements 无法穷尽的 Picture 剩余语义偏差。执行时，Judge Agent 将 Picture 拆解为 Picture Claims，并将进度检查结果、Constraints 状态、Data Plane 证据、未解决 Gotchas 和实际产出映射到这些 Claims 上。若存在核心 Picture Claim 缺少证据覆盖，或存在足以阻止利益相关者认可任务完成的 residual gap，则任务不得关闭。若证据不足，语义对齐必须返回 UNCERTAIN，而不是强行 PASS 或 FAIL。
 
-例如：一个 `Picture` 是"用户无需输入密码即可登录"的 OAuth 任务，Tier 1 检查了所有 Todo 是否完成，Tier 2 验证了"支持 Google OAuth"和"支持 GitHub OAuth"这两个 `Requirements` 都满足，但 Tier 3 额外检查了"实际登录流程中用户确实没有被要求输入密码"——这个检查无法通过代码结构验证，必须看实际行为，属于语义对齐。
+例如：一个 `Picture` 是"用户无需输入密码即可登录"的 OAuth 任务，进度检查了所有 Todo 是否完成，验收检查验证了"支持 Google OAuth"和"支持 GitHub OAuth"这两个 `Requirements` 都满足，但语义对齐额外检查了"实际登录流程中用户确实没有被要求输入密码"——这个检查无法通过代码结构验证，必须看实际行为，属于语义对齐。
 
 **决策执行规则：**
 
@@ -625,24 +625,24 @@ Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械
 **四层检验执行规则：**
 
 ```
-Tier 0 → Tier 1 → Tier 2 → Tier 3（条件触发）
+约束检查 → 进度检查 → 验收检查 → 语义对齐（条件触发）
 
-任何 Tier FAIL → 立即停止 → 输出 FAILED
-所有 Tier PASS（+ Tier 3 PASS 或 SKIPPED）→ 输出 PASSED
+任何关卡 FAIL → 立即停止 → 输出 FAILED
+所有关卡 PASS（+ 语义对齐 PASS 或 SKIPPED）→ 输出 PASSED
 ```
 
-**快速失败原则：** Tier 失败后不执行后续 Tier。Judge Agent 不累积所有问题再报告，而是在发现第一个阻断性问题时立即停止。理由：后续 Tier 的检验在前置 Tier 失败时结论不可信。
+**快速失败原则：** 某层检验失败后不执行后续层。Judge Agent 不累积所有问题再报告，而是在发现第一个阻断性问题时立即停止。理由：后续层的检验在前置层失败时结论不可信。
 
-**Tier 执行方式表：**
+**检验执行方式表：**
 
-| Tier | 名称 | 执行方式 | 依赖文件 |
+| 关卡 | 名称 | 执行方式 | 依赖文件 |
 |------|------|---------|---------|
-| Tier 0 | Constraints 约束检查 | 纯逻辑：扫描 session.md + gotchas.md 中的违反记录 | task.md, session.md, gotchas.md |
-| Tier 1 | Todo & Subtask 完成检查 | 纯逻辑：读取 task.md Todo 状态 + 扫描子任务目录 | task.md |
-| Tier 2 | Requirements 验收检查 | 运行测试命令：执行可验证动作，记录命令输出 | task.md, session.md |
-| Tier 3 | 语义对齐检查 | LLM 推断：Judge Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
+| 约束检查（Tier 0） | Constraints 约束检查 | 纯逻辑：扫描 session.md + gotchas.md 中的违反记录 | task.md, session.md, gotchas.md |
+| 进度检查（Tier 1） | Todo & Subtask 完成检查 | 纯逻辑：读取 task.md Todo 状态 + 扫描子任务目录 | task.md |
+| 验收检查（Tier 2） | Requirements 验收检查 | 运行测试命令：执行可验证动作，记录命令输出 | task.md, session.md |
+| 语义对齐（Tier 3） | 语义对齐检查 | LLM 推断：Judge Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
 
-**Tier 2 的关键约束：** Tier 2 不允许依赖 LLM 推断判断 Requirement 是否满足。每条 Requirement 必须有对应的可运行验证命令。若 Requirement 无法自动化验证，在任务创建阶段应被标记为无效 Requirement。
+**验收检查的关键约束：** 验收检查不允许依赖 LLM 推断判断 Requirement 是否满足。每条 Requirement 必须有对应的可运行验证命令。若 Requirement 无法自动化验证，在任务创建阶段应被标记为无效 Requirement。
 
 **Judge Agent 输出约束：** Judge Agent 只报告事实，不给出修复建议，不判断"主 Agent 应该怎么做"，不修改 task.md / session.md / gotchas.md，不直接标记任务为 COMPLETED 或 ABANDONED。FAIL 结论写入 judge.md 后，Judge Agent 的职责结束，决策权回到主 Agent。
 
