@@ -229,12 +229,22 @@ CAP 是认知协议运行时，不是工作流编排引擎。认知所有权描�
 
 #### 3.4.1 认知所有权模型
 
-```
-Agent Cognition
-     ↓
-Protocol Negotiation
-     ↓
-Deterministic Runtime
+```mermaid
+%% label：认知所有权模型
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#2e7d32', 'lineColor': '#616161' } } }%%
+flowchart LR
+    AC[Agent Cognition] --> PN[Protocol Negotiation]
+    PN --> DR[Deterministic Runtime]
+
+    AC -->|"semantic interpretation<br>ambiguity resolution<br>picture alignment<br>task evolution<br>drift correction<br>completion judgment"| AC
+    DR -->|"persistence<br>projection<br>validation<br>assembly<br>state transition"| DR
+
+    classDef ac fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef pn fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef dr fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
+    class AC ac;
+    class PN pn;
+    class DR dr;
 ```
 
 Agent 拥有非确定性认知行为：semantic interpretation、ambiguity resolution、picture alignment、task evolution、drift correction、completion judgment。
@@ -350,7 +360,7 @@ graph TD
 
 ## 4.2 父子任务边界与拓扑即协议
 
-### Spatial Topology Principle
+### 4.2.1 拓扑即协议
 
 CAP 的父子任务关系由目录拓扑天然表达，不由 frontmatter 字段定义。
 
