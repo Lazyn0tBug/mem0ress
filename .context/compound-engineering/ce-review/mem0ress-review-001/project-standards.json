@@ -1,0 +1,39 @@
+{
+  "reviewer": "project-standards",
+  "findings": [
+    {
+      "title": "Missing docstring on update_session",
+      "severity": "P2",
+      "file": "src/mem0ress/gateway/actions.py",
+      "line": 304,
+      "confidence": 0.85,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add docstring with Args/Returns/Raises format per CLAUDE.md."
+    },
+    {
+      "title": "Missing docstring on _write_judge_report",
+      "severity": "P2",
+      "file": "src/mem0ress/gateway/actions.py",
+      "line": 361,
+      "confidence": 0.85,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add docstring with Args/Returns/Raises format per CLAUDE.md."
+    }
+  ],
+  "residual_risks": [
+    "update_session, judge_task, close_task are public methods with no test coverage per CLAUDE.md 'all public interfaces must have tests'.",
+    "complete_task and abandon_task lack docstrings with Raises sections."
+  ],
+  "testing_gaps": [
+    "actions.py: update_session() — no tests",
+    "actions.py: judge_task() — no tests",
+    "actions.py: close_task() — no tests",
+    "actions.py: _write_judge_report() — no tests"
+  ]
+}

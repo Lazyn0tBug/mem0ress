@@ -1,0 +1,50 @@
+{
+  "reviewer": "kieran-python",
+  "findings": [
+    {
+      "title": "Inline import of datetime inside function body (update_session)",
+      "severity": "P2",
+      "file": "src/mem0ress/gateway/actions.py",
+      "line": 322,
+      "confidence": 0.75,
+      "autofix_class": "gated_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Move `import datetime` to top-level imports alongside `import shutil`. No conditional or lazy-loading justification exists."
+    },
+    {
+      "title": "Inline import of datetime inside _write_judge_report",
+      "severity": "P2",
+      "file": "src/mem0ress/gateway/actions.py",
+      "line": 365,
+      "confidence": 0.75,
+      "autofix_class": "gated_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Same as above — consolidate both datetime imports to single top-level import."
+    },
+    {
+      "title": "close_task atomicity gap — partial write possible",
+      "severity": "P2",
+      "file": "src/mem0ress/gateway/actions.py",
+      "line": 389,
+      "confidence": 0.82,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "If complete_task's safe_write raises ConflictError after judge_task has already persisted judge.md, system is left in inconsistent state. Document as known limitation or wrap in transaction-like pattern."
+    }
+  ],
+  "residual_risks": [
+    "Tier 2 stub bypass: All Tier 2 results return passed=True. When v0.2 implements real verify_cmd execution, existing tasks with failing verify_cmds will suddenly fail at close time. No migration path or warning exists.",
+    "requirements field type change: CognitiveTriad.requirements changed from list[str] to list[Requirement]. Parser handles backward compat, but any external tooling writing raw YAML will silently break."
+  ],
+  "testing_gaps": [
+    "update_session: no tests — FileNotFoundError path untested",
+    "judge_task: no tests — judge.md writing untested",
+    "close_task: RuntimeError on failed tiers and atomicity gap completely untested"
+  ]
+}

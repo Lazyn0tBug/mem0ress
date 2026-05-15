@@ -1,0 +1,50 @@
+{
+  "reviewer": "cli-readiness",
+  "findings": [
+    {
+      "title": "update command blocks on stdin without non-interactive bypass",
+      "severity": "P1",
+      "file": "src/mem0ress/cli.py",
+      "line": 245,
+      "confidence": 0.92,
+      "autofix_class": "gated_auto",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add TTY detection. If stdin is not a TTY and --content is empty, raise actionable error instead of blocking. Example: check sys.stdin.isatty() and require --content when not a TTY."
+    },
+    {
+      "title": "judge command returns exit code 0 even when verification tiers fail",
+      "severity": "P2",
+      "file": "src/mem0ress/cli.py",
+      "line": 291,
+      "confidence": 0.88,
+      "autofix_class": "safe_auto",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "After printing tier results, check if any result.passed is False. If any tier failed, raise typer.Exit(code=1)."
+    },
+    {
+      "title": "No --json/structured output option for judge/close/done commands",
+      "severity": "P2",
+      "file": "src/mem0ress/cli.py",
+      "line": 284,
+      "confidence": 0.72,
+      "autofix_class": "manual",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add --format option (e.g., --format=console|json) to judge, close, done. When --format=json, serialize HarnessResult as JSON to stdout."
+    }
+  ],
+  "residual_risks": [
+    "close/done have no --dry-run flag. Agent cannot preview what would fail before committing to close. By design (MVP no-bypass) but limits inspectability.",
+    "update silently succeeds with 'No content provided, nothing written' when stdin empty. Agent sending empty content gets no error and no state change."
+  ],
+  "testing_gaps": [
+    "No integration test for update with piped stdin (non-TTY)",
+    "No test verifying judge exit code when tiers fail",
+    "No test for structured output on data-returning commands"
+  ]
+}

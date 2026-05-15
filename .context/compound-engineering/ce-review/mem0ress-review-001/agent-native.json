@@ -1,0 +1,48 @@
+{
+  "reviewer": "agent-native",
+  "findings": [
+    {
+      "title": "update command interactive stdin blocks agent execution",
+      "severity": "P1",
+      "file": "src/mem0ress/cli.py",
+      "line": 245,
+      "confidence": 0.92,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Remove interactive stdin branch. When --content is absent, fail with clear error: 'mem0 update <task_id> --content <text>'. Agents must use --content explicitly."
+    },
+    {
+      "title": "status command uses Rich console rendering, output not machine-parseable",
+      "severity": "P2",
+      "file": "src/mem0ress/cli.py",
+      "line": 108,
+      "confidence": 0.75,
+      "autofix_class": "safe_auto",
+      "owner": "human",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "Add --format json flag to status. StatusPlane model has .render() method that produces machine-parseable text output but CLI only exposes Rich visualization."
+    },
+    {
+      "title": "update_cognitive_triad is CLI-accessible but not exposed via CLI",
+      "severity": "P2",
+      "file": "src/mem0ress/gateway/actions.py",
+      "line": 121,
+      "confidence": 0.72,
+      "autofix_class": "manual",
+      "owner": "downstream-resolver",
+      "requires_verification": false,
+      "pre_existing": true,
+      "suggested_fix": "Add CLI command 'mem0 define <task_id> --picture <text> --requirements <items> --constraints <items>' to expose update_cognitive_triad."
+    }
+  ],
+  "residual_risks": [
+    "update_todo is not CLI-exposed — agents cannot update todos via CLI. Only update_cognitive_triad and create have CLI commands."
+  ],
+  "testing_gaps": [
+    "No tests for update --content with empty string",
+    "No tests for close_task with failing verification tiers"
+  ]
+}

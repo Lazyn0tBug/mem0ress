@@ -1,0 +1,9 @@
+{
+  "reviewer": "learnings",
+  "findings": [],
+  "residual_risks": [
+    "Known Pattern: docs/solutions/ is empty — no institutional knowledge accumulated yet for this codebase. Team may want to document MVP learnings after this PR for future reference.",
+    "docs/brainstorms/ and docs/gpt/ contain relevant MVP design discussions (session_mvp.md, sesion_mvp0.2.md) but no formal solutions cataloged."
+  ],
+  "testing_gaps": []
+}

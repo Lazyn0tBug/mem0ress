@@ -1,0 +1,32 @@
+{
+  "reviewer": "correctness",
+  "findings": [],
+  "residual_risks": [
+    {
+      "id": "R-1",
+      "description": "Tier 2 always returns passed=True in MVP stub. When v0.2 implements verify_cmd execution, the implementation must correctly return passed=False for failing commands, otherwise the 'no bypass' rule in close_task becomes meaningless.",
+      "severity": "medium",
+      "evidence": "harness/__init__.py:_verify_tier2() line 139: passed=True always returned regardless of verify_cmd content"
+    },
+    {
+      "id": "R-2",
+      "description": "close_task and done CLI commands lack a pre-check for task status. An ABANDONED task can be 'closed' back to COMPLETED if the user calls `mem0 done abandoned_task` (though this would fail at Tier 1 if todos are incomplete). No guard prevents closing a task in non-IN_PROGRESS state.",
+      "severity": "low",
+      "evidence": "cli.py:done() and cli.py:close() do not validate current status before calling service.close_task()"
+    }
+  ],
+  "testing_gaps": [
+    {
+      "id": "T-1",
+      "description": "No integration test for the close_task atomicity: verifying that close_task raises RuntimeError when Tier 1 fails (pending todos), and verifying status remains unchanged after failed close attempt.",
+      "severity": "medium",
+      "suggested_test": "test_close_task_raises_on_tier1_failure: create task with incomplete todos, call close_task, assert RuntimeError raised, assert task status is still IN_PROGRESS (not COMPLETED)"
+    },
+    {
+      "id": "T-2",
+      "description": "No unit test for update_session with concurrent writes to session.md. While safe_write uses optimistic locking for task.md, session.md uses plain append — concurrent appends from multiple processes could result in interleaved writes.",
+      "severity": "low",
+      "suggested_test": "test_update_session_concurrent_append: simulate concurrent update_session calls and verify turn markers are not interleaved"
+    }
+  ]
+}

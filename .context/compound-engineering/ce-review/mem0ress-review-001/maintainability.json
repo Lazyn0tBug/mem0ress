@@ -1,0 +1,39 @@
+{
+  "reviewer": "maintainability",
+  "findings": [
+    {
+      "title": "TaskStatus enum missing VERIFYING state defined in spec.md",
+      "severity": "P2",
+      "file": "src/mem0ress/core/schema.py",
+      "line": 8,
+      "confidence": 0.90,
+      "autofix_class": "gated_auto",
+      "owner": "downstream-resolver",
+      "requires_verification": true,
+      "pre_existing": true,
+      "suggested_fix": "Add VERIFYING = \"verifying\" to TaskStatus enum. Per spec.md: VERIFYING is a transient state during judgment execution. The current enum only has 4 values (CREATED, IN_PROGRESS, COMPLETED, ABANDONED)."
+    },
+    {
+      "title": "close_task atomicity gap — partial write possible if complete_task fails after judge.md persisted",
+      "severity": "P2",
+      "file": "src/mem0ress/gateway/actions.py",
+      "line": 389,
+      "confidence": 0.75,
+      "autofix_class": "advisory",
+      "owner": "human",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Document the non-atomicity in close_task docstring. judge.md is written by judge_task, then complete_task writes task.md. If complete_task raises ConflictError, judge.md is already persisted but status is not COMPLETED."
+    }
+  ],
+  "residual_risks": [
+    "The missing VERIFYING state means the protocol cannot correctly model a task that is mid-verification.",
+    "close_task atomicity is incomplete — Tier 2 and 3 are stubs that always pass, so 'no bypass' rule only enforced at Tier 1."
+  ],
+  "testing_gaps": [
+    "No tests for judge_task -> judge.md roundtrip",
+    "No tests for close_task success path",
+    "No tests for close_task failure path (Tier 1 fails -> RuntimeError)",
+    "No tests for update_session with multiple consecutive calls"
+  ]
+}

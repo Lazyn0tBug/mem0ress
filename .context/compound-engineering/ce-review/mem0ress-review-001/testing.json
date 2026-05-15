@@ -1,0 +1,63 @@
+{
+  "reviewer": "testing",
+  "findings": [
+    {
+      "title": "update_session has zero test coverage",
+      "severity": "P1",
+      "file": "src/mem0ress/gateway/actions.py",
+      "line": 304,
+      "confidence": 0.85,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Add test_update_session_creates_turn_marker and test_update_session_nonexistent_raises to TestTaskServiceImpl."
+    },
+    {
+      "title": "close_task has zero test coverage",
+      "severity": "P1",
+      "file": "src/mem0ress/gateway/actions.py",
+      "line": 389,
+      "confidence": 0.85,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Add test_close_task_succeeds_when_all_tiers_pass and test_close_task_raises_when_tier1_fails."
+    },
+    {
+      "title": "judge_task has no direct unit test",
+      "severity": "P2",
+      "file": "src/mem0ress/gateway/actions.py",
+      "line": 336,
+      "confidence": 0.75,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": true,
+      "pre_existing": false,
+      "suggested_fix": "Add test_judge_task_writes_judge_report."
+    },
+    {
+      "title": "Backward compat parser string requirements path not directly tested",
+      "severity": "P3",
+      "file": "src/mem0ress/substrate/parser.py",
+      "line": 59,
+      "confidence": 0.65,
+      "autofix_class": "safe_auto",
+      "owner": "review-fixer",
+      "requires_verification": false,
+      "pre_existing": false,
+      "suggested_fix": "Add test_parse_manifest_string_requirements_backward_compat."
+    }
+  ],
+  "residual_risks": [
+    "Tier 2 stub behavior: passed=True for all requirements regardless of verify_cmd. Tests will need updating in v0.2 when real exec is added.",
+    "_write_judge_report file-writing is only triggered through judge_task, which has no direct test — the writing path is unverified at service level."
+  ],
+  "testing_gaps": [
+    "update_session: turn counter increment, timestamp format, file creation, nonexistent task raises FileNotFoundError — all untested",
+    "judge_task: no test directly calls service.judge_task()",
+    "close_task: success path, RuntimeError on tier failure — all untested",
+    "Parser backward compat: string → Requirement conversion path not directly exercised"
+  ]
+}
