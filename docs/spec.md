@@ -312,39 +312,6 @@ graph TD
 
 `Picture` / `Requirements` / `Constraints` 存在于 task.md 里，不在别处重复记录。状态平面只展示摘要，不展开全文。
 
-### 4.3 目录任务拓扑
-
-#### 4.2.1 拓扑即协议
-
-CAP 的父子任务关系由目录拓扑天然表达，不由 frontmatter 字段定义。
-
-```
-tasks/
-└── build_auth/
-    ├── task.md
-    └── children/
-        ├── oauth_google/
-        └── oauth_github/
-```
-
-`oauth_google/` 的父目录 `build_auth/` 即为其父任务，无需 `parent_id` 字段重复声明。
-
-这一原则的意义是**避免双重真相**：若同时存在目录拓扑和 `parent_id` 字段，"谁才是真相"会成为问题，协议必须处理一致性校验和冲突解决，复杂度不必要地上升。拓扑即协议是 CAP 区别于传统 workflow 系统（需要 `parent_id` 指针）的核心特征。
-
-task_id 作为稳定身份标识仍然需要，因为目录名可能因 rename / move / archive 变化，但 task_id 是稳定 identity。
-
-#### 4.2.2 协作边界
-
-父任务与子任务之间的协作边界：
-
-| 父任务可依赖 | 父任务不可依赖 |
-|------------|-------------|
-| child lifecycle state（COMPLETED / ABANDONED） | child todos / session / gotchas / judge |
-| child deliverables（future 扩展字段） | child 内部执行过程 |
-| child task_id + picture | child 状态平面内容 |
-
-子任务关闭时，可选择生成 closure note（completion_summary），但这仅作为人类可读归档，不构成 runtime 依赖通道。父任务的认知不依赖子任务内部执行过程。
-
 ### 4.2 双重平面
 
 任务需要同时掌握两个不同维度的事实：做到了什么（数据层）和推进到哪里（认知层）。两个维度认知性质不同，必须分开处理。数据平面以 Git 为底层，可追溯、可 revert；状态平面以数据平面为数据基础，外部状态不会因数据 revert 而回退，因此认知只能基于当下向前构建。
@@ -398,6 +365,41 @@ graph LR
 ```
 
 状态平面的当下性由数据平面保障。数据平面（Git）可追溯、可 revert，而状态平面以数据平面的当前版本为数据基础——外部状态（API 响应、第三方服务、协作者输入）不会因数据 revert 而回退，因此认知无法回退，只能基于当下向前构建。Session 的版本快照模型支撑这一点：每个快照记录的是"那一轮的状态"，而不是"历史的累积"。回溯只能是数据层面的 revert，认知永远是前向的。
+
+
+
+### 4.3 目录任务拓扑
+
+#### 4.3.1 拓扑即协议
+
+CAP 的父子任务关系由目录拓扑天然表达，不由 frontmatter 字段定义。
+
+```
+tasks/
+└── build_auth/
+    ├── task.md
+    └── children/
+        ├── oauth_google/
+        └── oauth_github/
+```
+
+`oauth_google/` 的父目录 `build_auth/` 即为其父任务，无需 `parent_id` 字段重复声明。
+
+这一原则的意义是**避免双重真相**：若同时存在目录拓扑和 `parent_id` 字段，"谁才是真相"会成为问题，协议必须处理一致性校验和冲突解决，复杂度不必要地上升。拓扑即协议是 CAP 区别于传统 workflow 系统（需要 `parent_id` 指针）的核心特征。
+
+task_id 作为稳定身份标识仍然需要，因为目录名可能因 rename / move / archive 变化，但 task_id 是稳定 identity。
+
+#### 4.3.2 协作边界
+
+父任务与子任务之间的协作边界：
+
+| 父任务可依赖 | 父任务不可依赖 |
+|------------|-------------|
+| child lifecycle state（COMPLETED / ABANDONED） | child todos / session / gotchas / judge |
+| child deliverables（future 扩展字段） | child 内部执行过程 |
+| child task_id + picture | child 状态平面内容 |
+
+子任务关闭时，可选择生成 closure note（completion_summary），但这仅作为人类可读归档，不构成 runtime 依赖通道。父任务的认知不依赖子任务内部执行过程。
 
 ### 4.4 文档数据模型
 
