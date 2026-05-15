@@ -514,17 +514,17 @@ Agent 拥有非确定性认知行为：semantic interpretation、ambiguity resol
 
 Runtime 负责确定性协议行为：persistence、projection、validation、assembly、state transition。
 
-#### 4.6.2 认知所有权边界
-
-Agent 不得替代 Judge 做出语义对齐判断，不得由状态平面做出"任务已完成"、"质量已足够"、"语义已对齐"等判断——这些判断由 Judge Agent 依据 Picture、Requirements 和 Constraints 做出。
-
-### 4.7 语义漂移
+#### 4.6.2 语义漂移
 
 漂移是系统性的，而非随机的。当执行权威与语义权威集中于同一角色时，执行状态自动成为对齐状态，本地推理自动成为正确性，工作流连续性自动成为语义连续性——漂移由此产生。
 
 对齐是连续的而非二元的，语义漂移可能通过局部优化、隐含假设或约束侵蚀逐渐发生。
 
 CAP 将漂移检测视为持续语义责任。
+
+#### 4.6.3 认知所有权边界
+
+Agent 不得替代 Judge 做出语义对齐判断，不得由状态平面做出"任务已完成"、"质量已足够"、"语义已对齐"等判断——这些判断由 Judge Agent 依据 Picture、Requirements 和 Constraints 做出。
 
 ---
 
