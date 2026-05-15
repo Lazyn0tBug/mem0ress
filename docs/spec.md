@@ -1,7 +1,7 @@
 ---
 title: 认知对齐平面(Cognitive Alignment Plane)
 version: 0.6 (Architecture Specification)
-definition: 基于本地文件系统的 Task-local Agent 状态框架
+definition: 基于认知对齐的任务信息同步框架
 ---
 
 # mem0ress: 认知对齐平面(Cognitive Alignment Plane)架构规约
