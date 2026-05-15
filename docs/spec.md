@@ -225,11 +225,7 @@ Task 是 Agent 的最小认知闭包。每个 Task 都拥有独立的 Picture、
 
 ### 3.4 认知所有权
 
-认知生产与对齐权威属于不同角色，不可合并，此为协议级不变量。
-
-Agent 负责执行推理、产生输出、推进任务状态，这些属于认知生产。但执行活动本身不能证明对齐被保持——大量输出不等于语义对齐，对齐真值从 Picture、Requirements、Constraints 和 Judge 解释中涌现，不由 Agent 隐含持有。
-
-若 Agent 同时拥有认知生产和对齐权威，则执行状态自动成为对齐状态，本地推理自动成为正确性，工作流连续性自动成为语义连续性，由此产生自我强化的漂移。CAP 通过将执行与对齐解释分离来防止此问题——Judge Agent 负责建构语义对齐状态，Agent 不得替代 Judge 做出对齐判断。
+mem0ress 将认知生产与语义对齐权威分离，此为协议级不变量。Judge Agent 拥有语义对齐的判断权威，依据 Picture、Requirements 和 Constraints 做出对齐判断。主 Agent 负责执行，不得替代 Judge 做出对齐判断。
 
 ### 3.5 认知边界
 
