@@ -225,7 +225,7 @@ Task 是 Agent 的最小认知闭包。每个 Task 都拥有独立的 Picture、
 
 ### 3.4 选择双重平面来呈现认知
 
-任务需要同时掌握两个不同维度的事实：做到了什么（数据层面）和推进到哪里（执行层面）。两个问题认知性质不同，必须分开处理。详见 §4.6。
+任务需要同时掌握两个不同维度的事实：做到了什么（数据层面）和推进到哪里（执行层面）。两个问题认知性质不同，必须分开处理。详见 §4.3。
 
 三个核心动作按固定顺序执行：认知构建 → 任务检验 → 状态更新。认知构建先于任务检验，任务检验先于状态更新。
 
@@ -235,7 +235,7 @@ CAP 的认知是前向构建的，不依赖历史回放。对齐恢复不需要�
 
 每轮次结束时，Agent 感知本轮任务内容的状态变更，并基于此更新对任务的认知。系统检测本轮中发生的任务相关变化——Todo 完成状态变化、`Constraints` 违反记录、`Requirements` 满足情况、任务状态转移、子任务关闭、新偏差追加——并将这些变化写入 Session 快照。Plane Assembler 从 Session 中提取最新快照，组装为状态平面挂载到 Agent 上下文，使 Agent 在下一轮开始时立即掌握当前任务态势。
 
-**纯文本持久化的设计理由：** 见 §4.8 文档数据模型。
+**纯文本持久化的设计理由：** 见 §4.4 文档数据模型。
 
 CAP 只管一件事：认知的生命周期管理，也就是任务的创建、检验与认知态势的构建。大模型沙箱隔离、并发控制这些，都交给宿主操作系统。
 
@@ -247,53 +247,7 @@ CAP 不是回答问题的引擎，而是呈现状态的窗口。它在任何时�
 
 CAP 的概念体系围绕任务展开。本章描述任务的核心概念、两种平面的构成、生命周期以及数据模型。
 
-### 4.1 认知所有权
-
-CAP 是认知协议运行时，不是工作流编排引擎。认知所有权描述 Agent 与 Runtime 的根本分工——两者处理的是完全不同性质的问题。
-
-#### 4.1.1 认知所有权模型
-
-```mermaid
-%% label：认知所有权模型
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#2e7d32', 'lineColor': '#616161' } } }%%
-flowchart LR
-    AC[Agent Cognition] --> PN[Protocol Negotiation]
-    PN --> DR[Deterministic Runtime]
-
-    AC -->|"semantic interpretation<br>ambiguity resolution<br>picture alignment<br>task evolution<br>drift correction<br>completion judgment"| AC
-    DR -->|"persistence<br>projection<br>validation<br>assembly<br>state transition"| DR
-
-    classDef ac fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef pn fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
-    classDef dr fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
-    class AC ac; class PN pn; class DR dr;
-```
-
-Agent 拥有非确定性认知行为：semantic interpretation、ambiguity resolution、picture alignment、task evolution、drift correction、completion judgment。
-
-Runtime 负责确定性协议行为：persistence、projection、validation、assembly、state transition。
-
-#### 4.1.2 认知所有权边界
-
-Agent 不得替代 Judge 做出语义对齐判断，不得由状态平面做出"任务已完成"、"质量已足够"、"语义已对齐"等判断——这些判断由 Judge Agent 依据 Picture、Requirements 和 Constraints 做出。
-
-### 4.2 语义漂移
-
-漂移是系统性的，而非随机的。当执行权威与语义权威集中于同一角色时，执行状态自动成为对齐状态，本地推理自动成为正确性，工作流连续性自动成为语义连续性——漂移由此产生。
-
-对齐是连续的而非二元的，语义漂移可能通过局部优化、隐含假设或约束侵蚀逐渐发生。
-
-CAP 将漂移检测视为持续语义责任。
-
-### 4.3 认知重构
-
-CAP 的认知是前向构建的，不依赖历史回放。对齐恢复不需要完整 transcript，不需要穷尽推理历史，不需要完整执行时序——需要的只是当前 Picture、当前 Requirements、当前 Constraints 与当前证据之间的关系。
-
-状态平面提供的是当前可判断状态，不是历史记录。无论之前发生了什么，Agent 看到的永远是当前最新的可判断状态。
-
-即使发生回溯（revert），认知仍以前向重构完成。数据平面的 revert 改变的是操作基准，但不改变认知的前向性——Agent 在 revert 后仍基于当下的 Picture、Requirements、Constraints 与当前证据重新建构对齐状态。
-
-### 4.4 任务信息模型(PRC)
+### 4.1 任务信息模型(PRC)
 
 每个任务由任务信息模型（PRC）定义。模型由三个要素构成：`Picture`（方向锚点）、`Requirements`（可验证标准）和 `Constraints`（边界约束）。三者缺一不可——缺少 `Picture`，任务没有目标锚点；缺少 `Requirements`，`Picture` 无法被检验；缺少 `Constraints`，任务没有不可逾越的底线。三者共同构成任务的完整定义。
 
@@ -347,7 +301,7 @@ graph TD
     CST -.->|即使 Req 满足\n任务仍不算完成| SAT
 
     classDef pic fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef req fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef req fill:#e3f5fd,stroke:#1565c0,stroke-width:2px;
     classDef cst fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
     classDef sat fill:#fff9c4,stroke:#f57f17,stroke-width:2px;
     class PIC pic;
@@ -358,9 +312,9 @@ graph TD
 
 `Picture` / `Requirements` / `Constraints` 存在于 task.md 里，不在别处重复记录。状态平面只展示摘要，不展开全文。
 
-### 4.5 父子任务边界与拓扑即协议
+### 4.2 父子任务边界与拓扑即协议
 
-### 4.5.1 拓扑即协议
+### 4.2.1 拓扑即协议
 
 CAP 的父子任务关系由目录拓扑天然表达，不由 frontmatter 字段定义。
 
@@ -389,7 +343,7 @@ task_id 作为稳定身份标识仍然需要，因为目录名可能因 rename /
 
 子任务关闭时，可选择生成 closure note（completion_summary），但这仅作为人类可读归档，不构成 runtime 依赖通道。父任务的认知不依赖子任务内部执行过程。
 
-### 4.6 双重平面
+### 4.3 双重平面
 
 状态平面和数据平面是 CAP 提供的两类互补视图——前者回答"我在哪、做到哪了"，后者回答"当前操作的是哪个版本的代码"。
 
@@ -445,30 +399,7 @@ graph LR
 
 状态平面的当下性由数据平面保障。数据平面（Git）可追溯、可 revert，而状态平面以数据平面的当前版本为数据基础——外部状态（API 响应、第三方服务、协作者输入）不会因数据 revert 而回退，因此认知无法回退，只能基于当下向前构建。Session 的版本快照模型支撑这一点：每个快照记录的是"那一轮的状态"，而不是"历史的累积"。回溯只能是数据层面的 revert，认知永远是前向的。
 
-### 4.7 任务生命周期
-
-任务从创建到结束经历五种状态：CREATED（模型已定义，所有 Todo 未开始）、IN_PROGRESS（至少有一个 Todo 已完成）、VERIFYING（任务检验进行中，瞬态）、COMPLETED（目标达成）、ABANDONED（目标放弃）。
-
-状态转换规则：CREATED → IN_PROGRESS（任意 Todo 被标记为完成）；CREATED → ABANDONED（任务废弃）；IN_PROGRESS → COMPLETED（检验通过）；IN_PROGRESS → ABANDONED（任务废弃）。
-
-```mermaid
-%% label：Task 生命周期状态机
-%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae' } } }%%
-stateDiagram-v2
-    [*] --> CREATED
-    CREATED --> IN_PROGRESS : 任意 Todo 被标记为完成
-    CREATED --> ABANDONED : 任务废弃
-    IN_PROGRESS --> COMPLETED : 检验通过
-    IN_PROGRESS --> ABANDONED : 任务废弃
-    COMPLETED --> [*]
-    ABANDONED --> [*]
-```
-
-> **注：** VERIFYING 是瞬态，存在于检验执行期间，检验完成后立即转换到 COMPLETED 或 ABANDONED，不作为独立稳定状态存在于图中。
-
-**任务检验**在认知构建之后执行，判断当前状态是否满足 Picture。详见 §5.3。
-
-### 4.8 文档数据模型
+### 4.4 文档数据模型
 
 CAP 采用纯文本持久化 + 运行时组装的数据模型。认知数据以 Markdown 文件形式存储在文件系统，运行时由系统按需组装为状态平面。
 
@@ -531,6 +462,67 @@ graph TD
     ├── gotchas.md    # 偏差记录（追加式）
     └── judge.md      # Judge Agent 检验记录
 ```
+
+### 4.5 任务生命周期
+
+任务从创建到结束经历五种状态：CREATED（模型已定义，所有 Todo 未开始）、IN_PROGRESS（至少有一个 Todo 已完成）、VERIFYING（任务检验进行中，瞬态）、COMPLETED（目标达成）、ABANDONED（目标放弃）。
+
+状态转换规则：CREATED → IN_PROGRESS（任意 Todo 被标记为完成）；CREATED → ABANDONED（任务废弃）；IN_PROGRESS → COMPLETED（检验通过）；IN_PROGRESS → ABANDONED（任务废弃）。
+
+```mermaid
+%% label：Task 生命周期状态机
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e3f2fd', 'primaryTextColor': '#0d47a1', 'primaryBorderColor': '#1565c0', 'lineColor': '#90a4ae' } } }%%
+stateDiagram-v2
+    [*] --> CREATED
+    CREATED --> IN_PROGRESS : 任意 Todo 被标记为完成
+    CREATED --> ABANDONED : 任务废弃
+    IN_PROGRESS --> COMPLETED : 检验通过
+    IN_PROGRESS --> ABANDONED : 任务废弃
+    COMPLETED --> [*]
+    ABANDONED --> [*]
+```
+
+> **注：** VERIFYING 是瞬态，存在于检验执行期间，检验完成后立即转换到 COMPLETED 或 ABANDONED，不作为独立稳定状态存在于图中。
+
+**任务检验**在认知构建之后执行，判断当前状态是否满足 Picture。详见 §5.3。
+
+### 4.6 认知所有权
+
+CAP 是认知协议运行时，不是工作流编排引擎。认知所有权描述 Agent 与 Runtime 的根本分工——两者处理的是完全不同性质的问题。
+
+#### 4.6.1 认知所有权模型
+
+```mermaid
+%% label：认知所有权模型
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#2e7d32', 'lineColor': '#616161' } } }%%
+flowchart LR
+    AC[Agent Cognition] --> PN[Protocol Negotiation]
+    PN --> DR[Deterministic Runtime]
+
+    AC -->|"semantic interpretation<br>ambiguity resolution<br>picture alignment<br>task evolution<br>drift correction<br>completion judgment"| AC
+    DR -->|"persistence<br>projection<br>validation<br>assembly<br>state transition"| DR
+
+    classDef ac fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef pn fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef dr fill:#fff3e0,stroke:#ff8f00,stroke-width:2px;
+    class AC ac; class PN pn; class DR dr;
+```
+
+Agent 拥有非确定性认知行为：semantic interpretation、ambiguity resolution、picture alignment、task evolution、drift correction、completion judgment。
+
+Runtime 负责确定性协议行为：persistence、projection、validation、assembly、state transition。
+
+#### 4.6.2 认知所有权边界
+
+Agent 不得替代 Judge 做出语义对齐判断，不得由状态平面做出"任务已完成"、"质量已足够"、"语义已对齐"等判断——这些判断由 Judge Agent 依据 Picture、Requirements 和 Constraints 做出。
+
+### 4.7 语义漂移
+
+漂移是系统性的，而非随机的。当执行权威与语义权威集中于同一角色时，执行状态自动成为对齐状态，本地推理自动成为正确性，工作流连续性自动成为语义连续性——漂移由此产生。
+
+对齐是连续的而非二元的，语义漂移可能通过局部优化、隐含假设或约束侵蚀逐渐发生。
+
+CAP 将漂移检测视为持续语义责任。
 
 ---
 
@@ -669,7 +661,7 @@ Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械
 
 状态更新将检验结果反映到 Task 状态，并处理决策执行。
 
-**状态机：** Task 生命周期包含五种状态，详见 §4.7 状态机图示及状态转换规则。
+**状态机：** Task 生命周期包含五种状态，详见 §4.5 状态机图示及状态转换规则。
 
 **子任务关闭协议：** 子任务进入 COMPLETED 时，父任务的认知锁定在"子任务 ID + 最终状态（COMPLETED / ABANDONED）"这条最小记录上。子任务可选择生成 closure note 作为人类可读归档，不影响父任务的状态平面组装。
 
@@ -701,7 +693,7 @@ CAP 的全部设计，都在试图让这个问题变得可回答。任务模型�
 
 #### 状态表 (State Table)
 
-> 完整状态定义及状态转换规则见 §4.7。
+> 完整状态定义及状态转换规则见 §4.5。
 
 #### 节点表 (Node Table)
 
