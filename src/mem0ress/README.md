@@ -18,14 +18,17 @@ mem0 <command>
 | 命令 | 说明 |
 |------|------|
 | `mem0 init` | 初始化认知基座（`.cap/` 目录）|
-| `mem0 create <task_id>` | 创建任务，生成 task.md / session.md / gotchas.md / judge.md |
-| `mem0 update <task_id> -c "内容"` | 追加 turn 快照到 session.md |
-| `mem0 judge <task_id>` | 执行 T0/T1/T2 验证，结果写入 judge.md |
-| `mem0 close <task_id>` | 先 judge，全 PASS 才标记 COMPLETED（不可绕过）|
-| `mem0 done <task_id>` | `close` 的别名 |
+| `mem0 create` | 创建任务，自动生成 6 位 task_id |
+| `mem0 list` | 列出活跃任务，支持交互式选择当前任务 |
+| `mem0 update -c "内容"` | 追加 turn 快照到 session.md |
+| `mem0 judge` | 执行 T0/T1/T2 验证，结果写入 judge.md |
+| `mem0 close` | 先 judge，全 PASS 才标记 COMPLETED（不可绕过）|
+| `mem0 done` | `close` 的别名 |
 | `mem0 status` | 展示当前状态平面（树形视图）|
-| `mem0 report <task_id>` | 展示最新 judge 验证报告 |
-| `mem0 abandon <task_id>` | 标记任务为 ABANDONED |
+| `mem0 report` | 展示最新 judge 验证报告 |
+| `mem0 abandon` | 标记任务为 ABANDONED |
+
+除 `init` / `status` / `list` 外，所有命令均从 `.task_info` 读取当前任务，`task_id` 参数可选。
 
 所有命令支持 `--root / -r <path>` 指定基座路径（默认 `.cap`）。
 
@@ -37,19 +40,22 @@ mem0 <command>
 # 1. 初始化
 mem0 init
 
-# 2. 创建任务
-mem0 create auth_module
+# 2. 创建任务（自动生成 task_id）
+mem0 create
 
-# 3. 每轮结束后记录快照
-mem0 update auth_module -c "完成了用户登录流程，修复了 session 超时问题"
+# 3. 查看任务列表（显示当前任务）
+mem0 list
 
-# 4. 验证任务是否就绪
-mem0 judge auth_module
+# 4. 每轮结束后记录快照
+mem0 update -c "完成了用户登录流程，修复了 session 超时问题"
 
-# 5. 关闭任务（必须 judge PASS 才成功）
-mem0 close auth_module
+# 5. 验证任务是否就绪
+mem0 judge
 
-# 6. 查看状态
+# 6. 关闭任务（必须 judge PASS 才成功）
+mem0 close
+
+# 7. 查看状态
 mem0 status
 ```
 
