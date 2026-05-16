@@ -490,7 +490,7 @@ def _update_status(task_id: str, root: str, new_status: TaskStatus, label: str) 
 
 @app.command()
 def report(
-    task_id: str,
+    task_id: str | None = None,
     root: str = typer.Option(
         DEFAULT_SUBSTRATE_ROOT,
         "--root",
@@ -498,8 +498,17 @@ def report(
         help="Path to cognitive substrate root directory",
     ),
 ) -> None:
-    """Show the latest judge verification report for a task."""
+    """Show the latest judge verification report. Uses current task if not specified."""
     substrate_root = Path(root)
+
+    # Resolve task_id from .task_info if not provided
+    if task_id is None:
+        task_info = TaskInfoManager(substrate_root=substrate_root)
+        task_id = task_info.get_current_task_id()
+        if task_id is None:
+            console.print("[red]No active task.[/red] Create or select a task first.")
+            raise typer.Exit(code=1)
+
     judge_path = substrate_root / "tasks" / task_id / "judge.md"
 
     if not judge_path.exists():
