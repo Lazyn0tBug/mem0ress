@@ -17,7 +17,7 @@ mem0 <command>
 
 | 命令 | 说明 |
 |------|------|
-| `mem0 init` | 初始化认知基座（`.mem0ress/` 目录）|
+| `mem0 init` | 初始化认知基座（`.cap/` 目录）|
 | `mem0 create <task_id>` | 创建任务，生成 task.md / session.md / gotchas.md / judge.md |
 | `mem0 update <task_id> -c "内容"` | 追加 turn 快照到 session.md |
 | `mem0 judge <task_id>` | 执行 T0/T1/T2 验证，结果写入 judge.md |
@@ -27,7 +27,7 @@ mem0 <command>
 | `mem0 report <task_id>` | 展示最新 judge 验证报告 |
 | `mem0 abandon <task_id>` | 标记任务为 ABANDONED |
 
-所有命令支持 `--root / -r <path>` 指定基座路径（默认 `.mem0ress`）。
+所有命令支持 `--root / -r <path>` 指定基座路径（默认 `.cap`）。
 
 ---
 
@@ -58,7 +58,7 @@ mem0 status
 ## 任务文件结构
 
 ```
-.mem0ress/
+.cap/
 └── tasks/
     └── {task_id}/
         ├── task.md     # PRC 定义（picture / requirements / constraints）+ todos
