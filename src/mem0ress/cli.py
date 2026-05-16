@@ -412,6 +412,10 @@ def close(
     ctm = CurrentTaskManager(substrate_root=substrate_root)
     ctm.activate_on_close()
 
+    # Sync .task_info
+    task_info = TaskInfoManager(substrate_root=substrate_root)
+    task_info.update_task_status(task_id, TaskStatus.COMPLETED)
+
     console.print(f"[green]Task closed:[/green] [bold]{task_id}[/bold]")
     console.print("Status: COMPLETED")
 
@@ -456,6 +460,10 @@ def done(
     # Clear .current_task on successful close
     ctm = CurrentTaskManager(substrate_root=substrate_root)
     ctm.activate_on_close()
+
+    # Sync .task_info
+    task_info = TaskInfoManager(substrate_root=substrate_root)
+    task_info.update_task_status(task_id, TaskStatus.COMPLETED)
 
     console.print(f"[green]Task closed:[/green] [bold]{task_id}[/bold]")
 
