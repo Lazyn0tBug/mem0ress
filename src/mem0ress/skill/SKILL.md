@@ -133,9 +133,39 @@ Every task must have:
 
 **Consistency check**: After all three are defined, verify no contradictions exist.
 
-### 6.3 Detailed Protocol
+### 6.3 /cog close Protocol
 
-See `references/create-protocol.md`
+**Trigger**: Agent or user signals task may be ready to close.
+
+**Flow**:
+```
+Agent invokes /cog close <task_id>
+        ↓
+Skill retrieves: Picture + current state
+        ↓
+Skill assesses: Does current state match Picture?
+  Not aligned → Clarification Mode (what's missing?)
+        ↓
+Skill requests Judge verification
+        ↓
+Judge returns verdict
+        ↓
+Agent evaluates: PASS/FAIL + semantic alignment
+        ↓
+  Ready to close → Agent: mem0 close <task_id>
+  Not ready → Continue work, goto /cog snapshot
+```
+
+**Judge verification only**:
+- Judge receives: task_id + filesystem protocol (NO runtime memory, NO hidden state)
+- Judge returns: PASS/FAIL with evidence
+
+**Agent decision authority**:
+- Judge PASS + semantic alignment → Agent calls `mem0 close`
+- Judge FAIL → Agent addresses gaps
+- Semantic misalignment → Agent continues Clarification Mode
+
+**Detailed protocol**: See `references/close-protocol.md`
 
 ## 7. File Protocol
 
