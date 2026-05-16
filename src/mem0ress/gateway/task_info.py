@@ -253,6 +253,18 @@ class TaskInfoManager:
         """
         return self.read().current_task_id
 
+    def clear_current_task(self) -> None:
+        """Clear the current task pointer (set current_task_id to None).
+
+        Does not change any task status — only clears which task is "current".
+
+        Raises:
+            ConflictError: If file was modified concurrently during write
+        """
+        data = self.read()
+        data.current_task_id = None
+        self._write(data)
+
     def get_active_tasks(self) -> list[TaskEntry]:
         """Get all non-completed, non-abandoned tasks.
 

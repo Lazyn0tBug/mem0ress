@@ -27,7 +27,6 @@ from mem0ress.core.constants import DEFAULT_SUBSTRATE_ROOT
 from mem0ress.core.id_gen import generate_task_id
 from mem0ress.core.schema import TaskManifest, TaskStatus
 from mem0ress.gateway import PlaneAssembler, TaskServiceImpl
-from mem0ress.gateway.current_task import CurrentTaskManager
 from mem0ress.gateway.task_info import TaskInfoManager
 from mem0ress.substrate.fs import get_file_hash, safe_write
 from mem0ress.substrate.parser import SubstrateParser
@@ -166,7 +165,7 @@ def create(
     """Create a new task with auto-generated 6-char task_id.
 
     Creates task directory with task.md, session.md, gotchas.md, judge.md.
-    Updates .current_task to point to the new task.
+    Registers task in .task_info and sets it as current.
     """
 
     substrate_root = Path(root)
@@ -181,12 +180,12 @@ def create(
     task_id = generate_task_id()
 
     # Check for existing active task — warn if non-empty
-    ctm = CurrentTaskManager(substrate_root=substrate_root)
-    existing_task_id, existing_activated_at = ctm.read()
-    if existing_task_id:
+    task_info = TaskInfoManager(substrate_root=substrate_root)
+    existing_task_id = task_info.get_current_task_id()
+    if existing_task_id is not None:
         console.print(
-            f"[yellow]Warning: overwriting non-empty .current_task "
-            f"(was {existing_task_id!r} since {existing_activated_at})[/yellow]"
+            f"[yellow]Warning: overwriting current task "
+            f"(was {existing_task_id!r})[/yellow]"
         )
 
     # Determine target directory
@@ -223,10 +222,7 @@ def create(
     judge_path = target_dir / "judge.md"
     judge_path.write_text(TEMPLATE_JUDGE, encoding="utf-8")
 
-    # Update .current_task pointer
-    ctm.activate_on_create(task_id)
-
-    # Register in .task_info
+    # Register in .task_info (add_task sets it as current)
     task_info = TaskInfoManager(substrate_root=substrate_root)
     task_info.add_task(task_id=task_id, path=f"tasks/{task_id}")
 
@@ -287,17 +283,17 @@ def update(
     Records what happened in the current turn so the Agent can resume
     after context switch without losing state.
 
-    If task_id is not provided, uses the active task from .current_task.
+    If task_id is not provided, uses the active task from .task_info.
     """
     substrate_root = Path(root)
     service = TaskServiceImpl(substrate_root=substrate_root)
 
-    # Resolve task_id: explicit or from .current_task
+    # Resolve task_id: explicit or from .task_info
     if task_id is None:
-        ctm = CurrentTaskManager(substrate_root=substrate_root)
-        task_id, _ = ctm.read()
+        task_info = TaskInfoManager(substrate_root=substrate_root)
+        task_id = task_info.get_current_task_id()
         if task_id is None:
-            console.print("[red]No active task.[/red] Provide task_id or create a task first.")
+            console.print("[red]No active task.[/red] Create or select a task first.")
             raise typer.Exit(code=1)
     elif not (substrate_root / "tasks" / task_id).exists():
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
@@ -325,18 +321,18 @@ def judge(
 ) -> None:
     """Run Tier 0/1/2 verification and write results to judge.md.
 
-    If task_id is not provided, uses the active task from .current_task.
+    If task_id is not provided, uses the active task from .task_info.
     Output is plain text (no ANSI markup) for agent consumption.
     """
     substrate_root = Path(root)
     service = TaskServiceImpl(substrate_root=substrate_root)
 
-    # Resolve task_id: explicit or from .current_task
+    # Resolve task_id: explicit or from .task_info
     if task_id is None:
-        ctm = CurrentTaskManager(substrate_root=substrate_root)
-        task_id, _ = ctm.read()
+        task_info = TaskInfoManager(substrate_root=substrate_root)
+        task_id = task_info.get_current_task_id()
         if task_id is None:
-            console.print("[red]No active task.[/red] Provide task_id or create a task first.")
+            console.print("[red]No active task.[/red] Create or select a task first.")
             raise typer.Exit(code=1)
     elif not (substrate_root / "tasks" / task_id).exists():
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
@@ -382,18 +378,18 @@ def close(
     This is the MVP's "no bypass" rule — a task cannot be closed
     without passing all verification tiers.
 
-    If task_id is not provided, uses the active task from .current_task.
-    On success, clears the .current_task pointer.
+    If task_id is not provided, uses the active task from .task_info.
+    On success, clears the current task pointer.
     """
     substrate_root = Path(root)
     service = TaskServiceImpl(substrate_root=substrate_root)
 
-    # Resolve task_id: explicit or from .current_task
+    # Resolve task_id: explicit or from .task_info
     if task_id is None:
-        ctm = CurrentTaskManager(substrate_root=substrate_root)
-        task_id, _ = ctm.read()
+        task_info = TaskInfoManager(substrate_root=substrate_root)
+        task_id = task_info.get_current_task_id()
         if task_id is None:
-            console.print("[red]No active task.[/red] Provide task_id or create a task first.")
+            console.print("[red]No active task.[/red] Create or select a task first.")
             raise typer.Exit(code=1)
     elif not (substrate_root / "tasks" / task_id).exists():
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
@@ -408,12 +404,11 @@ def close(
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
         raise typer.Exit(code=1)
 
-    # Clear .current_task on successful close
-    ctm = CurrentTaskManager(substrate_root=substrate_root)
-    ctm.activate_on_close()
+    # Clear .task_info current task on successful close
+    task_info = TaskInfoManager(substrate_root=substrate_root)
+    task_info.clear_current_task()
 
     # Sync .task_info
-    task_info = TaskInfoManager(substrate_root=substrate_root)
     task_info.update_task_status(task_id, TaskStatus.COMPLETED)
 
     console.print(f"[green]Task closed:[/green] [bold]{task_id}[/bold]")
@@ -432,17 +427,17 @@ def done(
 ) -> None:
     """Mark a task as completed. Alias for 'close' (runs verification first).
 
-    If task_id is not provided, uses the active task from .current_task.
+    If task_id is not provided, uses the active task from .task_info.
     """
     substrate_root = Path(root)
     service = TaskServiceImpl(substrate_root=substrate_root)
 
-    # Resolve task_id: explicit or from .current_task
+    # Resolve task_id: explicit or from .task_info
     if task_id is None:
-        ctm = CurrentTaskManager(substrate_root=substrate_root)
-        task_id, _ = ctm.read()
+        task_info = TaskInfoManager(substrate_root=substrate_root)
+        task_id = task_info.get_current_task_id()
         if task_id is None:
-            console.print("[red]No active task.[/red] Provide task_id or create a task first.")
+            console.print("[red]No active task.[/red] Create or select a task first.")
             raise typer.Exit(code=1)
     elif not (substrate_root / "tasks" / task_id).exists():
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
@@ -457,12 +452,11 @@ def done(
         console.print(f"[red]Task not found:[/red] [bold]{task_id}[/bold]")
         raise typer.Exit(code=1)
 
-    # Clear .current_task on successful close
-    ctm = CurrentTaskManager(substrate_root=substrate_root)
-    ctm.activate_on_close()
+    # Clear .task_info current task on successful close
+    task_info = TaskInfoManager(substrate_root=substrate_root)
+    task_info.clear_current_task()
 
     # Sync .task_info
-    task_info = TaskInfoManager(substrate_root=substrate_root)
     task_info.update_task_status(task_id, TaskStatus.COMPLETED)
 
     console.print(f"[green]Task closed:[/green] [bold]{task_id}[/bold]")
