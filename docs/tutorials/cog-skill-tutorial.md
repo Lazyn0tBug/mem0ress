@@ -40,7 +40,7 @@ mem0 create --picture "..." --requirements "..." --constraints "..."
 ### 2. Record progress
 
 ```bash
-/cap snapshot <task_id>
+/cap snapshot
 ```
 
 Compressed delta — not a transcript.
@@ -48,7 +48,7 @@ Compressed delta — not a transcript.
 ### 3. Record recovery-critical discoveries
 
 ```bash
-/cap gotcha <task_id>
+/cap gotcha
 ```
 
 Ambiguity, drift risk, unstable assumptions, blockers.
@@ -56,7 +56,7 @@ Ambiguity, drift risk, unstable assumptions, blockers.
 ### 4. Verify alignment
 
 ```bash
-/cap verify <task_id>
+/cap verify
 ```
 
 Judge Agent runs Tier 0/1/2 verification.
@@ -64,7 +64,7 @@ Judge Agent runs Tier 0/1/2 verification.
 ### 5. Close the task
 
 ```bash
-/cap close <task_id>
+/cap close
 ```
 
 1. Agent checks: Does current state semantically match Picture?
@@ -182,18 +182,18 @@ Agent: /cap create
 
 [Work on whitepaper sections]
 
-Agent: /cap snapshot <task_id>
+Agent: /cap snapshot
   → "Completed §2, identified ambiguity in §4 scope"
 
-Agent: /cap gotcha <task_id>
+Agent: /cap gotcha
   → "§4 scope undefined — may conflict with §2 assumptions"
 
 [Continue work]
 
-Agent: /cap verify <task_id>
+Agent: /cap verify
   → Judge returns: Tier 0 PASS, Tier 1 PASS, Tier 2 PASS
 
-Agent: /cap close <task_id>
+Agent: /cap close
   → Semantic alignment check: yes
   → Agent: mem0 close <task_id>
 ```

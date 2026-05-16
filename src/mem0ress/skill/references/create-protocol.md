@@ -6,14 +6,14 @@ Detailed protocol for semantic initialization of a task via `/cap create`.
 
 `/cap create` is a **semantic interaction entrypoint**, not a command binding.
 
-- Invocation: `/cap create <task_id>`
+- Invocation: `/cap create`
 - Meaning: "Begin semantic initialization of a new task"
 - Outcome: task.md created in `.CAP/tasks/<task_id>/`
 
 ## Session Flow
 
 ```
-Agent: /cap create <task_id>
+Agent: /cap create
         ↓
 Skill assesses: Is Picture complete?
         ↓
@@ -117,7 +117,7 @@ Done
 After semantic coordination completes, CLI executes:
 
 ```bash
-/cap create <task_id> \
+/cap create \
   --picture "语义成功状态描述" \
   --requirements "req1; req2; ..." \
   --constraints "红线1; 红线2; ..."
@@ -137,7 +137,7 @@ This creates:
 For MVP simplicity, if all three elements are provided upfront:
 
 ```bash
-/cap create <task_id> \
+/cap create \
   --picture "..." \
   --requirements "..." \
   --constraints "..."

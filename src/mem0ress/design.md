@@ -138,7 +138,7 @@ Requirements 需验证 → 主 Agent 请求 Judge Agent 验证
 ### 4.2 `/cap create` 会话协议
 
 ```
-Agent: /cap create <task_id>
+Agent: /cap create
        ↓
 Skill 评估当前认知状态（三要素是否完整）
        ↓
@@ -175,7 +175,7 @@ CLI persistence：创建 .cap/tasks/<task_id>/task.md
 ### 4.4 CLI 命令规格（MVP）
 
 ```bash
-/cap create <task_id> \
+/cap create \
   --picture "语义成功状态描述" \
   --requirements "req1; req2; ..." \
   --constraints "红线1; 红线2; ..."

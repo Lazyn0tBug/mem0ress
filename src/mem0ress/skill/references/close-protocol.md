@@ -6,7 +6,7 @@ Detailed protocol for semantic task closure via `/cap close`.
 
 `/cap close` is a **semantic verification entrypoint**, not a state machine transition.
 
-- Invocation: `/cap close <task_id>`
+- Invocation: `/cap close`
 - Meaning: "Begin semantic closure verification"
 - Precondition: Agent believes task may be ready to close
 - Postcondition: Either task marked COMPLETED, or gaps identified
@@ -14,7 +14,7 @@ Detailed protocol for semantic task closure via `/cap close`.
 ## Session Flow
 
 ```
-Agent: /cap close <task_id>
+Agent: /cap close
         ↓
 Skill retrieves Picture from task.md
         ↓
