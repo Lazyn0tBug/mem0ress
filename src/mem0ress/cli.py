@@ -28,6 +28,7 @@ from mem0ress.core.id_gen import generate_task_id
 from mem0ress.core.schema import TaskManifest, TaskStatus
 from mem0ress.gateway import PlaneAssembler, TaskServiceImpl
 from mem0ress.gateway.current_task import CurrentTaskManager
+from mem0ress.gateway.task_info import TaskInfoManager
 from mem0ress.substrate.fs import get_file_hash, safe_write
 from mem0ress.substrate.parser import SubstrateParser
 
@@ -224,6 +225,10 @@ def create(
 
     # Update .current_task pointer
     ctm.activate_on_create(task_id)
+
+    # Register in .task_info
+    task_info = TaskInfoManager(substrate_root=substrate_root)
+    task_info.add_task(task_id=task_id, path=f"tasks/{task_id}")
 
     console.print(f"[green]Created task[/green] [bold]{task_id}[/bold]")
 
