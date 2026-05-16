@@ -28,6 +28,7 @@ from mem0ress.core.id_gen import generate_task_id
 from mem0ress.core.schema import TaskManifest, TaskStatus
 from mem0ress.gateway import PlaneAssembler, TaskServiceImpl
 from mem0ress.gateway.current_task import CurrentTaskManager
+from mem0ress.gateway.task_info import TaskInfoManager
 from mem0ress.substrate.fs import get_file_hash, safe_write
 from mem0ress.substrate.parser import SubstrateParser
 
@@ -225,6 +226,10 @@ def create(
     # Update .current_task pointer
     ctm.activate_on_create(task_id)
 
+    # Register in .task_info
+    task_info = TaskInfoManager(substrate_root=substrate_root)
+    task_info.add_task(task_id=task_id, path=f"tasks/{task_id}")
+
     console.print(f"[green]Created task[/green] [bold]{task_id}[/bold]")
 
     # If picture was provided, show what was set
@@ -234,7 +239,7 @@ def create(
 
 @app.command()
 def abandon(
-    task_id: str,
+    task_id: str | None = None,
     root: str = typer.Option(
         DEFAULT_SUBSTRATE_ROOT,
         "--root",
@@ -242,8 +247,23 @@ def abandon(
         help="Path to cognitive substrate root directory",
     ),
 ) -> None:
-    """Mark a task as abandoned."""
+    """Mark a task as abandoned. Uses current task if not specified."""
+    substrate_root = Path(root)
+
+    # Resolve task_id from .task_info if not provided
+    if task_id is None:
+        task_info = TaskInfoManager(substrate_root=substrate_root)
+        task_id = task_info.get_current_task_id()
+        if task_id is None:
+            console.print("[red]No active task.[/red] Create or select a task first.")
+            raise typer.Exit(code=1)
+
+    # Update task.md (existing helper)
     _update_status(task_id, root, TaskStatus.ABANDONED, "Abandoned")
+
+    # Sync .task_info
+    task_info = TaskInfoManager(substrate_root=substrate_root)
+    task_info.update_task_status(task_id, TaskStatus.ABANDONED)
 
 
 @app.command()
@@ -392,6 +412,10 @@ def close(
     ctm = CurrentTaskManager(substrate_root=substrate_root)
     ctm.activate_on_close()
 
+    # Sync .task_info
+    task_info = TaskInfoManager(substrate_root=substrate_root)
+    task_info.update_task_status(task_id, TaskStatus.COMPLETED)
+
     console.print(f"[green]Task closed:[/green] [bold]{task_id}[/bold]")
     console.print("Status: COMPLETED")
 
@@ -437,6 +461,10 @@ def done(
     ctm = CurrentTaskManager(substrate_root=substrate_root)
     ctm.activate_on_close()
 
+    # Sync .task_info
+    task_info = TaskInfoManager(substrate_root=substrate_root)
+    task_info.update_task_status(task_id, TaskStatus.COMPLETED)
+
     console.print(f"[green]Task closed:[/green] [bold]{task_id}[/bold]")
 
 
@@ -470,7 +498,7 @@ def _update_status(task_id: str, root: str, new_status: TaskStatus, label: str) 
 
 @app.command()
 def report(
-    task_id: str,
+    task_id: str | None = None,
     root: str = typer.Option(
         DEFAULT_SUBSTRATE_ROOT,
         "--root",
@@ -478,8 +506,17 @@ def report(
         help="Path to cognitive substrate root directory",
     ),
 ) -> None:
-    """Show the latest judge verification report for a task."""
+    """Show the latest judge verification report. Uses current task if not specified."""
     substrate_root = Path(root)
+
+    # Resolve task_id from .task_info if not provided
+    if task_id is None:
+        task_info = TaskInfoManager(substrate_root=substrate_root)
+        task_id = task_info.get_current_task_id()
+        if task_id is None:
+            console.print("[red]No active task.[/red] Create or select a task first.")
+            raise typer.Exit(code=1)
+
     judge_path = substrate_root / "tasks" / task_id / "judge.md"
 
     if not judge_path.exists():
@@ -539,6 +576,71 @@ def report(
         else:
             console.print("  [dim](no output)[/dim]")
         console.print()
+
+
+@app.command(name="list")
+def _list(
+    root: str = typer.Option(
+        DEFAULT_SUBSTRATE_ROOT,
+        "--root",
+        "-r",
+        help="Path to cognitive substrate root directory",
+    ),
+) -> None:
+    """Show active tasks and optionally select one as current."""
+    substrate_root = Path(root)
+
+    task_info = TaskInfoManager(substrate_root=substrate_root)
+    active_tasks = task_info.get_active_tasks()
+    current_task_id = task_info.get_current_task_id()
+
+    # R3: 0 tasks
+    if len(active_tasks) == 0:
+        console.print("[yellow]No tasks available. Run 'mem0 create' first.[/yellow]")
+        raise typer.Exit(code=1)
+
+    # Print numbered list
+    for i, task in enumerate(active_tasks, start=1):
+        is_current = task.task_id == current_task_id
+        status_label = task.status.value
+        activated = ""
+        if is_current and task.activated_at:
+            date_part = task.activated_at[:10]
+            activated = f" ← current (activated {date_part})"
+        current_marker = "[bold]" if is_current else ""
+        current_end = "[/bold]" if is_current else ""
+        console.print(
+            f"  {i}. {current_marker}■ {task.task_id}  [{status_label}]{activated}{current_end}"
+        )
+
+    # R4: 1 task that is current — exit immediately
+    if len(active_tasks) == 1:
+        if active_tasks[0].task_id == current_task_id:
+            raise typer.Exit(code=0)
+        # Auto-select the only task
+        task_info.set_current_task(active_tasks[0].task_id)
+        raise typer.Exit(code=0)
+
+    # R5: N>1 tasks — interactive selection
+    while True:
+        user_input = console.input("\nSelect task number: ").strip()
+        if user_input == "":
+            console.print("[yellow]Invalid input. Enter a number.[/yellow]")
+            continue
+        try:
+            idx = int(user_input) - 1
+            if 0 <= idx < len(active_tasks):
+                task_info.set_current_task(active_tasks[idx].task_id)
+                break
+            else:
+                max_num = len(active_tasks)
+                console.print(
+                    f"[yellow]Invalid selection. Enter a number between 1 and {max_num}.[/yellow]"
+                )
+        except ValueError:
+            console.print("[yellow]Invalid input. Enter a number.[/yellow]")
+
+    raise typer.Exit(code=0)
 
 
 def render_rich_status_plane(plane, console: Console) -> None:

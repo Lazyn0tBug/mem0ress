@@ -77,7 +77,7 @@ Phase 0 使用 `.cap/` 作为认知基座根目录，与 spec.md 的命名约定
 ```
 
 **与 spec 命名约定的对齐：**
-- `.cap/` 而非 `.mem0ress/` —— 与 spec.md 的 Protocol 术语一致
+- `.cap/` —— 与 spec.md 的 Protocol 术语一致
 - `task.md` 而非 `manifest.md` —— filesystem source of truth
 
 ---
@@ -151,7 +151,7 @@ Requirements 需验证 → 主 Agent 请求 Judge Agent 验证
 ### 4.2 `/cap create` 会话协议
 
 ```
-Agent: /cap create <task_id>
+Agent: /cap create
        ↓
 Skill 评估当前认知状态（三要素是否完整）
        ↓
@@ -188,7 +188,7 @@ CLI persistence：创建 .cap/tasks/<task_id>/task.md
 ### 4.4 CLI 命令规格（MVP）
 
 ```bash
-/cap create <task_id> \
+/cap create \
   --picture "语义成功状态描述" \
   --requirements "req1; req2; ..." \
   --constraints "红线1; 红线2; ..."
@@ -406,9 +406,9 @@ Tier 执行:
 
 ### Step 1: 目录改名 + data plane 结构
 
-- [ ] 将 `.mem0ress/` 改为 `.cap/`
+- [x] 将 `.mem0ress/` 改为 `.cap/`
 - [ ] 在 `init` 命令中创建 `data/outputs/`, `data/evidence/`, `data/artifacts/` 目录
-- [ ] 将 `--root` 默认值从 `.mem0ress` 改为 `.cap`
+- [x] 将 `--root` 默认值从 `.mem0ress` 改为 `.cap`
 
 ### Step 2: `/cap recover` 命令
 

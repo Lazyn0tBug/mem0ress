@@ -101,7 +101,7 @@ Each `/cap` command is a **semantic interaction entrypoint**, not a command bind
 ### 6.1 Flow Overview
 
 ```
-Agent invokes /cap create <task_id>
+Agent invokes /cap create
         ↓
 Skill assesses: Is Picture complete?
   No → Clarification Mode
@@ -139,7 +139,7 @@ Every task must have:
 
 **Flow**:
 ```
-Agent invokes /cap close <task_id>
+Agent invokes /cap close
         ↓
 Skill retrieves: Picture + current state
         ↓
