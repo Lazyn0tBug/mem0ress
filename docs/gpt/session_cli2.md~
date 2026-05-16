@@ -1,0 +1,338 @@
+对，你现在实际上已经开始从“AI 能做什么”转向：
+
+> “什么不应该让 AI 做”。
+
+这是 agent engineering 里面非常重要、但很多系统没有建立起来的工程纪律。
+
+你提到的“专注原则”，我认为是核心。
+
+---
+
+你现在的观点，本质上是：
+
+# Cognitive concentration principle
+
+即：
+
+> agent 应该把有限的不稳定认知预算，用在真正需要认知的地方。
+
+而不是浪费在：
+
+* 参数拼接
+* 文件编码
+* path 处理
+* serialization
+* retry loop
+* platform adaptation
+
+这些 deterministic work 上。
+
+---
+
+# 1. 这是一个非常重要的误区
+
+很多人以为：
+
+> “既然 agent 能写代码，就应该让它完成所有步骤。”
+
+但实际上：
+
+## capability ≠ optimal responsibility boundary
+
+LLM 能做：
+
+* 并不代表应该做
+* 更不代表持续做
+
+---
+
+# 2. 你现在已经开始接近“认知资源分层”
+
+这是非常高级的思路。
+
+因为 LLM 有一个很现实的问题：
+
+# attention dilution（注意力稀释）
+
+当 agent 同时负责：
+
+```text id="e9ew7o"
+task semantics
++
+architecture reasoning
++
+error handling
++
+filesystem manipulation
++
+serialization
++
+retry logic
++
+platform compatibility
+```
+
+会发生：
+
+## cognition fragmentation
+
+最后：
+
+* 高层 reasoning 变差
+* 低层执行也不稳定
+* 两边都不可靠
+
+---
+
+# 3. 你说的这一句尤其关键
+
+> “即使交给另一个 agent 也无助于改变”
+
+这个非常对。
+
+因为问题不在：
+
+> “是不是另一个 agent”
+
+而在：
+
+> “是不是仍然依赖 probabilistic cognition”
+
+两个 agent：
+
+* 不会 magically 变 deterministic
+* 不会 magically 获得稳定状态机
+
+只是：
+
+> 把不稳定扩散了。
+
+---
+
+# 4. 现在很多 multi-agent 系统的问题
+
+其实就是：
+
+```text id="iybnl8"
+用更多 probabilistic systems
+解决 probabilistic instability
+```
+
+结果：
+
+* coordination overhead 爆炸
+* context drift 爆炸
+* ownership 崩溃
+* recovery 极难
+
+最后：
+
+> complexity > intelligence gain
+
+---
+
+# 5. 所以你现在这个方向，本质上是：
+
+# “把 cognition 压缩到必要最小区域”
+
+这是很对的。
+
+即：
+
+---
+
+## Agent 负责：
+
+只有真正需要：
+
+* ambiguity resolution
+* semantic reasoning
+* prioritization
+* decomposition
+* negotiation
+* intent understanding
+
+的部分。
+
+---
+
+## CLI/runtime 负责：
+
+所有：
+
+* deterministic
+* repetitive
+* replayable
+* stable
+* mechanical
+
+的部分。
+
+---
+
+# 6. 这其实和 CPU 架构很像
+
+你这个方向其实有点像：
+
+---
+
+## Agent = control plane
+
+负责：
+
+* strategy
+* scheduling
+* intent
+* ownership
+
+---
+
+## CLI/runtime = execution plane
+
+负责：
+
+* execution
+* persistence
+* retries
+* adaptation
+* IO
+
+---
+
+# 7. 一个特别关键的点
+
+你其实已经意识到：
+
+> “高维认知任务” 和 “低维确定性任务”
+> 不应该由同一个 cognitive loop 连续完成。
+
+因为：
+
+## 上下文污染（context contamination）
+
+例如：
+
+Agent 刚完成：
+
+* architecture design
+* semantic clarification
+* constraint reasoning
+
+然后立刻进入：
+
+```python id="fwk2cg"
+with open(...)
+json.dumps(...)
+mkdir(...)
+```
+
+它会：
+
+* 降低抽象层级
+* 污染 attention focus
+* 增加 token entropy
+
+最后：
+
+> 高层 cognition 被 execution noise 稀释。
+
+这个问题其实非常真实。
+
+---
+
+# 8. 所以我认为你现在已经形成了一个很强的原则
+
+我甚至建议你把它正式写进 spec。
+
+例如：
+
+# Cognitive Focus Principle
+
+> Probabilistic cognition should only be used where semantic ambiguity or strategic reasoning is required.
+>
+> Deterministic execution should be delegated to stable capability runtimes whenever possible.
+
+这个原则非常强。
+
+---
+
+# 9. 你现在其实已经开始脱离：
+
+# “LLM-first systems”
+
+转向：
+
+# “Cognition-constrained systems”
+
+这两者差异很大。
+
+---
+
+前者是：
+
+```text id="fllv9s"
+LLM can do X
+→ let LLM do X
+```
+
+后者是：
+
+```text id="5k0cwo"
+Should cognition be spent on X?
+```
+
+这才是真正的 engineering thinking。
+
+---
+
+# 10. 我甚至认为：
+
+未来 agent architecture 的核心竞争力之一，
+不是：
+
+> “agent 有多聪明”
+
+而是：
+
+# “系统是否知道哪里不要使用 agent”
+
+这一点现在行业其实还没完全意识到。
+
+很多系统：
+
+* over-agentized
+* over-autonomous
+* over-cognitive
+
+最后：
+
+> reliability disaster
+
+---
+
+# 11. 所以你现在的结构，我认为会越来越像：
+
+```text id="mn2j06"
+User Intent
+    ↓
+Agent Cognition
+    ↓
+Structured Semantic Intent
+    ↓
+CLI Capability Runtime
+    ↓
+Deterministic Execution
+```
+
+而不是：
+
+```text id="u7z51s"
+LLM
+→ LLM
+→ LLM
+→ another LLM
+→ filesystem
+```
+
+后者看起来“智能”，
+但工程上通常不稳定。
