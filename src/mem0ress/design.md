@@ -59,10 +59,10 @@ CLI = Protocol Persistence Step，不是主要交互界面。
 
 ## 2. 目录结构
 
-Phase 0 使用 `.CAP/` 作为认知基座根目录，与 spec.md 的命名约定保持一致。
+Phase 0 使用 `.cap/` 作为认知基座根目录，与 spec.md 的命名约定保持一致。
 
 ```
-.CAP/
+.cap/
 └── tasks/
     └── {task_id}/
         ├── task.md           # 任务清单（语义权威表面）
@@ -77,7 +77,7 @@ Phase 0 使用 `.CAP/` 作为认知基座根目录，与 spec.md 的命名约定
 ```
 
 **与 spec 命名约定的对齐：**
-- `.CAP/` 而非 `.mem0ress/` —— 与 spec.md 的 Protocol 术语一致
+- `.cap/` 而非 `.mem0ress/` —— 与 spec.md 的 Protocol 术语一致
 - `task.md` 而非 `manifest.md` —— filesystem source of truth
 
 ---
@@ -153,7 +153,7 @@ Requirements 不可验证？
        ↓
 主 Agent 确认补全完成
        ↓
-CLI persistence：创建 .CAP/tasks/<task_id>/task.md
+CLI persistence：创建 .cap/tasks/<task_id>/task.md
 ```
 
 ### 4.3 MVP 实现路径
@@ -278,7 +278,7 @@ Judge verification surface（Judge 验证表面）。
 渲染当前状态平面（Tree 可视化）。
 
 ```
-输入: /cog status [--root .CAP]
+输入: /cog status [--root .cap]
 输出: Rich tree
   ■ {task_id} [{done}/{total}] {STATUS}
      ! {gotcha}
@@ -290,7 +290,7 @@ Judge verification surface（Judge 验证表面）。
 解析协议文件，重建认知表面，返回给 Agent 恢复所需的关键信息。
 
 ```
-输入: /cog recover [--root .CAP]
+输入: /cog recover [--root .cap]
 输出:
   picture: {picture}
   active requirements: [{id}: {description}]
@@ -305,7 +305,7 @@ Judge verification surface（Judge 验证表面）。
 追加认知增量到 session.md。
 
 ```
-输入: /cog snapshot {content} [--root .CAP]
+输入: /cog snapshot {content} [--root .cap]
 规则:
   - 必须压缩（不得包含原始日志、chain-of-thought）
   - 必须有语义（记录发现、决策、进展）
@@ -320,7 +320,7 @@ Judge verification surface（Judge 验证表面）。
 追加关键发现到 gotchas.md。
 
 ```
-输入: /cog gotcha {content} [--root .CAP]
+输入: /cog gotcha {content} [--root .cap]
 适用场景:
   - 语义模糊
   - 不稳定假设
@@ -336,7 +336,7 @@ Judge verification surface（Judge 验证表面）。
 触发 Judge 隔离验证。
 
 ```
-输入: /cog verify [--root .CAP]
+输入: /cog verify [--root .cap]
 隔离保证:
   - Judge 只接收 task_id + filesystem protocol
   - Judge 不得接收 runtime memory / hidden state / full history
@@ -357,7 +357,7 @@ Tier 执行:
 读取 judge.md 判决结果，Agent 决定下一步动作。
 
 ```
-输入: /cog decide [--root .CAP]
+输入: /cog decide [--root .cap]
 决策权永远属于 Hermes，skill 不得自主决定。
 输出:
   - 最新 judge 判决摘要
@@ -372,9 +372,9 @@ Tier 执行:
 
 ### Step 1: 目录改名 + data plane 结构
 
-- [ ] 将 `.mem0ress/` 改为 `.CAP/`
+- [ ] 将 `.mem0ress/` 改为 `.cap/`
 - [ ] 在 `init` 命令中创建 `data/outputs/`, `data/evidence/`, `data/artifacts/` 目录
-- [ ] 将 `--root` 默认值从 `.mem0ress` 改为 `.CAP`
+- [ ] 将 `--root` 默认值从 `.mem0ress` 改为 `.cap`
 
 ### Step 2: `/cog recover` 命令
 

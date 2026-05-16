@@ -117,7 +117,7 @@ graph TB
 ## 附录 0: MVP Scope（v0.1 边界定义）
 
 **v0.1-alpha 必须支持：**
-- 本地文件系统（`.CAP/` 目录结构）
+- 本地文件系统（`.cap/` 目录结构）
 - Task-local 状态平面（单任务认知边界）
 - 五个核心文档：`task.md` / `session.md` / `gotchas.md` / `judge.md`（`completion_summary.md` 可选）
 - One-Agent-One-Task 责任模型
@@ -415,10 +415,10 @@ CAP 采用纯文本持久化 + 运行时组装的数据模型。认知数据以 
 纯文本持久化有三个原因：消除隐藏状态（所有数据可直接读取和修改，外部工具 git、grep、编辑器可直接操作）、时间切片而非可变状态（快照追加，不存在数据汤问题）、与 Agent 工具生态无缝衔接（文件工具天然支持，无需额外 SDK）。
 
 ```mermaid
-%% label：.CAP 文件树与概念映射
+%% label：.cap 文件树与概念映射
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#e8f5e9', 'primaryTextColor': '#1b5e20', 'primaryBorderColor': '#388e3c', 'lineColor': '#616161', 'secondaryColor': '#fff3e0', 'tertiaryColor': '#fafafa' } } }%%
 graph TD
-    ROOT[".CAP/tasks/"]
+    ROOT[".cap/tasks/"]
     TMPL["task.md"]
     SESS["session.md"]
     GOT["gotchas.md"]
@@ -457,7 +457,7 @@ graph TD
 **文件读写权限：** 每个文件有唯一的写入方。主 Agent 读写 task.md（覆盖写 + Todo 更新），追加写 session.md 和 gotchas.md；Judge Agent 只追加写 judge.md，只读取 task.md、session.md、gotchas.md。写入规则：session.md / gotchas.md / judge.md 只追加不修改历史；task.md 是唯一允许覆盖写的文件；task.md 的 Picture / Requirements / Constraints 一旦写入不允许修改。
 
 ```plaintext
-.CAP/tasks/
+.cap/tasks/
 └── {task_id}/
     ├── task.md       # 任务声明（Picture/Requirements/Constraints/Todo）
     ├── session.md    # 轮次快照序列（含 data_plane 快照）

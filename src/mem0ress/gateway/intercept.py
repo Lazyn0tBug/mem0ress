@@ -22,6 +22,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from mem0ress.core.constants import DEFAULT_SUBSTRATE_ROOT
 from mem0ress.gateway.plane import PlaneAssembler
 from mem0ress.substrate.fs import get_file_hash, safe_write
 
@@ -70,7 +71,7 @@ def snapshot_session(
 
     Args:
         task_id: Task identifier
-        substrate_root: Root directory (.mem0ress)
+        substrate_root: Root directory (.cap)
         code_progress: Description of this turn's code output
         data_plane: Repository → commit ID mapping (optional)
         todos: List of {text, done} dicts (optional, inferred from manifest if None)
@@ -138,7 +139,7 @@ class CognitiveContext:
     """SDK entry point for host lifecycle hooks.
 
     Usage (host event loop):
-        with CognitiveContext(".mem0ress") as ctx:
+        with CognitiveContext(DEFAULT_SUBSTRATE_ROOT) as ctx:
             status_plane = ctx.status_plane  # inject into Agent context
             # Agent executes turn...
             # (no explicit call needed on exit — hooks fire automatically)
@@ -156,7 +157,7 @@ class CognitiveContext:
     active decisions called explicitly during the turn.
     """
 
-    def __init__(self, substrate_root: str | Path = ".mem0ress"):
+    def __init__(self, substrate_root: str | Path = DEFAULT_SUBSTRATE_ROOT):
         """Initialize CognitiveContext.
 
         Args:

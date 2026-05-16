@@ -23,6 +23,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.tree import Tree
 
+from mem0ress.core.constants import DEFAULT_SUBSTRATE_ROOT
 from mem0ress.core.id_gen import generate_task_id
 from mem0ress.core.schema import TaskManifest, TaskStatus
 from mem0ress.gateway import PlaneAssembler, TaskServiceImpl
@@ -90,7 +91,7 @@ VERIFIER_OUTPUT_PATTERN = re.compile(r"^-\s*`?(\w+)`?:\s*(.+)$", re.MULTILINE)
 @app.command()
 def status(
     root: str = typer.Option(
-        ".mem0ress",
+        DEFAULT_SUBSTRATE_ROOT,
         "--root",
         "-r",
         help="Path to cognitive substrate root directory",
@@ -116,7 +117,7 @@ def status(
 @app.command()
 def init(
     root: str = typer.Option(
-        ".mem0ress",
+        DEFAULT_SUBSTRATE_ROOT,
         "--root",
         "-r",
         help="Path where to initialize cognitive substrate",
@@ -155,7 +156,7 @@ def create(
         help="YAML list of constraints",
     ),
     root: str = typer.Option(
-        ".mem0ress",
+        DEFAULT_SUBSTRATE_ROOT,
         "--root",
         "-r",
         help="Path to cognitive substrate root directory",
@@ -235,7 +236,7 @@ def create(
 def abandon(
     task_id: str,
     root: str = typer.Option(
-        ".mem0ress",
+        DEFAULT_SUBSTRATE_ROOT,
         "--root",
         "-r",
         help="Path to cognitive substrate root directory",
@@ -255,7 +256,7 @@ def update(
         help="Turn snapshot content describing what happened this turn",
     ),
     root: str = typer.Option(
-        ".mem0ress",
+        DEFAULT_SUBSTRATE_ROOT,
         "--root",
         "-r",
         help="Path to cognitive substrate root directory",
@@ -296,7 +297,7 @@ def update(
 def judge(
     task_id: str | None = None,
     root: str = typer.Option(
-        ".mem0ress",
+        DEFAULT_SUBSTRATE_ROOT,
         "--root",
         "-r",
         help="Path to cognitive substrate root directory",
@@ -350,7 +351,7 @@ def judge(
 def close(
     task_id: str | None = None,
     root: str = typer.Option(
-        ".mem0ress",
+        DEFAULT_SUBSTRATE_ROOT,
         "--root",
         "-r",
         help="Path to cognitive substrate root directory",
@@ -399,7 +400,7 @@ def close(
 def done(
     task_id: str | None = None,
     root: str = typer.Option(
-        ".mem0ress",
+        DEFAULT_SUBSTRATE_ROOT,
         "--root",
         "-r",
         help="Path to cognitive substrate root directory",
@@ -471,7 +472,7 @@ def _update_status(task_id: str, root: str, new_status: TaskStatus, label: str) 
 def report(
     task_id: str,
     root: str = typer.Option(
-        ".mem0ress",
+        DEFAULT_SUBSTRATE_ROOT,
         "--root",
         "-r",
         help="Path to cognitive substrate root directory",

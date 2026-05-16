@@ -38,6 +38,7 @@ Design Principles (设计原则):
 
 from pathlib import Path
 
+from mem0ress.core.constants import DEFAULT_SUBSTRATE_ROOT
 from mem0ress.core.schema import (
     StatusPlane,
     StatusPlaneEntry,
@@ -49,11 +50,11 @@ from mem0ress.substrate.parser import SubstrateParser
 class PlaneAssembler:
     """Compiles the cognitive status plane from the substrate."""
 
-    def __init__(self, substrate_root: Path = Path(".mem0ress")):
+    def __init__(self, substrate_root: Path = Path(DEFAULT_SUBSTRATE_ROOT)):
         """Initialize PlaneAssembler.
 
         Args:
-            substrate_root: Root directory for cognitive substrate (default: .mem0ress)
+            substrate_root: Root directory for cognitive substrate (default: .cap)
         """
         self.substrate_root = substrate_root
         self.tasks_dir = substrate_root / "tasks"
