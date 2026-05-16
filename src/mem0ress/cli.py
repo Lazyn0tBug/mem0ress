@@ -570,6 +570,71 @@ def report(
         console.print()
 
 
+@app.command(name="list")
+def _list(
+    root: str = typer.Option(
+        DEFAULT_SUBSTRATE_ROOT,
+        "--root",
+        "-r",
+        help="Path to cognitive substrate root directory",
+    ),
+) -> None:
+    """Show active tasks and optionally select one as current."""
+    substrate_root = Path(root)
+
+    task_info = TaskInfoManager(substrate_root=substrate_root)
+    active_tasks = task_info.get_active_tasks()
+    current_task_id = task_info.get_current_task_id()
+
+    # R3: 0 tasks
+    if len(active_tasks) == 0:
+        console.print("[yellow]No tasks available. Run 'mem0 create' first.[/yellow]")
+        raise typer.Exit(code=1)
+
+    # Print numbered list
+    for i, task in enumerate(active_tasks, start=1):
+        is_current = task.task_id == current_task_id
+        status_label = task.status.value
+        activated = ""
+        if is_current and task.activated_at:
+            date_part = task.activated_at[:10]
+            activated = f" ← current (activated {date_part})"
+        current_marker = "[bold]" if is_current else ""
+        current_end = "[/bold]" if is_current else ""
+        console.print(
+            f"  {i}. {current_marker}■ {task.task_id}  [{status_label}]{activated}{current_end}"
+        )
+
+    # R4: 1 task that is current — exit immediately
+    if len(active_tasks) == 1:
+        if active_tasks[0].task_id == current_task_id:
+            raise typer.Exit(code=0)
+        # Auto-select the only task
+        task_info.set_current_task(active_tasks[0].task_id)
+        raise typer.Exit(code=0)
+
+    # R5: N>1 tasks — interactive selection
+    while True:
+        user_input = console.input("\nSelect task number: ").strip()
+        if user_input == "":
+            console.print("[yellow]Invalid input. Enter a number.[/yellow]")
+            continue
+        try:
+            idx = int(user_input) - 1
+            if 0 <= idx < len(active_tasks):
+                task_info.set_current_task(active_tasks[idx].task_id)
+                break
+            else:
+                max_num = len(active_tasks)
+                console.print(
+                    f"[yellow]Invalid selection. Enter a number between 1 and {max_num}.[/yellow]"
+                )
+        except ValueError:
+            console.print("[yellow]Invalid input. Enter a number.[/yellow]")
+
+    raise typer.Exit(code=0)
+
+
 def render_rich_status_plane(plane, console: Console) -> None:
     """Render StatusPlane using Rich with tree formatting.
 
