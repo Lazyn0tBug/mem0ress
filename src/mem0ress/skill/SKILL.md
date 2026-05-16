@@ -1,8 +1,8 @@
 ---
 name: mem0ress
 description: |
-  Use when starting a task (/cog create), checking state (/cog status),
-  or verifying alignment (/cog verify). Provides semantic coordination
+  Use when starting a task (/cap create), checking state (/cap status),
+  or verifying alignment (/cap verify). Provides semantic coordination
   for recoverable task cognition — NOT workflow orchestration.
 version: 0.1.0
 author: mem0ress
@@ -83,25 +83,25 @@ CLI persistence (create/update files)
 
 ## 5. Slash Commands as Semantic Entrypoints
 
-Each `/cog` command is a **semantic interaction entrypoint**, not a command binding.
+Each `/cap` command is a **semantic interaction entrypoint**, not a command binding.
 
 | Command | Semantic Meaning |
 |---------|-----------------|
-| `/cog create` | Begin semantic initialization of a task |
-| `/cog status` | Understand current cognitive state |
-| `/cog snapshot` | Append cognitive delta to session |
-| `/cog gotcha` | Record recovery-critical discovery |
-| `/cog verify` | Request Judge Agent verification |
-| `/cog decide` | Read Judge verdict, determine next action |
+| `/cap create` | Begin semantic initialization of a task |
+| `/cap status` | Understand current cognitive state |
+| `/cap snapshot` | Append cognitive delta to session |
+| `/cap gotcha` | Record recovery-critical discovery |
+| `/cap verify` | Request Judge Agent verification |
+| `/cap decide` | Read Judge verdict, determine next action |
 
 **CLI role**: Protocol persistence step — executes file operations AFTER semantic coordination completes.
 
-## 6. /cog create Protocol
+## 6. /cap create Protocol
 
 ### 6.1 Flow Overview
 
 ```
-Agent invokes /cog create <task_id>
+Agent invokes /cap create <task_id>
         ↓
 Skill assesses: Is Picture complete?
   No → Clarification Mode
@@ -133,13 +133,13 @@ Every task must have:
 
 **Consistency check**: After all three are defined, verify no contradictions exist.
 
-### 6.3 /cog close Protocol
+### 6.3 /cap close Protocol
 
 **Trigger**: Agent or user signals task may be ready to close.
 
 **Flow**:
 ```
-Agent invokes /cog close <task_id>
+Agent invokes /cap close <task_id>
         ↓
 Skill retrieves: Picture + current state
         ↓
@@ -153,7 +153,7 @@ Judge returns verdict
 Agent evaluates: PASS/FAIL + semantic alignment
         ↓
   Ready to close → Agent: mem0 close <task_id>
-  Not ready → Continue work, goto /cog snapshot
+  Not ready → Continue work, goto /cap snapshot
 ```
 
 **Judge verification only**:
@@ -184,7 +184,7 @@ See `references/protocol.yaml`
 
 ## 8. Cognitive Modes Detailed Reference
 
-See `references/cognitive-modes.md`
+See `references/capnitive-modes.md`
 
 ## 9. Anti-Patterns
 

@@ -1,19 +1,19 @@
-# /cog create Protocol
+# /cap create Protocol
 
-Detailed protocol for semantic initialization of a task via `/cog create`.
+Detailed protocol for semantic initialization of a task via `/cap create`.
 
 ## Command Semantic
 
-`/cog create` is a **semantic interaction entrypoint**, not a command binding.
+`/cap create` is a **semantic interaction entrypoint**, not a command binding.
 
-- Invocation: `/cog create <task_id>`
+- Invocation: `/cap create <task_id>`
 - Meaning: "Begin semantic initialization of a new task"
 - Outcome: task.md created in `.CAP/tasks/<task_id>/`
 
 ## Session Flow
 
 ```
-Agent: /cog create <task_id>
+Agent: /cap create <task_id>
         ↓
 Skill assesses: Is Picture complete?
         ↓
@@ -117,7 +117,7 @@ Done
 After semantic coordination completes, CLI executes:
 
 ```bash
-/cog create <task_id> \
+/cap create <task_id> \
   --picture "语义成功状态描述" \
   --requirements "req1; req2; ..." \
   --constraints "红线1; 红线2; ..."
@@ -137,7 +137,7 @@ This creates:
 For MVP simplicity, if all three elements are provided upfront:
 
 ```bash
-/cog create <task_id> \
+/cap create <task_id> \
   --picture "..." \
   --requirements "..." \
   --constraints "..."

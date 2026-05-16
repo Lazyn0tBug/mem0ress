@@ -37,7 +37,7 @@ Skill = Semantic Coordination Layer，不是 Workflow Coordinator。
 Slash Command = Semantic Interaction Entrypoint，不是 Command Binding。
 
 ```
-/cog create
+/cap create
   ≠ create_task()
   = 一个认知操作开始
 
@@ -109,7 +109,7 @@ skills/mem0ress/
 
 ---
 
-## 4. `/cog create` — MVP 最小实现示例
+## 4. `/cap create` — MVP 最小实现示例
 
 ### 4.1 核心概念：Semantic Coordination vs Procedural Orchestration
 
@@ -135,10 +135,10 @@ Requirements 需验证 → 主 Agent 请求 Judge Agent 验证
 补全完成 → CLI persistence
 ```
 
-### 4.2 `/cog create` 会话协议
+### 4.2 `/cap create` 会话协议
 
 ```
-Agent: /cog create <task_id>
+Agent: /cap create <task_id>
        ↓
 Skill 评估当前认知状态（三要素是否完整）
        ↓
@@ -164,18 +164,18 @@ CLI persistence：创建 .cap/tasks/<task_id>/task.md
 - [ ] 创建 `references/protocol.yaml`（从 spec §5.5 提取）
 
 **Phase 2：CLI 层（Persistence）**
-- [ ] 简化 `/cog create` 命令，只接收最终补全结果
+- [ ] 简化 `/cap create` 命令，只接收最终补全结果
 - [ ] 按 protocol.yaml 创建 task.md
 - [ ] 不做复杂交互，交给 Skill 引导的主 Agent 对话
 
 **Phase 3：Agent 侧**
-- [ ] Agent 加载 Skill 后，在 `/cog create` 触发时按 Skill 的认知路由进行对话
+- [ ] Agent 加载 Skill 后，在 `/cap create` 触发时按 Skill 的认知路由进行对话
 - [ ] 对话完成后调用 CLI 命令执行持久化
 
 ### 4.4 CLI 命令规格（MVP）
 
 ```bash
-/cog create <task_id> \
+/cap create <task_id> \
   --picture "语义成功状态描述" \
   --requirements "req1; req2; ..." \
   --constraints "红线1; 红线2; ..."
@@ -261,36 +261,36 @@ Judge verification surface（Judge 验证表面）。
 ## 6. 生命周期（Phase 0）
 
 ```
-1. /cog create          → Skill 引导补全 picture/requirements/constraints
+1. /cap create          → Skill 引导补全 picture/requirements/constraints
 2. Execute Work         → (Agent 自主执行)
-3. /cog snapshot        → 追加认知增量到 session.md
-4. /cog gotcha          → 记录关键发现（可选）
-5. /cog verify          → 触发 Judge 隔离验证
-6. /cog decide          → 基于判决结果决定下一步
+3. /cap snapshot        → 追加认知增量到 session.md
+4. /cap gotcha          → 记录关键发现（可选）
+5. /cap verify          → 触发 Judge 隔离验证
+6. /cap decide          → 基于判决结果决定下一步
 ```
 
 ---
 
 ## 7. 其他命令规格
 
-### 7.1 `/cog status`
+### 7.1 `/cap status`
 
 渲染当前状态平面（Tree 可视化）。
 
 ```
-输入: /cog status [--root .cap]
+输入: /cap status [--root .cap]
 输出: Rich tree
   ■ {task_id} [{done}/{total}] {STATUS}
      ! {gotcha}
      └─ {subtask}
 ```
 
-### 7.2 `/cog recover`
+### 7.2 `/cap recover`
 
 解析协议文件，重建认知表面，返回给 Agent 恢复所需的关键信息。
 
 ```
-输入: /cog recover [--root .cap]
+输入: /cap recover [--root .cap]
 输出:
   picture: {picture}
   active requirements: [{id}: {description}]
@@ -300,12 +300,12 @@ Judge verification surface（Judge 验证表面）。
   latest verification state: {status}
 ```
 
-### 7.3 `/cog snapshot`
+### 7.3 `/cap snapshot`
 
 追加认知增量到 session.md。
 
 ```
-输入: /cog snapshot {content} [--root .cap]
+输入: /cap snapshot {content} [--root .cap]
 规则:
   - 必须压缩（不得包含原始日志、chain-of-thought）
   - 必须有语义（记录发现、决策、进展）
@@ -315,12 +315,12 @@ Judge verification surface（Judge 验证表面）。
   {content}
 ```
 
-### 7.4 `/cog gotcha`
+### 7.4 `/cap gotcha`
 
 追加关键发现到 gotchas.md。
 
 ```
-输入: /cog gotcha {content} [--root .cap]
+输入: /cap gotcha {content} [--root .cap]
 适用场景:
   - 语义模糊
   - 不稳定假设
@@ -331,12 +331,12 @@ Judge verification surface（Judge 验证表面）。
   {content}
 ```
 
-### 7.5 `/cog verify`
+### 7.5 `/cap verify`
 
 触发 Judge 隔离验证。
 
 ```
-输入: /cog verify [--root .cap]
+输入: /cap verify [--root .cap]
 隔离保证:
   - Judge 只接收 task_id + filesystem protocol
   - Judge 不得接收 runtime memory / hidden state / full history
@@ -352,12 +352,12 @@ Tier 执行:
   Tier 3: (Agent 判断请求)
 ```
 
-### 7.6 `/cog decide`
+### 7.6 `/cap decide`
 
 读取 judge.md 判决结果，Agent 决定下一步动作。
 
 ```
-输入: /cog decide [--root .cap]
+输入: /cap decide [--root .cap]
 决策权永远属于 Hermes，skill 不得自主决定。
 输出:
   - 最新 judge 判决摘要
@@ -376,22 +376,22 @@ Tier 执行:
 - [ ] 在 `init` 命令中创建 `data/outputs/`, `data/evidence/`, `data/artifacts/` 目录
 - [ ] 将 `--root` 默认值从 `.mem0ress` 改为 `.cap`
 
-### Step 2: `/cog recover` 命令
+### Step 2: `/cap recover` 命令
 
 - [ ] 实现 `RecoveredCognition` 数据类
 - [ ] 实现 `recover_cognition()` 函数，解析 task.md + session.md + gotchas.md
-- [ ] 添加 CLI 命令 `/cog recover`
+- [ ] 添加 CLI 命令 `/cap recover`
 
-### Step 3: `/cog gotcha` 命令
+### Step 3: `/cap gotcha` 命令
 
 - [ ] 实现 `append_gotcha()` 函数
-- [ ] 添加 CLI 命令 `/cog gotcha`
+- [ ] 添加 CLI 命令 `/cap gotcha`
 - [ ] 模板：`gotchas.md`
 
-### Step 4: `/cog decide` 命令
+### Step 4: `/cap decide` 命令
 
 - [ ] 实现 `read_judge_verdict()` 函数
-- [ ] 添加 CLI 命令 `/cog decide`
+- [ ] 添加 CLI 命令 `/cap decide`
 - [ ] 输出格式化判决摘要
 
 ### Step 5: Skill 层（语义协调协议）
@@ -430,17 +430,17 @@ Tier 执行:
 ### Scenario A — 白皮书写作
 
 ```
-/cog recover
+/cap recover
     ↓
 write section
     ↓
-/cog snapshot
+/cap snapshot
     ↓
 identify ambiguity
     ↓
-/cog gotcha
+/cap gotcha
     ↓
-/cog verify
+/cap verify
 ```
 
 成功标准：
@@ -451,17 +451,17 @@ identify ambiguity
 ### Scenario B — 软件开发
 
 ```
-/cog recover
+/cap recover
     ↓
 implement feature
     ↓
-/cog snapshot
+/cap snapshot
     ↓
 run tests
     ↓
-/cog verify
+/cap verify
     ↓
-/cog decide
+/cap decide
 ```
 
 成功标准：

@@ -1,24 +1,24 @@
 ---
-name: cog
+name: cap
 description: Cognitive alignment plane for AI agents. Track tasks, verify progress, and maintain cognitive context across turns.
 triggers:
-  - /cog create
-  - /cog update
-  - /cog judge
-  - /cog close
+  - /cap create
+  - /cap update
+  - /cap judge
+  - /cap close
 ---
 
-# cog Skill
+# cap Skill
 
-`cog` provides a cognitive alignment plane for AI agents. It tracks task state, verifies progress against requirements, and maintains cognitive context across turns.
+`cap` provides a cognitive alignment plane for AI agents. It tracks task state, verifies progress against requirements, and maintains cognitive context across turns.
 
 ## Setup
 
-The Skill calls the `mem0` CLI. Ensure `mem0` is available in PATH. The skill file is installed at `~/.claude/skills/cog.md`.
+The Skill calls the `cog` CLI. Ensure `cog` is available in PATH. The skill file is installed at `~/.claude/skills/cap.md`.
 
 ## Commands
 
-### /cog create
+### /cap create
 
 Create a new task. Task ID is auto-generated (6 characters, e.g., `2k5m3x`).
 
@@ -27,13 +27,13 @@ Create a new task. Task ID is auto-generated (6 characters, e.g., `2k5m3x`).
 - `--requirements <text>`: YAML list of requirements (optional). Example: `- "响应 < 200ms"`
 - `--constraints <text>`: YAML list of constraints (optional). Example: `- "不明文存储密码"`
 
-**Usage:** `/cog create --picture "用户顺畅登录" --requirements "- 响应 < 200ms" --constraints "- 不明文存储密码"`
+**Usage:** `/cap create --picture "用户顺畅登录" --requirements "- 响应 < 200ms" --constraints "- 不明文存储密码"`
 
-**Behavior:** Creates task directory under `.mem0ress/tasks/<task_id>/` with `task.md`, `session.md`, `gotchas.md`, `judge.md`. Updates `.current_task` pointer to the new task.
+**Behavior:** Creates task directory under `.cap/tasks/<task_id>/` with `task.md`, `session.md`, `gotchas.md`, `judge.md`. Updates `.current_task` pointer to the new task.
 
 ---
 
-### /cog update
+### /cap update
 
 Append a turn snapshot to the session log of the active task.
 
@@ -41,20 +41,20 @@ Append a turn snapshot to the session log of the active task.
 - `--content <text>`: What happened this turn (required).
 - `<task_id>`: Optional. Task ID to operate on (default: active task from `.current_task`).
 
-**Usage:** `/cog update --content "完成了登录 API 实现，开始写测试"`
+**Usage:** `/cap update --content "完成了登录 API 实现，开始写测试"`
 
 **Behavior:** Appends a turn snapshot to `session.md` under the target task's directory.
 
 ---
 
-### /cog judge
+### /cap judge
 
 Run Tier 0/1/2 verification on a task.
 
 **Parameters:**
 - `<task_id>`: Optional. Task ID to verify (default: active task from `.current_task`).
 
-**Usage:** `/cog judge`
+**Usage:** `/cap judge`
 
 **Behavior:** Executes verification and prints results. Tier 0 checks constraints, Tier 1 checks todo completion, Tier 2 checks requirements (MVP: stub).
 
@@ -69,14 +69,14 @@ Exit code 1 if any tier fails.
 
 ---
 
-### /cog close
+### /cap close
 
 Atomically close the active task: run judge first, mark COMPLETED only if all tiers pass.
 
 **Parameters:**
 - `<task_id>`: Optional. Task ID to close (default: active task from `.current_task`).
 
-**Usage:** `/cog close`
+**Usage:** `/cap close`
 
 **Behavior:**
 1. Runs judge verification
