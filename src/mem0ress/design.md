@@ -37,7 +37,7 @@ Skill = Semantic Coordination Layer，不是 Workflow Coordinator。
 Slash Command = Semantic Interaction Entrypoint，不是 Command Binding。
 
 ```
-/cog create
+/cap create
   ≠ create_task()
   = 一个认知操作开始
 
@@ -59,39 +59,26 @@ Stable Capability Runtime = Protocol Persistence Step，不是主要交互界面
 
 **核心原则**：
 
-> Probabilistic cognition should only be used where semantic ambiguity or strategic reasoning is required. Deterministic execution should be delegated to stable capability runtimes whenever possible.
-
-**含义**：
-
-| 资源 | 用途 |
-|------|------|
-| **Cognition（稀缺）** | semantic ambiguity、intent formation、strategic reasoning、prioritization |
-| **Stable Capability Runtime（稳定）** | write_file、retry、path adaptation、encoding、transaction、rollback、backend migration |
-
-**边界**：
+Phase 0 使用 `.cap/` 作为认知基座根目录，与 spec.md 的命名约定保持一致。
 
 ```
-Cognition 不应消耗在：
-  - 文件写入路径
-  - YAML/JSON 序列化
-  - 重试逻辑
-  - backend adaptation
-
-这些是 Stable Capability Runtime 的职责。
+.cap/
+└── tasks/
+    └── {task_id}/
+        ├── task.md           # 任务清单（语义权威表面）
+        ├── session.md        # 追加式认知增量流
+        ├── gotchas.md        # 关键发现记录
+        ├── judge.md          # Judge 验证结果
+        │
+        └── data/             # data plane
+            ├── outputs/      # 执行产物
+            ├── evidence/     # 证据文件
+            └── artifacts/    # 生成物
 ```
 
-**稳定性结论**：
-
-- LLM 不稳定，runtime 稳定
-- 加更多 Agent 不能解决 deterministic instability，复杂度上升比稳定性更快
-- 原则：不要让 agent 做 runtime，不要让 runtime 做 cognition
-
-**收益**：
-
-1. **Stability** — LLM 不参与 deterministic mechanics，execution surface 收缩
-2. **Cognitive purity** — Agent 不被 execution detail（mkdir/path/yaml/utf8）污染
-3. **Backend portability** — 今天 task.md，明天 sqlite，后天 remote graph store，Agent 完全不用改
-4. **Recovery** — runtime 天然支持 replay、rollback、recover、audit
+**与 spec 命名约定的对齐：**
+- `.cap/` 而非 `.mem0ress/` —— 与 spec.md 的 Protocol 术语一致
+- `task.md` 而非 `manifest.md` —— filesystem source of truth
 
 ---
 
@@ -117,6 +104,91 @@ CLI 是 Stable Capability Runtime 的第一种实现形态。
 
 ```bash
 mem0 create \
+  --picture "语义成功状态描述" \
+  --requirements "req1; req2; ..." \
+  --constraints "红线1; 红线2; ..."
+```
+
+### 3.2 Skill 定义的认知操作
+
+| 操作 | 语义含义 | 触发结果 |
+|---|---|---|
+| `create` | 开始一个任务的语义初始化 | 多轮补全 picture/requirements/constraints |
+| `status` | 理解当前认知状态 | 渲染状态平面 |
+| `snapshot` | 追加认知增量 | 压缩记录到 session.md |
+| `gotcha` | 记录恢复关键发现 | 持久化到 gotchas.md |
+| `verify` | 请求 Judge 验证 alignment | 触发隔离检验 |
+| `decide` | 基于 Judge 结果决定下一步 | 读取判决，Agent 决策 |
+
+---
+
+## 4. `/cap create` — MVP 最小实现示例
+
+### 4.1 核心概念：Semantic Coordination vs Procedural Orchestration
+
+Skill 是 **Semantic Coordination Layer**，不是 Workflow Orchestrator。
+
+| | Procedural Orchestration | Semantic Coordination |
+|---|---|---|
+| 模式 | 先做A，再做B，再做C | 当前缺什么，补什么 |
+| 控制流 | 固定流程 | 动态路由 |
+| 分派对象 | 子任务/子Agent | 认知模式切换 |
+
+Skill 根据当前认知状态，动态引导主 Agent 进入正确的认知模式：
+
+```
+主 Agent + Judge Agent（仅此两者）
+    ↓
+Skill 评估认知状态
+    ↓
+Picture 不明确 → 主 Agent 进入 Clarification Mode
+Constraints 冲突 → 主 Agent 进入 Analysis Mode
+Requirements 需验证 → 主 Agent 请求 Judge Agent 验证
+    ↓
+补全完成 → CLI persistence
+```
+
+### 4.2 `/cap create` 会话协议
+
+```
+Agent: /cap create <task_id>
+       ↓
+Skill 评估当前认知状态（三要素是否完整）
+       ↓
+缺失 Picture？
+  → 主 Agent Clarification Mode："这个任务的语义成功状态是什么？"
+       ↓
+Constraints 冲突？
+  → 主 Agent Analysis Mode："这些约束之间是否存在矛盾？"
+       ↓
+Requirements 不可验证？
+  → 主 Agent 请求 Judge Agent 确认
+       ↓
+主 Agent 确认补全完成
+       ↓
+CLI persistence：创建 .cap/tasks/<task_id>/task.md
+```
+
+### 4.3 MVP 实现路径
+
+**Phase 1：Skill 层（语义协调协议）**
+- [ ] 创建 `skills/mem0ress/mem0ress/SKILL.md`
+- [ ] 定义认知状态评估规则（何时需要 Clarification / Analysis / Judge）
+- [ ] 创建 `references/protocol.yaml`（从 spec §5.5 提取）
+
+**Phase 2：CLI 层（Persistence）**
+- [ ] 简化 `/cap create` 命令，只接收最终补全结果
+- [ ] 按 protocol.yaml 创建 task.md
+- [ ] 不做复杂交互，交给 Skill 引导的主 Agent 对话
+
+**Phase 3：Agent 侧**
+- [ ] Agent 加载 Skill 后，在 `/cap create` 触发时按 Skill 的认知路由进行对话
+- [ ] 对话完成后调用 CLI 命令执行持久化
+
+### 4.4 CLI 命令规格（MVP）
+
+```bash
+/cap create <task_id> \
   --picture "语义成功状态描述" \
   --requirements "req1; req2; ..." \
   --constraints "红线1; 红线2; ..."
@@ -220,7 +292,159 @@ activated_at: '2026-05-14T10:00:00+09:00'
 
 ---
 
-## 3. 技术栈
+## 6. 生命周期（Phase 0）
+
+```
+1. /cap create          → Skill 引导补全 picture/requirements/constraints
+2. Execute Work         → (Agent 自主执行)
+3. /cap snapshot        → 追加认知增量到 session.md
+4. /cap gotcha          → 记录关键发现（可选）
+5. /cap verify          → 触发 Judge 隔离验证
+6. /cap decide          → 基于判决结果决定下一步
+```
+
+---
+
+## 7. 其他命令规格
+
+### 7.1 `/cap status`
+
+渲染当前状态平面（Tree 可视化）。
+
+```
+输入: /cap status [--root .cap]
+输出: Rich tree
+  ■ {task_id} [{done}/{total}] {STATUS}
+     ! {gotcha}
+     └─ {subtask}
+```
+
+### 7.2 `/cap recover`
+
+解析协议文件，重建认知表面，返回给 Agent 恢复所需的关键信息。
+
+```
+输入: /cap recover [--root .cap]
+输出:
+  picture: {picture}
+  active requirements: [{id}: {description}]
+  active todos: [{text}]
+  unresolved gotchas: [{content}]
+  recent deltas: [{turn} {content}]
+  latest verification state: {status}
+```
+
+### 7.3 `/cap snapshot`
+
+追加认知增量到 session.md。
+
+```
+输入: /cap snapshot {content} [--root .cap]
+规则:
+  - 必须压缩（不得包含原始日志、chain-of-thought）
+  - 必须有语义（记录发现、决策、进展）
+  - 追加不覆盖
+格式:
+  ## Turn N @ {timestamp}
+  {content}
+```
+
+### 7.4 `/cap gotcha`
+
+追加关键发现到 gotchas.md。
+
+```
+输入: /cap gotcha {content} [--root .cap]
+适用场景:
+  - 语义模糊
+  - 不稳定假设
+  - 漂移风险
+  - 未解 blocker
+格式:
+  ## Gotcha N @ {timestamp}
+  {content}
+```
+
+### 7.5 `/cap verify`
+
+触发 Judge 隔离验证。
+
+```
+输入: /cap verify [--root .cap]
+隔离保证:
+  - Judge 只接收 task_id + filesystem protocol
+  - Judge 不得接收 runtime memory / hidden state / full history
+Tier 执行:
+  - Tier 0: constraint violations（同步执行）
+  - Tier 1: todo completion（同步执行）
+  - Tier 2: verify_cmd（MVP: stub 不执行，v0.2+ 实现）
+  - Tier 3: semantic alignment（Agent 自主判断）
+输出:
+  Tier 0: PASS/FAIL
+  Tier 1: PASS/FAIL
+  Tier 2: (stub)
+  Tier 3: (Agent 判断请求)
+```
+
+### 7.6 `/cap decide`
+
+读取 judge.md 判决结果，Agent 决定下一步动作。
+
+```
+输入: /cap decide [--root .cap]
+决策权永远属于 Hermes，skill 不得自主决定。
+输出:
+  - 最新 judge 判决摘要
+  - Tier 0/1 是否通过
+  - Tier 3 判决状态
+  - 下一步建议（给 Agent 参考，不是指令）
+```
+
+---
+
+## 8. 实现步骤
+
+### Step 1: 目录改名 + data plane 结构
+
+- [ ] 将 `.mem0ress/` 改为 `.cap/`
+- [ ] 在 `init` 命令中创建 `data/outputs/`, `data/evidence/`, `data/artifacts/` 目录
+- [ ] 将 `--root` 默认值从 `.mem0ress` 改为 `.cap`
+
+### Step 2: `/cap recover` 命令
+
+- [ ] 实现 `RecoveredCognition` 数据类
+- [ ] 实现 `recover_cognition()` 函数，解析 task.md + session.md + gotchas.md
+- [ ] 添加 CLI 命令 `/cap recover`
+
+### Step 3: `/cap gotcha` 命令
+
+- [ ] 实现 `append_gotcha()` 函数
+- [ ] 添加 CLI 命令 `/cap gotcha`
+- [ ] 模板：`gotchas.md`
+
+### Step 4: `/cap decide` 命令
+
+- [ ] 实现 `read_judge_verdict()` 函数
+- [ ] 添加 CLI 命令 `/cap decide`
+- [ ] 输出格式化判决摘要
+
+### Step 5: Skill 层（语义协调协议）
+
+- [ ] 创建 `skills/mem0ress/mem0ress/SKILL.md`
+- [ ] 创建 `skills/mem0ress/mem0ress/references/protocol.yaml`
+- [ ] 定义 `create` 的对话协议（三要素补全）
+- [ ] 定义其他命令的语义协调协议
+
+### Step 6: 验证 + 清理
+
+- [ ] 运行 `ty check src/`
+- [ ] 运行 `ruff check src/`
+- [ ] 运行 `pytest tests/`
+- [ ] 提交
+
+---
+
+## 9. 技术栈
 
 | 层级 | 技术 |
 |------|------|
@@ -240,17 +464,17 @@ activated_at: '2026-05-14T10:00:00+09:00'
 ### Scenario A — 白皮书写作
 
 ```
-/cog recover
+/cap recover
     ↓
 write section
     ↓
-/cog snapshot
+/cap snapshot
     ↓
 identify ambiguity
     ↓
-/cog gotcha
+/cap gotcha
     ↓
-/cog verify
+/cap verify
 ```
 
 成功标准：白皮书存活于中断；认知从协议重建；gotchas 改善连续性。
@@ -258,17 +482,17 @@ identify ambiguity
 ### Scenario B — 软件开发
 
 ```
-/cog recover
+/cap recover
     ↓
 implement feature
     ↓
-/cog snapshot
+/cap snapshot
     ↓
 run tests
     ↓
-/cog verify
+/cap verify
     ↓
-/cog decide
+/cap decide
 ```
 
 成功标准：实现存活于 context reset；snapshots 保持压缩；Judge 验证保持隔离；runtime 保持确定性。

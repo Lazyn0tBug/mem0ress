@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING
 
 import yaml
 
+from mem0ress.core.constants import DEFAULT_SUBSTRATE_ROOT
+
 if TYPE_CHECKING:
     pass
 
@@ -26,11 +28,11 @@ class CurrentTaskManager:
     All write operations use safe_write for optimistic-lock protection.
     """
 
-    def __init__(self, substrate_root: Path = Path(".mem0ress")) -> None:
+    def __init__(self, substrate_root: Path = Path(DEFAULT_SUBSTRATE_ROOT)) -> None:
         """Initialize CurrentTaskManager.
 
         Args:
-            substrate_root: Root directory for cognitive substrate (default: .mem0ress)
+            substrate_root: Root directory for cognitive substrate (default: .cap)
         """
         self.substrate_root = substrate_root
         self._current_task_path = substrate_root / ".current_task"

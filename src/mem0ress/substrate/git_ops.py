@@ -253,7 +253,7 @@ def snapshot_data_plane(
 
     Args:
         task_id: Task identifier
-        substrate_root: Root directory (.mem0ress)
+        substrate_root: Root directory (.cap)
         data_plane: Optional pre-built data plane dict. If None, auto-discovers
                     all repos under substrate_root.
     """

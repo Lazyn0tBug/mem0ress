@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from mem0ress.harness import HarnessResult
 
+from mem0ress.core.constants import DEFAULT_SUBSTRATE_ROOT
 from mem0ress.core.schema import (
     CognitiveTriad,
     Requirement,
@@ -30,11 +31,11 @@ class TaskExistsError(Exception):
 class TaskServiceImpl:
     """TaskService implementation with optimistic locking."""
 
-    def __init__(self, substrate_root: Path = Path(".mem0ress")):
+    def __init__(self, substrate_root: Path = Path(DEFAULT_SUBSTRATE_ROOT)):
         """Initialize TaskService.
 
         Args:
-            substrate_root: Root directory for cognitive substrate (default: .mem0ress)
+            substrate_root: Root directory for cognitive substrate (default: .cap)
         """
         self.substrate_root = substrate_root
         self.tasks_dir = substrate_root / "tasks"

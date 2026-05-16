@@ -23,7 +23,7 @@ Task close
 ### 1. Start a task
 
 ```bash
-/cog create
+/cap create
 ```
 
 The Agent engages in multi-turn clarification:
@@ -40,7 +40,7 @@ mem0 create --picture "..." --requirements "..." --constraints "..."
 ### 2. Record progress
 
 ```bash
-/cog snapshot <task_id>
+/cap snapshot <task_id>
 ```
 
 Compressed delta — not a transcript.
@@ -48,7 +48,7 @@ Compressed delta — not a transcript.
 ### 3. Record recovery-critical discoveries
 
 ```bash
-/cog gotcha <task_id>
+/cap gotcha <task_id>
 ```
 
 Ambiguity, drift risk, unstable assumptions, blockers.
@@ -56,7 +56,7 @@ Ambiguity, drift risk, unstable assumptions, blockers.
 ### 4. Verify alignment
 
 ```bash
-/cog verify <task_id>
+/cap verify <task_id>
 ```
 
 Judge Agent runs Tier 0/1/2 verification.
@@ -64,7 +64,7 @@ Judge Agent runs Tier 0/1/2 verification.
 ### 5. Close the task
 
 ```bash
-/cog close <task_id>
+/cap close <task_id>
 ```
 
 1. Agent checks: Does current state semantically match Picture?
@@ -83,7 +83,7 @@ Judge Agent runs Tier 0/1/2 verification.
 
 ## File Protocol
 
-Each task lives in `.mem0ress/tasks/<task_id>/`:
+Each task lives in `.cap/tasks/<task_id>/`:
 
 | File | Purpose |
 |------|---------|
@@ -125,7 +125,7 @@ Within a single session: no duplicate IDs. Across sessions: timestamp prevents c
 
 ## The `.current_task` Pointer
 
-`.mem0ress/.current_task` tracks the active task:
+`.cap/.current_task` tracks the active task:
 
 ```yaml
 task_id: '2k5m3x'
@@ -163,7 +163,7 @@ mem0ress is NOT:
 The Skill bridges slash commands to the CLI:
 
 ```
-/cog create  →  Skill  →  mem0 create
+/cap create  →  Skill  →  mem0 create
 ```
 
 The Skill is a thin glue layer: it translates slash commands into CLI invocations, knows nothing about task state, and stays minimal.
@@ -175,25 +175,25 @@ The Skill is a thin glue layer: it translates slash commands into CLI invocation
 ```
 User: I need to write a whitepaper on AI safety.
 
-Agent: /cog create
+Agent: /cap create
   → Clarification Mode: What does "done" mean semantically?
   → Define: Picture, Requirements, Constraints
   → Agent: mem0 create --picture "..." --requirements "..." --constraints "..."
 
 [Work on whitepaper sections]
 
-Agent: /cog snapshot <task_id>
+Agent: /cap snapshot <task_id>
   → "Completed §2, identified ambiguity in §4 scope"
 
-Agent: /cog gotcha <task_id>
+Agent: /cap gotcha <task_id>
   → "§4 scope undefined — may conflict with §2 assumptions"
 
 [Continue work]
 
-Agent: /cog verify <task_id>
+Agent: /cap verify <task_id>
   → Judge returns: Tier 0 PASS, Tier 1 PASS, Tier 2 PASS
 
-Agent: /cog close <task_id>
+Agent: /cap close <task_id>
   → Semantic alignment check: yes
   → Agent: mem0 close <task_id>
 ```

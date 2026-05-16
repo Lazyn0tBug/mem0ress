@@ -1,12 +1,12 @@
-# /cog close Protocol
+# /cap close Protocol
 
-Detailed protocol for semantic task closure via `/cog close`.
+Detailed protocol for semantic task closure via `/cap close`.
 
 ## Command Semantic
 
-`/cog close` is a **semantic verification entrypoint**, not a state machine transition.
+`/cap close` is a **semantic verification entrypoint**, not a state machine transition.
 
-- Invocation: `/cog close <task_id>`
+- Invocation: `/cap close <task_id>`
 - Meaning: "Begin semantic closure verification"
 - Precondition: Agent believes task may be ready to close
 - Postcondition: Either task marked COMPLETED, or gaps identified
@@ -14,7 +14,7 @@ Detailed protocol for semantic task closure via `/cog close`.
 ## Session Flow
 
 ```
-Agent: /cog close <task_id>
+Agent: /cap close <task_id>
         ↓
 Skill retrieves Picture from task.md
         ↓
@@ -79,7 +79,7 @@ Judge does NOT receive:
 The decision to close is **always Agent's**, not Judge's:
 
 - Judge PASS + Agent semantic alignment → Agent calls `mem0 close`
-- Judge FAIL → Agent addresses failures, re-triggers `/cog close`
+- Judge FAIL → Agent addresses failures, re-triggers `/cap close`
 - Judge PASS + semantic misalignment → Agent continues work
 - Agent may abandon instead if Picture is unachievable
 
@@ -103,7 +103,7 @@ This is the "no bypass" rule from the MVP design.
 
 ## Anti-Patterns
 
-- Calling `mem0 close` without `/cog close` verification first
+- Calling `mem0 close` without `/cap close` verification first
 - Bypassing Judge (always runs, cannot be disabled in MVP)
 - Judge checking semantic alignment (that's Agent's job)
 - Agent closing without semantic alignment check
@@ -122,12 +122,12 @@ mem0 judge <task_id>
 mem0 report <task_id>
 ```
 
-## Relationship with /cog create
+## Relationship with /cap create
 
 | Phase | Command | Agent Focus | CLI Action |
 |-------|---------|-------------|------------|
-| Opening | `/cog create` | Define goal (Picture + Requirements + Constraints) | Create task.md |
-| Working | `/cog snapshot` | Record progress deltas | Append to session.md |
-| Working | `/cog gotcha` | Record recovery-critical discoveries | Append to gotchas.md |
-| Verification | `/cog verify` | Trigger Judge | Write to judge.md |
-| Closure | `/cog close` | Semantic alignment + Judge PASS | Update task.md status |
+| Opening | `/cap create` | Define goal (Picture + Requirements + Constraints) | Create task.md |
+| Working | `/cap snapshot` | Record progress deltas | Append to session.md |
+| Working | `/cap gotcha` | Record recovery-critical discoveries | Append to gotchas.md |
+| Verification | `/cap verify` | Trigger Judge | Write to judge.md |
+| Closure | `/cap close` | Semantic alignment + Judge PASS | Update task.md status |
