@@ -1,0 +1,13 @@
+---
+current_task_id: 2k5m3x  # task_id | null | ''
+tasks:
+  - task_id: 2k5m3x
+    status: in-progress
+    path: .cap/tasks/2k5m3x
+    created_at: 2026-05-14T10:00:00+09:00
+    activated_at: 2026-05-16T10:00:00+09:00
+  - task_id: a3x7br
+    status: created
+    path: .cap/tasks/a3x7br
+    created_at: 2026-05-15T08:00:00+09:00
+    activated_at: null

@@ -1,0 +1,70 @@
+# mem0ress Protocol — Machine Operational Projection
+# Derived from schema.md. All semantics reference schema.md.
+# MUST NOT introduce semantics absent from schema.md.
+
+---
+
+schema_ref: ./schema.md
+
+current_task_id:
+  type: task_id | null | ''
+  description: 当前活跃任务的标识符。无则 null，显式清空则 ''
+  persistence: workspace-level registry (.cap/.task_info)
+
+states:
+  - CREATED
+  - IN_PROGRESS
+  - VERIFYING
+  - COMPLETED
+  - ABANDONED
+
+transitions:
+  CREATED:
+    - IN_PROGRESS
+    - ABANDONED
+  IN_PROGRESS:
+    - VERIFYING
+    - COMPLETED
+    - ABANDONED
+  VERIFYING:
+    - COMPLETED
+    - IN_PROGRESS
+    - ABANDONED
+  COMPLETED: []
+  ABANDONED: []
+
+tiers:
+  tier0:
+    check: constraint_violations
+    on_fail: FAIL_IMMEDIATE
+  tier1:
+    check: todo_completion
+    on_fail: FAIL_IMMEDIATE
+  tier2:
+    check: requirement_validation
+    on_fail: FAIL_IMMEDIATE
+  tier3:
+    check: semantic_alignment
+    on_fail: PASS_FAIL_UNCERTAIN
+    trigger_conditions:
+      - picture_has_subjective_terms
+      - constraint_picture_ambiguity
+      - explicit_request
+
+timeouts:
+  verifying: 180
+  tier3_default: 300
+
+constraints:
+  no_concurrent_session_writes: true
+  no_multi_agent_same_task: true
+  no_cross_workspace_dependencies: true
+  verifying_is_transient: true
+
+files:
+  task: task.md
+  session: session.md
+  gotchas: gotchas.md
+  judge: judge.md
+
+
