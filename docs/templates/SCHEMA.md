@@ -65,12 +65,12 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 
 ### Frontmatter
 
-| 字段 | 类型 | 必填 | 说明 |
+|| 字段 | 类型 | 必填 | 说明 |
 |-----|------|------|------|
-| `task_id` | string | ✅ | 见 §1.2 |
-| `status` | enum | ✅ | 见 §2.1 |
-| `parent_id` | — | — | 由目录拓扑表达，不由 frontmatter 字段定义 |
-| `created_at` | timestamp | ✅ | 见 §1.1 |
+|| `status` | enum | ✅ | 见 §2.1 |
+|| `created_at` | timestamp | ✅ | 见 §1.1 |
+
+**task_id 由目录拓扑表达，不由 frontmatter 字段定义。**
 
 ### 2.1 status 枚举
 
@@ -119,23 +119,23 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 
 ### Frontmatter
 
-| 字段 | 类型 | 必填 |
+|| 字段 | 类型 | 必填 |
 |-----|------|------|
-| `task_id` | string | ✅ |
-| `type` | `"session"` | ✅ |
+|| `task_id` | string | ✅ |
+|| `type` | `"session"` | ✅ |
 
 ### Turn 块字段
 
-| 字段 | 类型 | 必填 | 说明 |
+|| 字段 | 类型 | 必填 | 说明 |
 |-----|------|------|------|
-| `Turn {N.M}` | string | ✅ | 见 §1.3 |
-| `Timestamp` | timestamp | ✅ | 见 §1.1 |
-| `Status` | enum | ✅ | CREATED / IN_PROGRESS / COMPLETED / ABANDONED，不含 VERIFYING |
-| `Action Summary` | string | ✅ | 本轮主要动作，一两句话 |
-| `Todos` | list | ✅ | 全量 Todo 列表当前状态，不只记录本轮变化 |
-| `Outcome` | object | ✅ | 执行结果：status（success/partial/failed）+ note |
-| `Evidence` | list[object] | ✅ | 结构化证据：type/ref/purpose，purpose 绑定 Picture Claim |
-| `Workspace Snapshot` | object | ✅ | 工作区快照：commit_id + note |
+|| `Turn {N.M}` | string | ✅ | 见 §1.3 |
+|| `Timestamp` | timestamp | ✅ | 见 §1.1 |
+|| `Status` | enum | ✅ | CREATED / IN_PROGRESS / COMPLETED / ABANDONED，不含 VERIFYING |
+|| `Action Summary` | string | ✅ | 本轮主要动作，一两句话 |
+|| `Todos` | list | ✅ | 全量 Todo 列表当前状态，不只记录本轮变化 |
+|| `Outcome` | object | ✅ | 执行结果：status（success/partial/failed）+ note |
+|| `Evidence` | list[object] | ✅ | 结构化证据：type/ref/purpose，purpose 绑定 Picture Claim |
+|| `Workspace Snapshot` | object | ✅ | 工作区快照：commit_id + note |
 
 **Evidence 的 purpose 字段意义：** purpose 描述"该证据证明了什么"，与 Picture 维度对应，供 Judge 建立 Picture Claim → Evidence 映射。
 
@@ -148,24 +148,24 @@ session.md 的 Todos 字段记录**全量状态**（所有 Todo 的当前完成�
 
 ### Frontmatter
 
-| 字段 | 类型 | 必填 |
+|| 字段 | 类型 | 必填 |
 |-----|------|------|
-| `task_id` | string | ✅ |
-| `type` | `"judge"` | ✅ |
+|| `task_id` | string | ✅ |
+|| `type` | `"judge"` | ✅ |
 
 ### Turn 块字段
 
-| 字段 | 类型 | 必填 | 说明 |
+|| 字段 | 类型 | 必填 | 说明 |
 |-----|------|------|------|
-| `Turn {N.M}` | string | ✅ | 与触发时的 session Turn 一致 |
-| `Timestamp` | timestamp | ✅ | Judge Agent 开始检验的时间 |
-| `Verdict` | enum | ✅ | PASSED / FAILED |
-| `Tier 0` | table | ✅ | 每条 Constraint 一行 |
-| `Tier 1` | checklist | ✅ | Todo + 子任务检查 |
-| `Tier 2` | table | ✅ | 每条 Requirement 一行 |
-| `Tier 3` | block | 条件 | 见 §4.1 |
-| `Overall Verdict` | enum | ✅ | PASSED / FAILED |
-| `Summary` | string | ✅ | FAILED 时必须说明是哪个 Tier 失败 |
+|| `Turn {N.M}` | string | ✅ | 与触发时的 session Turn 一致 |
+|| `Timestamp` | timestamp | ✅ | Judge Agent 开始检验的时间 |
+|| `Verdict` | enum | ✅ | PASSED / FAILED |
+|| `Tier 0` | table | ✅ | 每条 Constraint 一行 |
+|| `Tier 1` | checklist | ✅ | Todo + 子任务检查 |
+|| `Tier 2` | table | ✅ | 每条 Requirement 一行 |
+|| `Tier 3` | block | 条件 | 见 §4.1 |
+|| `Overall Verdict` | enum | ✅ | PASSED / FAILED |
+|| `Summary` | string | ✅ | FAILED 时必须说明是哪个 Tier 失败 |
 
 ### 4.1 Tier 3 触发条件
 
@@ -183,21 +183,21 @@ Tier 0/1/2 任一 FAIL 时，Tier 3 强制 SKIPPED。
 
 ### Frontmatter
 
-| 字段 | 类型 | 必填 |
+|| 字段 | 类型 | 必填 |
 |-----|------|------|
-| `task_id` | string | ✅ |
-| `type` | `"gotchas"` | ✅ |
+|| `task_id` | string | ✅ |
+|| `type` | `"gotchas"` | ✅ |
 
 ### Gotcha 块字段
 
-| 字段 | 类型 | 必填 | 说明 |
+|| 字段 | 类型 | 必填 | 说明 |
 |-----|------|------|------|
-| `Gotcha {G-N}` | string | ✅ | 见 §1.4 |
-| `Timestamp` | timestamp | ✅ | 见 §1.1 |
-| `Turn` | string | ✅ | 关联的 session Turn |
-| `触发背景` | string | ✅ | 在执行哪个 Todo 时发生 |
-| `实际发生了什么` | string | ✅ | 不允许写"发现了问题"，必须写具体事实 |
-| `如何处理` | string | ✅ | 结论，不写过程 |
+|| `Gotcha {G-N}` | string | ✅ | 见 §1.4 |
+|| `Timestamp` | timestamp | ✅ | 见 §1.1 |
+|| `Turn` | string | ✅ | 关联的 session Turn |
+|| `触发背景` | string | ✅ | 在执行哪个 Todo 时发生 |
+|| `实际发生了什么` | string | ✅ | 不允许写"发现了问题"，必须写具体事实 |
+|| `如何处理` | string | ✅ | 结论，不写过程 |
 
 ---
 
