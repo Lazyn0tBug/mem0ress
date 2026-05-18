@@ -99,6 +99,16 @@ git commit -m "type(scope): description"
 
 **提交前必须验证通过。验证不通过不提交。**
 
+### Git 禁止操作
+
+- ❌ **禁止擅自 push** — push 是禁区，除非用户明确要求
+- ❌ **禁止自作主张 merge / commit / reset / revert**
+- ❌ **用户说"撤回 X 个 commit"时，必须先确认范围，不能自作主张批量操作**
+- ❌ **命名问题只影响单处时，不能因此 revert 其他正常 commit**
+- ❌ **pptx、压缩包等二进制文件不进行 git 操作，只做文件系统移动**
+
+**所有 Git 操作（add / commit / push / merge / reset / revert）必须先确认。
+
 ### 类型注解规范
 
 - 所有公共函数必须有完整类型注解
