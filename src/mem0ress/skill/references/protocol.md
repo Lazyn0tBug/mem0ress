@@ -60,11 +60,14 @@ todos:
 ## Requirements Verification
 
 Each Requirement is paired with a verify.md marker entry defined via interactive dialogue:
-- `[(.)]` = checked (interactive verification with human)
-- `[(.)]` = command (automated command execution)
-- `[]`/`()` = unconfirmed (pending human confirmation)
 
-Only `[(.)]` markers are executable. Unconfirmed markers serve as discussion placeholders.
+| marker | 含义 | 可 amend？ |
+|--------|------|-----------|
+| `[]` / `()` / `{}` | 未确认 | ✅ |
+| `[.]` / `(.)` / `{.}` | 已确认（可执行） | ✅（执行前） |
+| `[\✓]` / `(\✓)` / `{\✓}` | 已完成 | ❌ |
+
+**状态转移**：未确认 → 确认 → 已完成（已完成后不可逆向）
 
 ## Example
 

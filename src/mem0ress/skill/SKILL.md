@@ -93,6 +93,7 @@ Each `/cap` command is a **semantic interaction entrypoint**, not a command bind
 | `/cap gotcha` | Record recovery-critical discovery |
 | `/cap verify` | Request Judge Agent verification |
 | `/cap decide` | Read Judge verdict, determine next action |
+| `/cap amend` | Amend verify.md marker (update or add entry) |
 
 **CLI role**: Protocol persistence step — executes file operations AFTER semantic coordination completes.
 
@@ -168,6 +169,35 @@ Agent evaluates: PASS/FAIL + semantic alignment
 - Semantic misalignment → Agent continues Clarification Mode
 
 **Detailed protocol**: See `references/close-protocol.md`
+
+### 6.4 /cap amend Protocol
+
+**Trigger**: Any round — Agent or user wants to amend a verify.md entry.
+
+**Constraint**: Completed entries (`[\✓]` / `(\✓)` / `{\✓}`) cannot be amended.
+
+**Flow**:
+```
+Agent invokes /cap amend
+        ↓
+Skill retrieves: current verify.md state
+        ↓
+TUI: "Update existing marker" or "Add new marker"?
+        ↓
+If update:
+  → Display only unconfirmed + confirmed entries
+  → User selects entry to amend
+  → User provides new content
+  → Confirm write
+If add:
+  → User provides new requirement ID and description
+  → Interactive dialogue to define verification method
+  → Confirm write
+        ↓
+session.md records this amend (auditable)
+```
+
+**Detailed protocol**: See `references/amend-protocol.md`
 
 ## 7. File Protocol
 
