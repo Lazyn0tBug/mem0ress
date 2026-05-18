@@ -134,6 +134,8 @@ Every task must have:
 
 **Requirements with verify.md marker**: Each Requirement corresponds to a verify.md marker entry. The user provides semantic intent (e.g., "白皮书需要至少3个架构图"), and the Agent writes the corresponding marker (`[.]` for interactive, `(.)` for command) in verify.md. Unconfirmed markers use `[]`/`()`/`{}`. For ongoing requirements (e.g., terminology consistency), mark `persistent: true` — these never fully complete, only verify pass/fail per check.
 
+**verify.md 职责边界**: verify.md 只存储 Constraint 和适合交互式对话的 Requirement 子集。Tier 2 deterministic 验证由 marker 直接执行，不通过 verify.md 条目。Tier 3 语义对齐（Picture vs 实际产出）通过对话确认，证据存入 judge.md，不写入 verify.md。
+
 **Consistency check**: After all three are defined, verify no contradictions exist.
 
 ### 6.3 /cap close Protocol
