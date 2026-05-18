@@ -50,6 +50,8 @@ Before triggering Judge, Agent checks:
 
 **Human confirmation is required for Requirements and Constraints verification**: Unconfirmed entries (`[]` / `()` / `{}`) in verify.md cannot be treated as verified. Each entry must transition to `[.]` / `(.)` / `{.}` through explicit human dialogue before the Judge considers it verified. If any entry is still unconfirmed, Level 1 cannot PASS.
 
+**Note on persistent requirements**: Requirements marked `persistent: true` (e.g., terminology consistency) never transition to `[\✓]` — they remain permanently in confirmed state (`[.]` / `(.)` / `{.}`). Their `[\✓]` absence does not block closure.
+
 If semantic misalignment exists → Clarification Mode first.
 
 ### Level 2: Judge Verification

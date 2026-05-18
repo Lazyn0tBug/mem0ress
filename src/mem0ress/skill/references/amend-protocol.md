@@ -50,6 +50,8 @@ User or Agent invokes `/cap amend`.
    - `command` — automated command
    - `skip` — explicitly skip
 3. **Dialogue must conclude explicitly**: The verification method must be confirmed by the user, transitioning the marker from `[]` / `()` / `{}` (unconfirmed) to `[.]` / `(.)` / `{.}` (confirmed). Until the user explicitly confirms, the entry remains unconfirmed and cannot be executed.
+
+   **Note for persistent requirements**: If this is a persistent requirement (e.g., terminology consistency), the marker starts as `[.]` / `(.)` / `{.}` (confirmed) but never transitions to `[\✓]` / `(\✓)` / `{\✓}`. It remains permanently in confirmed state, representing ongoing verification rather than one-time completion.
 4. Confirm write
 5. Append to session.md
 

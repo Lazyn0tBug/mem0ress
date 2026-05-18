@@ -127,12 +127,12 @@ Every task must have:
 | Element | Question |
 |---------|----------|
 | **Picture** | What does "done" mean semantically? |
-| **Requirements** | What must be verifiable? (Agent writes verify.md marker for each requirement) |
+| **Requirements** | What must be verifiable? (Agent writes verify.md marker for each requirement, marks `persistent: true` for ongoing requirements like terminology consistency) |
 | **Constraints** | What must never be violated? |
 
 **Definition order**: Picture first, then Requirements and Constraints derived from Picture.
 
-**Requirements with verify.md marker**: Each Requirement corresponds to a verify.md marker entry. The user provides semantic intent (e.g., "白皮书需要至少3个架构图"), and the Agent writes the corresponding marker (`[.]` for interactive, `(.)` for command) in verify.md. Unconfirmed markers use `[]`/`()`/`{}`.
+**Requirements with verify.md marker**: Each Requirement corresponds to a verify.md marker entry. The user provides semantic intent (e.g., "白皮书需要至少3个架构图"), and the Agent writes the corresponding marker (`[.]` for interactive, `(.)` for command) in verify.md. Unconfirmed markers use `[]`/`()`/`{}`. For ongoing requirements (e.g., terminology consistency), mark `persistent: true` — these never fully complete, only verify pass/fail per check.
 
 **Consistency check**: After all three are defined, verify no contradictions exist.
 

@@ -255,7 +255,7 @@ CAP 的概念体系围绕任务展开。本章描述任务的核心概念、两�
 
 `Picture` 之所以不可缺席，是因为 Agent 具备语义理解能力。传统编程依赖穷举测试用例来判定任务完成——所有分支必须被覆盖、所有边界必须被检验。而 Agent 可以理解自然语言描绘的图景，即使没有穷举测试，也能通过语义理解判断任务是否真正完成。这意味着可以用少量检验点配合语义理解来判定完成情况，而不必为每个细节编写测试。
 
-**Requirements（需求）**是任务完成的可验证标准。Requirements 将 Picture 转化为具体的检验点，但 Requirements 满足不等于任务满足——Requirements 是 Picture 满足的必要条件，而非充分条件。任务满足等价于 Picture 满足。Agent 依据 Picture 推导 Requirements，利益相关者确认。每个 Requirement 都必须有明确的验收标准——"界面美观大方"这种依赖主观判断的不是有效的 Requirements。
+**Requirements（需求）**是任务完成的可验证标准。Requirements 将 Picture 转化为具体的检验点，但 Requirements 满足不等于任务满足——Requirements 是 Picture 满足的必要条件，而非充分条件。任务满足等价于 Picture 满足。Agent 依据 Picture 推导 Requirements，利益相关者确认。每个 Requirement 都必须有明确的验收标准——"界面美观大方"这种依赖主观判断的不是有效的 Requirements。可选标记 `persistent: true` 标识持续性需求（如"术语一致性"），此类需求的 `[\✓]` 仅表示"本次验证通过"，不代表 requirement 永久解决。
 
 **Constraints（约束）**是任务的外部属性，为任务的过程和结果定义边界条件。Constraints 不是任务的第三层组成部分，而是贯穿任务全程的约束线。违反 Constraints 即使 Requirements 全部满足、Picture 看似达成，任务也不算完成。Agent 联合领域知识推导 Constraints，利益相关者确认。违反时系统必须能检测到并拦住——如果系统感知不到，就不适合作为 Constraints，应该放到 Requirements 里。
 

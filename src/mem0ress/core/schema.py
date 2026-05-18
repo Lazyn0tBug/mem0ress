@@ -21,6 +21,10 @@ class Requirement(BaseModel):
 
     id: str = Field(description="Requirement ID (e.g., req_01)")
     description: str = Field(description="Human-readable requirement description")
+    persistent: bool = Field(
+        default=False,
+        description="Whether this requirement is permanent (e.g., terminology consistency). Persistent requirements have ongoing verification semantics, not one-time completion.",
+    )
     verify_cmd: str | None = Field(
         default=None,
         description="Shell command for Tier 2 verification (MVP: stub, not executed)",
