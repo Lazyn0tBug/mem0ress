@@ -109,11 +109,21 @@ mem0ress/
 
 ### 安装
 
+**Python 包（CLI 命令行工具）：**
+
 ```bash
-uv add mem0ress
-# 或从源码安装
+# 方式一：从源码安装（当前测试阶段）
 pip install -e .
+
+# 方式二：从 PyPI 安装（发布后）
+pip install mem0ress
 ```
+
+安装后，`mem0` CLI 命令可用。
+
+**Skill（`/cap` 命令）：**
+
+Skill 不需要 pip 安装。Agent runtime 读取 `src/mem0ress/skill/SKILL.md` 即可激活 `/cap` 命令集。Skill 和 CLI 共用同一套代码库。
 
 ### CLI 命令
 

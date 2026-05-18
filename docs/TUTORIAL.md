@@ -6,6 +6,37 @@ mem0ress 是面向 AI Agent 的认知对齐平面（Cognitive Alignment Plane）
 
 ## §1 快速开始
 
+### 1.0 安装
+
+**Python 包安装（CLI 命令行工具）：**
+
+```bash
+# 方式一：从源码安装（当前测试阶段推荐）
+pip install -e /path/to/mem0ress
+
+# 方式二：从 PyPI 安装（发布后使用）
+pip install mem0ress
+```
+
+安装后，`mem0` CLI 命令可用：`mem0 init` / `mem0 create` / `mem0 status` 等。
+
+**Skill 加载（`/cap` 命令）：**
+
+Skill 是 agent runtime 的协议接口，不需要 pip 安装。Agent runtime 读取 `src/mem0ress/skill/SKILL.md` 即可激活 `/cap` 命令集：
+
+```
+/cap create     # 语义初始化任务
+/cap recover    # 恢复任务认知
+/cap status     # 查看状态平面
+/cap snapshot   # 追加认知增量
+/cap gotcha     # 记录关键发现
+/cap verify     # 请求 Judge 验证
+/cap decide     # 读取判决，决定下一步
+/cap close      # 语义关闭验证
+```
+
+Skill 和 CLI 共用同一套代码库（`.cap/` 文件系统协议）。
+
 ### 1.1 初始化
 
 ```bash
