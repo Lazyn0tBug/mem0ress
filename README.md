@@ -51,7 +51,7 @@ mem0ress 是一个面向 AI Agent 开发者的**认知对齐平面（Cognitive A
 ```
 mem0ress/
 ├── src/mem0ress/            # 源代码
-│   ├── cli.py               # CLI 入口（mem0 init/create/status/done/abandon/report）
+│   ├── cli.py               # CLI 入口（mem0 init/create/status/list/update/judge/close/done/abandon/report）
 │   ├── core/                # 核心类型
 │   │   ├── schema.py        # Pydantic 模型（TaskManifest、CognitiveTriad、TaskStatus）
 │   │   ├── constants.py     # 常量（DEFAULT_SUBSTRATE_ROOT = ".cap"）
@@ -125,26 +125,28 @@ mem0 init
 mem0 status
 
 # 创建任务
-mem0 create implement_login --picture "用户无需输入密码即可登录"
+mem0 create --picture "用户无需输入密码即可登录"
 
-# 更新认知三要素（定义 Picture/Requirements/Constraints）
-# 直接编辑 .mem0ress/tasks/{task_id}/task.md 的 frontmatter
+# 列出所有任务并选择当前任务
+mem0 list
 
-# 标记 Todo 完成
-# 直接编辑 task.md 中的 - [x] / - [ ] 行
+# 追加会话快照（使用当前任务）
+mem0 update --content "完成了 OAuth provider 配置"
 
-# 标记任务完成
-mem0 done implement_login
+# 运行 Judge 验证（使用当前任务）
+mem0 judge
+
+# 标记当前任务完成（先 Judge 验证）
+mem0 done
 
 # 标记任务废弃
-mem0 abandon implement_login
+mem0 abandon
 
-# 查看最新 Judge 报告
-mem0 report implement_login
+# 查看最新 Judge 报告（使用当前任务）
+mem0 report
 
-# 指定根目录（默认 .mem0ress）
-mem0 status --root /path/to/.mem0ress
-mem0 create auth --parent implement_login
+# 指定根目录（默认 .cap）
+mem0 status --root /path/to/.cap
 ```
 
 ### Python API 使用

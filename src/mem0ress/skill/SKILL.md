@@ -116,7 +116,7 @@ All three elements complete
         ↓
 Agent confirms completion
         ↓
-CLI creates .CAP/tasks/<task_id>/task.md
+CLI creates .cap/tasks/<task_id>/task.md
 ```
 
 ### 6.2 Three Elements
@@ -152,7 +152,7 @@ Judge returns verdict
         ↓
 Agent evaluates: PASS/FAIL + semantic alignment
         ↓
-  Ready to close → Agent: mem0 close <task_id>
+  Ready to close → Agent: mem0 close
   Not ready → Continue work, goto /cap snapshot
 ```
 

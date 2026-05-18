@@ -1,16 +1,17 @@
 """mem0ress CLI - terminal entry point with Rich visualization.
 
 Usage:
-    mem0 status           # Show cognitive status plane
-    mem0 status --root .  # Show status plane for custom root
-    mem0 init             # Initialize cognitive substrate
+    mem0 status              # Show cognitive status plane
+    mem0 init                # Initialize cognitive substrate
     mem0 create [--picture TEXT] [--requirements TEXT] [--constraints TEXT]
-    mem0 update [--content TEXT]   # Append turn snapshot to session.md
-    mem0 judge <task_id>                      # Run T0/T1/T2 verification
-    mem0 close <task_id>                      # Judge then mark COMPLETED (atomic)
-    mem0 done <task_id>                       # Alias for close
-    mem0 abandon <task_id>
-    mem0 report <task_id>
+    mem0 update [--content TEXT]  # Append turn snapshot to session.md
+    mem0 list                # Show active tasks, select current
+    mem0 judge [task_id]            # Run T0/T1/T2 verification
+    mem0 close [task_id]            # Judge then mark COMPLETED (atomic)
+    mem0 done [task_id]             # Alias for close
+    mem0 abandon [task_id]           # Mark task abandoned
+    mem0 report [task_id]            # Show latest Judge report
+    mem0 update <task_id> --content TEXT  # snapshot session
 """
 
 from __future__ import annotations
@@ -146,7 +147,6 @@ def create(
     requirements: str = typer.Option(
         "",
         "--requirements",
-        "-r",
         help="YAML list of requirements",
     ),
     constraints: str = typer.Option(

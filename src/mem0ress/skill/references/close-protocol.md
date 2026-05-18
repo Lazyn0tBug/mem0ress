@@ -113,13 +113,13 @@ This is the "no bypass" rule from the MVP design.
 
 ```bash
 # Verify and close (atomic — Judge runs first)
-mem0 close <task_id>
+mem0 close [task_id]
 
 # Just run Judge verification (no close)
-mem0 judge <task_id>
+mem0 judge [task_id]
 
 # Read Judge report
-mem0 report <task_id>
+mem0 report [task_id]
 ```
 
 ## Relationship with /cap create
