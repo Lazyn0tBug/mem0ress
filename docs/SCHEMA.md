@@ -164,13 +164,13 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 | `Tier 0` | table | ✅ | 每条 Constraint 一行 |
 | `Tier 1` | checklist | ✅ | Todo + 子任务检查 |
 | `Tier 2` | table | ✅ | 每条 Requirement 一行 |
-| `Tier 3` | block | 条件 | 见 §4.1 |
+| `Tier 3` | block | 条件 | 对话确认，不写入 verify.md；见 §4.1 |
 | `Overall Verdict` | enum | ✅ | PASSED / FAILED |
 | `Summary` | string | ✅ | FAILED 时必须说明是哪个 Tier 失败 |
 
 ### 4.1 Tier 3 触发条件
 
-Tier 3 仅在以下条件之一成立时执行，其余情况标记为 SKIPPED：
+Tier 3 通过对话确认 Picture 与实际产出的语义对齐，不写入 verify.md。仅在以下条件之一成立时执行，其余情况标记为 SKIPPED：
 
 1. Picture 包含主观判断词汇（"无感知"、"流畅"、"友好"等）
 2. Constraints 与 Picture 之间存在语义歧义，需要语义裁定

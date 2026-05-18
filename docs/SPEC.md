@@ -623,6 +623,14 @@ Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械
 
 verify.md 记录验证方法，包含已确认和待讨论两类条目。
 
+**verify.md 职责边界：**
+
+verify.md 只存两类：
+- **Constraint** — 必须交互式对话确认，violation → `[×]` → SUSPEND
+- **Requirement（适合交互式对话的子集）** — 仅限适合对话验证的部分，非全集
+
+Tier 2 deterministic 验证（命令执行）不由 verify.md 条目承载，由 `[(.)]` marker 直接执行。Tier 3 semantic alignment 通过对话确认，不写入 verify.md。
+
 **三方分工：**
 
 * **人** — 提出验证需求（"我想验证 X"）
@@ -778,7 +786,7 @@ verify.md 条目有三个状态：
 | 验收检查（Tier 2） | Requirements 验收检查 | 运行测试命令：执行可验证动作，记录命令输出 | task.md, session.md |
 | 语义对齐（Tier 3） | 语义对齐检查 | LLM 推断：Judge Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
 
-**验收检查的关键约束：** 验收检查的依据来自 verify.md，不允许 Agent 自行构造验证逻辑。每条 Requirement 或 Constraint 的验证方式由 verify.md 中的类型前缀决定：`[.]` 为交互相确认，`(.)` 为命令执行，`{.}` 为显式跳过。若验证过程中发现 verify.md 某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态。
+**验收检查的关键约束：** 验收检查分为两层。Tier 2 deterministic 验证：`[(.)]` / `(\.)` / `{\.}` marker 为直接执行指令，由 Judge Agent 执行对应命令。Tier 3 semantic alignment：通过对话确认 Picture 与实际产出的语义偏差，不写入 verify.md。若验证过程中发现 verify.md 某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态。
 
 **Judge Agent 输出约束：** Judge Agent 只报告事实，不给出修复建议，不判断"主 Agent 应该怎么做"，不修改 task.md / session.md / gotchas.md，不直接标记任务为 COMPLETED 或 ABANDONED。FAIL 结论写入 judge.md 后，Judge Agent 的职责结束，决策权回到主 Agent。
 
