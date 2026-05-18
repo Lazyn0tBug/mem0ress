@@ -64,7 +64,7 @@ Then Judge Agent evaluates:
 |------|-------------------|
 | Tier 0 | Constraint violations — SUSPEND (do not FAIL), wait for resolution |
 | Tier 1 | Todo completion — Checklist verification |
-| Tier 2 | Automated validation — verify.md marker execution |
+| Tier 2 | Automated validation — `[(.)]` / `(\.)` / `{\.}` marker execution |
 
 Judge does NOT check semantic alignment — that's Agent's responsibility.
 
