@@ -113,13 +113,13 @@ mem0 create \
 
 | 操作 | 语义含义 | 触发结果 |
 |---|---|---|
-| `create` | 开始一个任务的语义初始化 | 多轮补全 picture/requirements/constraints |
-| `status` | 理解当前认知状态 | 渲染状态平面 |
-| `snapshot` | 追加认知增量 | 压缩记录到 session.md |
-| `gotcha` | 记录恢复关键发现 | 持久化到 gotchas.md |
-| `verify` | 请求 Judge 验证 alignment | 触发隔离检验 |
-| `decide` | 基于 Judge 结果决定下一步 | 读取判决，Agent 决策 |
-| `amend` | 修正 verify.md 条目 | 展示未确认条目，人机对话修正 |
+| `/cap create` | 开始一个任务的语义初始化 | 多轮补全 picture/requirements/constraints |
+| `/cap status` | 理解当前认知状态 | 渲染状态平面 |
+| `/cap amend` | 修正 verify.md 未确认条目 | 交互式条目编辑 |
+| `/cap snapshot` | 追加认知增量 | 压缩记录到 session.md |
+| `/cap gotcha` | 记录恢复关键发现 | 持久化到 gotchas.md |
+| `/cap verify` | 请求 Judge 验证 alignment | 触发隔离检验 |
+| `/cap decide` | 基于判决结果决定下一步 | 读取 judge.md 判决摘要 |
 
 ---
 
@@ -384,10 +384,41 @@ Tier 执行:
   - Tier 2: verify.md marker（读取 `[(.)/(.)/{.}]` 执行命令；`[\✓]/(\✓)/{\✓}` 为已完成状态，不可 amend）
   - Tier 3: semantic alignment（Agent 自主判断）
 输出:
-  Tier 0: PASS/FAIL
+  Tier 0: SUSPEND（violation → 暂停，不 FAIL；解决后继续；人可 override）
   Tier 1: PASS/FAIL
-  Tier 2: (stub)
-  Tier 3: (Agent 判断请求)
+  Tier 2: PASS/FAIL（stub）
+  Tier 3: UNCERTAIN / PASS / FAIL
+
+Tier 0 语义约束：Constraint 违规不等于任务失败。违规时任务 SUSPEND，等待解决；解决后继续。人判断无法解决时可 override 继续（附理由）。Tier 3 语义约束：证据不足时必须返回 UNCERTAIN，不得强行 PASS。
+
+### 7.5.1 verify.md 三类实体状态机
+
+**Non-persistent requirement：**
+
+```
+[] → [.] → [\✓]  (永久完成，不退回)
+```
+
+**Persistent requirement：**
+
+```
+[] → [.] → [\✓]  (阶段性完成；下一轮次出现新的语义漂移时，可退回 [.] 重新验证)
+```
+
+- `[\✓]` 标记时机：至少一个 todo 完成 + 至少一轮次结束 + Tier 2 验证通过
+- 退回触发：下一轮次发现新的语义漂移，由 Judge 或人主动提出
+
+**Constraint：**
+
+```
+[] → [.] → [\✓]  (已解决)
+           ↓
+        [×]  (violated — suspended，等待解决)
+```
+
+- `[\✓]` = 约束已解决
+- `[×]` = 约束违规中（suspended，不 FAIL，解决后继续）
+- 每轮次必须重新验证
 ```
 
 ### 7.6 `/cap decide`
