@@ -185,7 +185,7 @@ Skill retrieves: current verify.md state
 TUI: "Update existing marker" or "Add new marker"?
         ↓
 If update:
-  → Display only unconfirmed + confirmed entries
+  → Display only unconfirmed entries ([] / () / {})
   → User selects entry to amend
   → User provides new content
   → Confirm write

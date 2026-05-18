@@ -36,7 +36,7 @@ User or Agent invokes `/cap amend`.
 
 ### Step 3a: Update Existing
 
-1. Display all unconfirmed + confirmed entries
+1. Display only unconfirmed entries (`[]` / `()` / `{}`)
 2. User selects entry by ID
 3. User provides new content (marker state, command, or description)
 4. Confirm write
