@@ -6,6 +6,16 @@ mem0ress 是一个面向 AI Agent 开发者的**认知对齐平面（Cognitive A
 
 ---
 
+## 文档索引
+
+| 文档 | 说明 |
+|------|------|
+| **[教程 (docs/tutorial.md)](docs/tutorial.md)** | 快速上手指南——安装、命令、文件协议、Skill 命令、Judge 验证 |
+| `docs/spec.md` | 接口语义规范 |
+| `src/mem0ress/design.md` | 实施方案 |
+
+---
+
 ## 核心概念
 
 ### 认知三要素（PRC Framework）
