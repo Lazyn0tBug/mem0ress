@@ -9,10 +9,11 @@ Amend verify.md entries at any point during task execution. Enables iterative re
 | State | marker | Can amend? |
 |-------|--------|-----------|
 | Unconfirmed | `[]` / `()` / `{}` | ✅ |
-| Confirmed | `[.]` / `(.)` / `{.}` | ✅ (before execution) |
+| Confirmed | `[.]` / `(.)` / `{.}` | ✅ (non-persistent only, before execution) |
 | Completed | `[\✓]` / `(\✓)` / `{\✓}` | ❌ |
+| Persistent | `[.]` / `(.)` / `{.}` (ongoing) | ❌ (never reaches completed state; only pass/fail per check) |
 
-**Rule**: Completed entries are immutable. Once a marker transitions to completed state, it cannot be reverted or modified.
+**Rule**: Completed entries are immutable. Persistent requirements are also immutable once confirmed — they never reach a "completed" state, only pass/fail per check cycle.
 
 ## State Transitions
 
@@ -36,11 +37,12 @@ User or Agent invokes `/cap amend`.
 
 ### Step 3a: Update Existing
 
-1. Display only unconfirmed entries (`[]` / `()` / `{}`) AND Constraint `[×]` (violated) entries
-2. User selects entry by ID
-3. User provides new content (marker state, command, or description)
-4. Confirm write
-5. Append amend record to session.md
+1. Display only: unconfirmed entries (`[]` / `()` / `{}`) AND non-persistent confirmed entries (`[.]` / `(.)` / `{.}`)
+2. Exclude: completed entries (`[\✓]` / `(\✓]` / `{\✓}`) and persistent requirements (which never reach completed state)
+3. User selects entry by ID
+4. User provides new content (marker state, command, or description)
+5. Confirm write
+6. Append amend record to session.md
 
 ### Step 3b: Add New
 

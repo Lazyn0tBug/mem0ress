@@ -176,7 +176,7 @@ Agent evaluates: PASS/FAIL + semantic alignment
 
 **Trigger**: Any round — Agent or user wants to amend a verify.md entry.
 
-**Constraint**: Completed entries (`[\✓]` / `(\✓)` / `{\✓}`) cannot be amended.
+**Constraint**: Completed entries (`[\✓]` / `(\✓)` / `{\✓}`) and persistent requirements cannot be amended. Persistent requirements never reach completed state — they only cycle through pass/fail per check.
 
 **Flow**:
 ```
