@@ -119,7 +119,7 @@ graph TB
 **v0.1-alpha 必须支持：**
 - 本地文件系统（`.cap/` 目录结构）
 - Task-local 状态平面（单任务认知边界）
-- 五个核心文档：`task.md` / `session.md` / `gotchas.md` / `judge.md`（`completion_summary.md` 可选）
+- 五个协议文档：`task.md` / `session.md` / `gotchas.md` / `judge.md` / `verify.md`（`completion_summary.md` 可选）
 - One-Agent-One-Task 责任模型
 - Judge Tier 0 / Tier 1 / Tier 2
 - Tier 3 结构化输出协议（Picture Claims / Evidence Mapping / Residual Gap / UNCERTAIN）
@@ -405,12 +405,13 @@ task_id 作为稳定身份标识仍然需要，因为目录名可能因 rename /
 
 CAP 采用纯文本持久化 + 运行时组装的数据模型。认知数据以 Markdown 文件形式存储在文件系统，运行时由系统按需组装为状态平面。
 
-**四个核心文档**：
+**六个协议文档**：
 
 * **task.md**：任务声明，`Picture`/`Requirements`/`Constraints` 的唯一真源。任务创建时写入，运行时以它为准。
 * **session.md**：轮次快照序列，含 data_plane 快照。每轮次结束后按时间追加，不改变 task.md。
 * **gotchas.md**：偏差记录，带外追加，不阻塞主流程。偏差确认后追加。
 * **judge.md**：Judge Agent 检验记录，与 Task 生命周期同步。任务创建时生成，检验后追加。
+* **verify.md**：验证协议，记录已确认和待讨论的验证方法。`[.]` / `(.)` / `{.}` = 已确认可执行，`[]` / `()` / `{}` = 待讨论。人确认后写入，是 Agent 执行检验的依据。
 
 纯文本持久化有三个原因：消除隐藏状态（所有数据可直接读取和修改，外部工具 git、grep、编辑器可直接操作）、时间切片而非可变状态（快照追加，不存在数据汤问题）、与 Agent 工具生态无缝衔接（文件工具天然支持，无需额外 SDK）。
 
@@ -455,7 +456,7 @@ graph TD
 | FAQ.md | 设计哲学：认知所有权、聚焦原则等核心问题 |
 | `docs/example/` | 示例集：3 个完整案例（oauth-sso / whitepaper / website） |
 
-**文件读写权限：** 每个文件有唯一的写入方。主 Agent 读写 task.md（覆盖写 + Todo 更新），追加写 session.md 和 gotchas.md；Judge Agent 只追加写 judge.md，只读取 task.md、session.md、gotchas.md。写入规则：session.md / gotchas.md / judge.md 只追加不修改历史；task.md 是唯一允许覆盖写的文件；task.md 的 Picture / Requirements / Constraints 一旦写入不允许修改。
+**文件读写权限：** 每个文件有唯一的写入方。主 Agent 读写 task.md（覆盖写 + Todo 更新），追加写 session.md 和 gotchas.md；Judge Agent 只追加写 judge.md，只读取 task.md、session.md、gotchas.md；verify.md 由人确认后写入，`[]` / `()` / `{}` 条目由 Agent 维护。写入规则：session.md / gotchas.md / judge.md 只追加不修改历史；task.md 是唯一允许覆盖写的文件；task.md 的 Picture / Requirements / Constraints 一旦写入不允许修改；verify.md 中只有 `[.]` / `(.)` / `{.}` 条目可作为执行依据，`[]` / `()` / `{}` 条目仅作记录。
 
 ```plaintext
 .cap/tasks/
@@ -463,7 +464,8 @@ graph TD
     ├── task.md       # 任务声明（Picture/Requirements/Constraints/Todo）
     ├── session.md    # 轮次快照序列（含 data_plane 快照）
     ├── gotchas.md    # 偏差记录（追加式）
-    └── judge.md      # Judge Agent 检验记录
+    ├── judge.md      # Judge Agent 检验记录
+    ├── verify.md     # 验证协议（已确认/待讨论的验证方法）
 ```
 
 ### 4.5 任务生命周期
@@ -607,9 +609,9 @@ Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械
 
 **Todo 与 Subtask 的边界：** Todo 是任务内部的机械步，不是独立的认知单元。Subtask 是独立的 Task，有自己的 Picture/Requirements/Constraints 三要素，是完整的认知闭包。区分标准是：是否有独立的 Picture——有独立 Picture 的是 Subtask，没有独立 Picture 的是 Todo。父任务的 Todo 完成后，父任务本身即进入 VERIFYING 状态；父任务的 Subtask 完成后，只向父任务传递完成信号，不改变父任务的状态。
 
-**任务创建顺序：** 任务创建必须按以下顺序进行，不允许跳步：Step 1 定义 Picture → Step 2 从 Picture 推导 Requirements → Step 3 从 Picture 推导 Constraints → Step 4 冲突检测（Requirements 与 Constraints 是否矛盾）→ Step 5 若有矛盾与利益相关者协商直到矛盾消除 → Step 6 拆解 Todos → Step 7 写入 task.md，初始化 session.md / gotchas.md / judge.md（空文件）。Step 4 不可跳过——矛盾的 Requirements / Constraints 写入后，Judge 永远无法通过。
+**任务创建顺序：** 任务创建必须按以下顺序进行，不允许跳步：Step 1 定义 Picture → Step 2 从 Picture 推导 Requirements → Step 3 从 Picture 推导 Constraints → Step 4 冲突检测（Requirements 与 Constraints 是否矛盾）→ Step 5 若有矛盾与利益相关者协商直到矛盾消除 → Step 6 拆解 Todos → Step 7 写入 task.md，初始化 session.md / gotchas.md / judge.md / verify.md（空文件）。Step 4 不可跳过——矛盾的 Requirements / Constraints 写入后，Judge 永远无法通过。
 
-**Requirements 合法性检查：** 在 Step 2 完成后，对每条 Requirement 执行合法性检查——必须可独立验证（存在可运行的验证命令或明确的数值指标），验收标准必须在 task.md 创建时就能确定（不允许"完成后再定"），不合法的 Requirement 不允许写入。
+**Requirements 合法性检查：** 在 Step 2 完成后，对每条 Requirement 执行合法性检查——必须有明确的验收标准（不允许"到时候再定"），验收标准必须是可判断的（不能依赖纯主观感受），不合法的 Requirement 不允许写入。验收标准的验证方式（`[] / () / {}` 类型前缀）通过 verify 定义工作流逐步澄清，不要求在 task.md 创建时确定。
 
 **子任务创建：** 子任务是独立的任务节点，拥有独立的 PRC 模型和四个协议文件。父任务的完成以所有直接子任务关闭（COMPLETED 或 ABANDONED）为前提。主 Agent 不允许在子任务处于 CREATED 或 IN_PROGRESS 状态时完成父任务。
 
@@ -617,7 +619,70 @@ Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械
 
 任务检验在认知构建之后执行，负责判断当前状态是否满足 `Picture`。检验在轮次结束后自动触发，是只读操作，不执行写操作。
 
-**四层检验关卡：**
+#### 5.4.1 验证定义工作流
+
+verify.md 记录验证方法，包含已确认和待讨论两类条目。
+
+**三方分工：**
+
+* **人** — 提出验证需求（"我想验证 X"）
+* **Agent** — 提出验证方法（"用什么手段验证，技术上如何实现"）
+* **人** — 确认后将标记从 `[]` / `()` / `{}` 改为 `[.]` / `(.)` / `{.}`，写入 verify.md
+
+**verify 定义时机：**
+
+* **create 时**：任务创建阶段，人提出验证需求，Agent 以 `[]` / `()` / `{}` 前缀写入 verify.md，开始澄清
+* **生命周期中**：任何轮次结束后，人可提出新的验证需求或更新已有验证方法
+
+**verify.md 条目标记规则：**
+
+```markdown
+## Requirements
+
+[.]  req-1  checked   新读者能理解 worldview     # 已确认，执行
+(.)  req-2  command   npm run build               # 已确认，执行
+()   req-3  command   lighthouse --quiet          # 待讨论，不执行
+[]   req-4  checked   待确认                       # 待讨论，不执行
+
+## Constraints
+
+{.}  cons-1  skip     性能优化在 v2 处理           # 已确认，执行
+{}   cons-2  skip     待讨论                       # 待讨论，不执行
+```
+
+**verify.md 内容变更规则：** 验证过程中若发现某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态，不直接删除历史记录。
+
+**verify 类型标记：**
+
+verify.md 中每条验证条目由「类型前缀」和「有效性标记」共同决定含义：
+
+| 前缀 | 类型 | 说明 |
+|---|---|---|
+| `[]` / `[.]` | checked | 交互相验证，Judge Agent 向人提问，人回答 yes/no |
+| `()` / `(.)` | command | 命令式验证，Agent 执行命令，以退出码判断结果 |
+| `{}` / `{.}` | skip | 主动跳过，记录理由，不执行验证 |
+
+有效性标记：中间有点（`[.]` / `(.)` / `{.}`）= 已确认，可执行；中间无点（`[]` / `()` / `{}`）= 待讨论，尚未形成有效验证。
+
+**格式示例：**
+
+```markdown
+## Requirements
+
+[.]  req-1  checked   新读者能理解 worldview
+(.)  req-2  command   npm run build
+()   req-3  command   lighthouse --quiet   # 待讨论
+[]   req-4  checked   待确认
+
+## Constraints
+
+{.}  cons-1  skip     性能优化在 v2 处理
+[.]  cons-2  checked  术语必须与 spec 一致
+```
+
+**verify.md 写入前提：** 人确认方法后写入，未经人确认的内容不允许写入 verify.md。
+
+#### 5.4.2 四层检验关卡
 
 任务检验按顺序执行以下四层关卡。其中约束检查/进度检查/验收检查（对应内部 Tier 0/1/2）为客观检验条件，由 Judge Agent 自动执行并判断是否通过，无需主 Agent 主观决策；语义对齐关卡（对应内部 Tier 3）为语义对齐关卡，由 Agent 根据任务属性决定是否启用。
 
@@ -656,7 +721,7 @@ Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械
 | 验收检查（Tier 2） | Requirements 验收检查 | 运行测试命令：执行可验证动作，记录命令输出 | task.md, session.md |
 | 语义对齐（Tier 3） | 语义对齐检查 | LLM 推断：Judge Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
 
-**验收检查的关键约束：** 验收检查不允许依赖 LLM 推断判断 Requirement 是否满足。每条 Requirement 必须有对应的可运行验证命令。若 Requirement 无法自动化验证，在任务创建阶段应被标记为无效 Requirement。
+**验收检查的关键约束：** 验收检查的依据来自 verify.md，不允许 Agent 自行构造验证逻辑。每条 Requirement 或 Constraint 的验证方式由 verify.md 中的类型前缀决定：`[.]` 为交互相确认，`(.)` 为命令执行，`{.}` 为显式跳过。若验证过程中发现 verify.md 某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态。
 
 **Judge Agent 输出约束：** Judge Agent 只报告事实，不给出修复建议，不判断"主 Agent 应该怎么做"，不修改 task.md / session.md / gotchas.md，不直接标记任务为 COMPLETED 或 ABANDONED。FAIL 结论写入 judge.md 后，Judge Agent 的职责结束，决策权回到主 Agent。
 
