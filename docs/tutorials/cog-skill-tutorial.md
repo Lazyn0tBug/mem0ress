@@ -100,7 +100,7 @@ Every task passes through three tiers:
 |------|------|----------------|
 | Tier 0 | Constraints | Scans session history for constraint violations — passive, runs every turn |
 | Tier 1 | Todos | Every todo item must be marked `done: true` |
-| Tier 2 | Requirements | Runs `verify_cmd` for each requirement (MVP: auto-PASS stub) |
+| Tier 2 | Requirements | Runs verify.md marker execution for each requirement (MVP: auto-PASS stub) |
 
 **No bypass rule**: A task cannot close without passing all three tiers.
 

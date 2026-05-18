@@ -36,7 +36,7 @@ todos:
 | created | Task defined, no todos completed |
 | in-progress | At least one todo marked complete |
 | verifying | Judge verification in progress (transient) |
-| completed | All requirements verified, goal achieved |
+| completed | All non-persistent requirements verified AND goal achieved; persistent requirements remain in confirmed state |
 | abandoned | Task abandoned |
 
 ## Status Transition Rules

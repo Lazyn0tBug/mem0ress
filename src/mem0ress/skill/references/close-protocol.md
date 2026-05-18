@@ -46,11 +46,13 @@ Before triggering Judge, Agent checks:
 
 1. **Picture completeness**: Does current work semantically match Picture?
 2. **Requirements coverage**: Are all Requirements satisfied (or explicitly deferred)?
-3. **Constraint compliance**: Were any Constraints violated?
+3. **Constraint compliance**: Are any Constraints violated?
 
 **Human confirmation is required for Requirements and Constraints verification**: Unconfirmed entries (`[]` / `()` / `{}`) in verify.md cannot be treated as verified. Each entry must transition to `[.]` / `(.)` / `{.}` through explicit human dialogue before the Judge considers it verified. If any entry is still unconfirmed, Level 1 cannot PASS.
 
-**Note on persistent requirements**: Requirements marked `persistent: true` (e.g., terminology consistency) never transition to `[\✓]` — they remain permanently in confirmed state (`[.]` / `(.)` / `{.}`). Their `[\✓]` absence does not block closure.
+**Note on persistent requirements**: Requirements marked `persistent: true` transition to `[\✓]` when at least one todo is completed and one session round ends with Tier 2 pass. Their `[\✓]` marks phase completion, not permanent closure — new semantic drift in subsequent rounds can trigger re-verification (revert to `[.]`).
+
+**Note on Constraint violations**: Constraint violations do NOT cause FAIL. Instead, the task enters SUSPEND state (`[×]` in verify.md) until resolved. Human may override with justification if the constraint cannot be resolved.
 
 If semantic misalignment exists → Clarification Mode first.
 
@@ -60,7 +62,7 @@ Then Judge Agent evaluates:
 
 | Tier | What Judge Checks |
 |------|-------------------|
-| Tier 0 | Constraint violations — hard failures |
+| Tier 0 | Constraint violations — SUSPEND (do not FAIL), wait for resolution |
 | Tier 1 | Todo completion — Checklist verification |
 | Tier 2 | Automated validation — verify.md marker execution |
 

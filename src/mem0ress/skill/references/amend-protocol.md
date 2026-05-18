@@ -36,7 +36,7 @@ User or Agent invokes `/cap amend`.
 
 ### Step 3a: Update Existing
 
-1. Display only unconfirmed entries (`[]` / `()` / `{}`)
+1. Display only unconfirmed entries (`[]` / `()` / `{}`) AND Constraint `[×]` (violated) entries
 2. User selects entry by ID
 3. User provides new content (marker state, command, or description)
 4. Confirm write
@@ -51,7 +51,7 @@ User or Agent invokes `/cap amend`.
    - `skip` — explicitly skip
 3. **Dialogue must conclude explicitly**: The verification method must be confirmed by the user, transitioning the marker from `[]` / `()` / `{}` (unconfirmed) to `[.]` / `(.)` / `{.}` (confirmed). Until the user explicitly confirms, the entry remains unconfirmed and cannot be executed.
 
-   **Note for persistent requirements**: If this is a persistent requirement (e.g., terminology consistency), the marker starts as `[.]` / `(.)` / `{.}` (confirmed) but never transitions to `[\✓]` / `(\✓)` / `{\✓}`. It remains permanently in confirmed state, representing ongoing verification rather than one-time completion.
+   **Note for persistent requirements**: If this is a persistent requirement (e.g., terminology consistency), the marker transitions to `[\✓]` when at least one todo is completed and one session round ends with Tier 2 pass. New semantic drift in subsequent rounds can revert it to `[.]` / `(.)` / `{.}` for re-verification.
 4. Confirm write
 5. Append to session.md
 
