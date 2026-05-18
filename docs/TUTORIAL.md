@@ -17,10 +17,10 @@ mem0 init
 ### 1.2 创建任务
 
 ```bash
-mem0 create my-task --picture "完成一份白皮书"
+mem0 create --picture "完成一份白皮书"
 ```
 
-这会创建 `.cap/tasks/my-task/`，包含：
+这会创建 `.cap/tasks/<自动生成ID>/`，包含：
 
 - `task.md` — 任务定义（picture、requirements、constraints）
 - `session.md` — 认知增量流（append-only）
@@ -30,18 +30,20 @@ mem0 create my-task --picture "完成一份白皮书"
 ### 1.3 工作循环
 
 ```
-/cog.recover        → 恢复任务认知
+/cap recover        → 恢复任务认知
 write/edit          → 执行工作
-/cog.snapshot       → 追加认知增量
-/cog.gotcha         → 记录关键发现
-/cog.verify         → 请求 Judge 验证
-/cog.decide         → 根据 Judge 判决决定下一步
+/cap snapshot       → 追加认知增量
+/cap gotcha         → 记录关键发现
+/cap verify         → 请求 Judge 验证
+/cap decide         → 根据 Judge 判决决定下一步
 ```
 
 ### 1.4 完成任务
 
 ```bash
-mem0 done my-task
+mem0 done
+# 或指定任务 ID
+mem0 done <task_id>
 ```
 
 要求 Judge 通过（Tier 0 约束无违规 + Tier 1 Todo 完成 + Tier 2 可选自动验证）。
@@ -153,10 +155,10 @@ mem0 init [--root .cap]
 ### 3.2 创建任务
 
 ```bash
-mem0 create <task_id> --picture "<语义目标>"
+mem0 create --picture "<语义目标>" [--requirements TEXT] [--constraints TEXT]
 ```
 
-创建任务目录和 `task.md`。picture 是必需的语义描述。
+创建任务目录和 `task.md`。picture 是必需的语义描述。任务 ID 自动生成。
 
 ### 3.3 状态展示
 
@@ -166,19 +168,18 @@ mem0 status [--root .cap]
 
 展示当前状态平面：所有任务、进度、阻塞点。
 
-### 3.4 更新 Todo
+### 3.4 追加会话快照
 
 ```bash
-mem0 update <task_id> --todo "完成第一章" --done
-mem0 update <task_id> --todo "完成第一章"
+mem0 update [--content TEXT]
 ```
 
-标记 Todo 完成或添加新项。
+追加认知增量到 `session.md`。使用当前任务（从 `.task_info` 读取）。
 
 ### 3.5 完成任务
 
 ```bash
-mem0 done <task_id>
+mem0 done [task_id]
 ```
 
 触发完整 Judge 验证。必须通过才能完成。
@@ -186,7 +187,7 @@ mem0 done <task_id>
 ### 3.6 废弃任务
 
 ```bash
-mem0 abandon <task_id>
+mem0 abandon [task_id]
 ```
 
 标记任务为废弃状态，并记录废弃原因。
@@ -194,7 +195,7 @@ mem0 abandon <task_id>
 ### 3.7 查看 Judge 报告
 
 ```bash
-mem0 report <task_id>
+mem0 report [task_id]
 ```
 
 显示最近一次 Judge 验证的完整报告。
@@ -203,9 +204,9 @@ mem0 report <task_id>
 
 ## §4 Skill 命令
 
-`/cog *` 是语义交互入口。每个命令对应一个认知操作，不是命令绑定。
+`/cap *` 是语义交互入口。每个命令对应一个认知操作，不是命令绑定。
 
-### 4.1 /cog.recover
+### 4.1 /cap recover
 
 恢复任务认知。加载 `task.md`、`session.md`、最近增量、gotchas、Judge 状态。
 
@@ -218,7 +219,7 @@ mem0 report <task_id>
 
 **使用场景**：上下文压缩后、中断后回到任务、切换任务前。
 
-### 4.2 /cog.status
+### 4.2 /cap status
 
 渲染当前状态平面。包含认知表面和数据平面。
 
@@ -227,7 +228,7 @@ mem0 report <task_id>
 
 **使用场景**：快速了解任务全貌、给用户展示进度。
 
-### 4.3 /cog.snapshot
+### 4.3 /cap snapshot
 
 追加认知增量到 `session.md`。
 
@@ -238,7 +239,7 @@ mem0 report <task_id>
 
 **使用场景**：完成一个工作单元后、有意义的认知变化发生时。
 
-### 4.4 /cog.gotcha
+### 4.4 /cap gotcha
 
 记录关键发现到 `gotchas.md`。
 
@@ -249,7 +250,7 @@ mem0 report <task_id>
 
 **使用场景**：遇到模糊点、风险假设、阻塞时立即记录。
 
-### 4.5 /cog.verify
+### 4.5 /cap verify
 
 请求 Judge Agent 验证。
 
@@ -265,7 +266,7 @@ mem0 report <task_id>
 
 **使用场景**：完成一个阶段后、提交前、遇到方向问题时。
 
-### 4.6 /cog.decide
+### 4.6 /cap decide
 
 读取 Judge 判决，决定下一步。
 
@@ -276,7 +277,7 @@ mem0 report <task_id>
 - `INCOMPLETE` — 未通过，继续当前工作
 - `REVISION_REQUIRED` — 需要修订某个部分
 
-**使用场景**：`/cog.verify` 之后、`/cog.recover` 之后、遇到重大决策时。
+**使用场景**：`/cap verify` 之后、`/cap recover` 之后、遇到重大决策时。
 
 ---
 
@@ -314,9 +315,9 @@ requirements:
 验证失败时：
 
 1. 查看 `judge.md` 中的失败原因
-2. 使用 `/cog.gotcha` 记录发现的模糊点
+2. 使用 `/cap gotcha` 记录发现的模糊点
 3. 修复问题
-4. 再次执行 `/cog.verify`
+4. 再次执行 `/cap verify`
 
 ---
 
@@ -325,58 +326,58 @@ requirements:
 ### 场景 A：白皮书写作
 
 ```
-1. mem0 create whitepaper --picture "完成一份 10 页白皮书"
+1. mem0 create --picture "完成一份 10 页白皮书"
 
-2. /cog.recover
+2. /cap recover
    → 加载任务定义
 
 3. 开始写作，完成第一章
-   /cog.snapshot
+   /cap snapshot
    → "完成第一章：背景与问题定义"
 
 4. 发现数据来源不确定
-   /cog.gotcha
+   /cap gotcha
    → "市场数据来源尚未验证"
 
 5. 继续写作
-   /cog.snapshot
+   /cap snapshot
    → "第二章核心论点：AI 提升效率 30%"
 
-6. /cog.verify
+6. /cap verify
    → Judge 检查 constraints（10 页限制、数据来源标注）
 
-7. /cog.decide
+7. /cap decide
    → 如果 PASS，继续；如果 FAIL，修复
 
-8. mem0 done whitepaper
+8. mem0 done
    → 完整 Judge 验证 + 持久化关闭
 ```
 
 ### 场景 B：软件功能开发
 
 ```
-1. mem0 create feature-login --picture "实现基于 OAuth2 的第三方登录"
+1. mem0 create --picture "实现基于 OAuth2 的第三方登录"
 
-2. /cog.recover
+2. /cap recover
 
 3. 实现核心逻辑
-   /cog.snapshot
+   /cap snapshot
    → "完成 OAuth2 授权码流程"
 
 4. 写测试
-   /cog.snapshot
+   /cap snapshot
    → "完成单元测试：覆盖率 85%"
 
-5. /cog.verify
+5. /cap verify
    → Judge 检查 constraints（无硬编码密钥、必须处理 refresh token 过期）
 
 6. 发现边界条件未处理
-   /cog.gotcha
+   /cap gotcha
    → "未处理用户撤回授权的情况"
 
 7. 修复后再次验证
 
-8. mem0 done feature-login
+8. mem0 done
 ```
 
 ---
@@ -400,16 +401,16 @@ requirements:
 ## §8 常见问题
 
 **Q：session.md 可以手动编辑吗？**
-可以，但不建议。session.md 应该是 `/cog.snapshot` 自动追加的。手动编辑会破坏增量流的语义一致性。
+可以，但不建议。session.md 应该是 `/cap snapshot` 自动追加的。手动编辑会破坏增量流的语义一致性。
 
 **Q：验证失败后可以强行完成任务吗？**
 不可以。`mem0 done` 要求 Judge 通过。强制完成会破坏协议完整性。
 
 **Q：gotchas 会被自动处理吗？**
-不会。gotchas 是给 Agent 和人类看的记录，不触发自动行为。Agent 应该在 `/cog.recover` 时看到活跃的 gotchas，并主动处理。
+不会。gotchas 是给 Agent 和人类看的记录，不触发自动行为。Agent 应该在 `/cap recover` 时看到活跃的 gotchas，并主动处理。
 
 **Q：可以同时处理多个任务吗？**
-可以。每个任务有独立目录。但上下文压缩会丢失任务切换的记忆，所以建议用 `/cog.recover` 恢复后再切换。
+可以。每个任务有独立目录。但上下文压缩会丢失任务切换的记忆，所以建议用 `/cap recover` 恢复后再切换。
 
 **Q：中断后如何恢复？**
-使用 `/cog.recover` 恢复任务认知。mem0ress 通过文件系统协议保证了中断恢复的能力——即使完整上下文丢失，只要文件系统存在，就能恢复到一致状态。
+使用 `/cap recover` 恢复任务认知。mem0ress 通过文件系统协议保证了中断恢复的能力——即使完整上下文丢失，只要文件系统存在，就能恢复到一致状态。
