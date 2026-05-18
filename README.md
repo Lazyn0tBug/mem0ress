@@ -10,8 +10,8 @@ mem0ress 是一个面向 AI Agent 开发者的**认知对齐平面（Cognitive A
 
 | 文档 | 说明 |
 |------|------|
-| **[教程 (docs/tutorial.md)](docs/tutorial.md)** | 快速上手指南——安装、命令、文件协议、Skill 命令、Judge 验证 |
-| `docs/spec.md` | 接口语义规范 |
+| **[教程 (docs/TUTORIAL.md)](docs/TUTORIAL.md)** | 快速上手指南——安装、命令、文件协议、Skill 命令、Judge 验证 |
+| `docs/SPEC.md` | 接口语义规范 |
 | `src/mem0ress/design.md` | 实施方案 |
 
 ---
@@ -49,16 +49,61 @@ mem0ress 是一个面向 AI Agent 开发者的**认知对齐平面（Cognitive A
 ## 目录结构
 
 ```
-.mem0ress/                          # 认知基座根目录
-└── tasks/
-    └── {task_id}/
-        ├── task.md                  # 任务定义（Picture/Requirements/Constraints + Todos）
-        ├── session.md               # 轮次快照（每轮追加，含 data_plane 快照）
-        ├── gotchas.md               # 偏差记录（每条追加）
-        └── judge.md                 # 检验报告（每轮追加，含时间戳）
+mem0ress/
+├── src/mem0ress/            # 源代码
+│   ├── cli.py               # CLI 入口（mem0 init/create/status/done/abandon/report）
+│   ├── core/                # 核心类型
+│   │   ├── schema.py        # Pydantic 模型（TaskManifest、CognitiveTriad、TaskStatus）
+│   │   ├── constants.py     # 常量（DEFAULT_SUBSTRATE_ROOT = ".cap"）
+│   │   └── id_gen.py        # 任务 ID 生成器（base36，6位）
+│   ├── gateway/             # 核心逻辑
+│   │   ├── actions.py       # 写操作（create/update/complete/abandon）
+│   │   ├── plane.py         # 状态平面组装器（只读扫描）
+│   │   ├── intercept.py     # 生命周期钩子（Before/After Turn）
+│   │   ├── protocol.py      # TaskServiceProtocol 接口定义
+│   │   ├── task_info.py     # 集中式任务注册表（.task_info）
+│   │   └── current_task.py  # 当前任务指针（legacy）
+│   ├── harness/             # 任务检验
+│   │   └── judge.py         # Tier 1/2/3 验证执行器
+│   └── substrate/           # 底层组件
+│       ├── fs.py            # 乐观锁文件系统（safe_write）
+│       ├── parser.py        # Markdown ↔ Pydantic 双向解析
+│       └── git_ops.py       # Git 操作（数据平面快照）
+├── tests/                   # 测试
+│   ├── unit/               # 单元测试
+│   └── integration/        # 集成测试
+├── docs/                   # 文档
+│   ├── SPEC.md             # 接口语义规范
+│   ├── PROTOCOL.md         # 协议解释
+│   ├── FAQ.md              # 设计哲学
+│   ├── SCHEMA.md           # 数据模型说明
+│   ├── TUTORIAL.md         # 入门教程
+│   ├── TEMPLATES/          # 任务模板
+│   ├── BRAINSTORMS/        # 头脑风暴
+│   ├── ARCHIVE/            # 归档文档
+│   ├── CLAUDE/             # Claude 会话
+│   ├── DESIGN/             # 设计文档
+│   ├── GEMINI/             # Gemini 会话
+│   ├── GPT/                # GPT 会话
+│   ├── PLANS/              # 实施计划
+│   ├── REVIEW/             # 评审文档
+│   └── TUTORIALS/          # 教程
+└── pyproject.toml
 ```
 
 ---
+
+## 认知基座结构
+
+```
+.cap/                              # 认知基座根目录（.mem0ress 的别名）
+└── tasks/
+    └── {task_id}/
+        ├── task.md               # 任务定义（Picture/Requirements/Constraints + Todos）
+        ├── session.md            # 轮次快照（每轮追加，含 data_plane 快照）
+        ├── gotchas.md           # 偏差记录（每条追加）
+        └── judge.md             # 检验报告（每轮追加，含时间戳）
+```
 
 ## 快速开始
 
@@ -250,9 +295,8 @@ ty check src/ && ruff check src/ && pytest tests/
 
 | 文档 | 说明 |
 |------|------|
-| `docs/spec.md` | 接口语义规范（做什么） |
+| `docs/SPEC.md` | 接口语义规范（做什么） |
+| `docs/PROTOCOL.md` | 协议解释 |
+| `docs/FAQ.md` | 设计哲学 |
+| `docs/SCHEMA.md` | 数据模型说明 |
 | `src/mem0ress/design.md` | 实施方案（如何做） |
-| `src/mem0ress/core/schema.py` | Pydantic 数据模型 |
-| `src/mem0ress/gateway/actions.py` | TaskService 写操作实现 |
-| `src/mem0ress/substrate/git_ops.py` | 数据平面 Git 追踪 |
-| `src/mem0ress/harness/__init__.py` | Tier 1/2/3 检验引擎 |
