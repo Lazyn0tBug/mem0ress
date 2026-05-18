@@ -444,15 +444,16 @@ graph TD
     class SP plane;
 ```
 
-**协议规范**（见 `docs/templates/`）：
+**协议规范**（见 `docs/`）：
 
 || 文件 | 用途 |
 |---|------|------|
+| SPEC.md | 架构规约：设计决策、概念定义、生命周期 |
 | PROTOCOL.md | 行为契约：参与方职责、文件权限、执行循环、不支持场景 |
 | SCHEMA.md | 字段定义：Turn 编号规则、VERIFYING 约束、ID 体系 |
-| EXAMPLE.md | 完整示例：OAuth 任务全流程（失败-修正-重试） |
-| PROTOCOL.md | Implementer Guide：参与方速查、轮次序列图示、Tier 速查表、默认值（VERIFYING 超时 180s） |
-| judge.md | Tier 3 prompt 工程：维度分解、证据锚定、失效模式 |
+| TUTORIAL.md | 入门指南：安装、命令、文件协议、Skill 命令 |
+| FAQ.md | 设计哲学：认知所有权、聚焦原则等核心问题 |
+| `docs/example/` | 示例集：3 个完整案例（oauth-sso / whitepaper / website） |
 
 **文件读写权限：** 每个文件有唯一的写入方。主 Agent 读写 task.md（覆盖写 + Todo 更新），追加写 session.md 和 gotchas.md；Judge Agent 只追加写 judge.md，只读取 task.md、session.md、gotchas.md。写入规则：session.md / gotchas.md / judge.md 只追加不修改历史；task.md 是唯一允许覆盖写的文件；task.md 的 Picture / Requirements / Constraints 一旦写入不允许修改。
 
