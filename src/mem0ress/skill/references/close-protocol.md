@@ -48,6 +48,8 @@ Before triggering Judge, Agent checks:
 2. **Requirements coverage**: Are all Requirements satisfied (or explicitly deferred)?
 3. **Constraint compliance**: Were any Constraints violated?
 
+**Human confirmation is required for Requirements and Constraints verification**: Unconfirmed entries (`[]` / `()` / `{}`) in verify.md cannot be treated as verified. Each entry must transition to `[.]` / `(.)` / `{.}` through explicit human dialogue before the Judge considers it verified. If any entry is still unconfirmed, Level 1 cannot PASS.
+
 If semantic misalignment exists → Clarification Mode first.
 
 ### Level 2: Judge Verification

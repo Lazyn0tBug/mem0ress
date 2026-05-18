@@ -49,7 +49,7 @@ User or Agent invokes `/cap amend`.
    - `checked` — human confirms manually
    - `command` — automated command
    - `skip` — explicitly skip
-3. Marker starts as unconfirmed (`[]` / `()` / `{}`)
+3. **Dialogue must conclude explicitly**: The verification method must be confirmed by the user, transitioning the marker from `[]` / `()` / `{}` (unconfirmed) to `[.]` / `(.)` / `{.}` (confirmed). Until the user explicitly confirms, the entry remains unconfirmed and cannot be executed.
 4. Confirm write
 5. Append to session.md
 
