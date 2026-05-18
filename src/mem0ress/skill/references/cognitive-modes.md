@@ -108,7 +108,7 @@ Judge MUST NOT receive:
 Judge returns structured verdict:
 - Tier 0: PASS | FAIL (constraint violations)
 - Tier 1: PASS | FAIL (todo completion)
-- Tier 2: PASS | FAIL | SKIP (verify_cmd results)
+- Tier 2: PASS | FAIL | SKIP (verify.md marker results)
 - Tier 3: ALIGNED | MISALIGNED | UNCERTAIN (semantic judgment)
 
 ### Post-Judge Decision

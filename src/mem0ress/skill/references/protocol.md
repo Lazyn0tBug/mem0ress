@@ -20,7 +20,6 @@ cognitive_triad:
   requirements:
     - id: string
       description: string
-      verify_cmd: string | null
   constraints:
     - string
 gotcha_refs: []
@@ -58,9 +57,14 @@ todos:
 | gotchas.md | 主 Agent | Append only |
 | judge.md | Judge Agent | Append only |
 
-## Requirements Verification Constraint
+## Requirements Verification
 
-No LLM inference for verification. Each requirement must have a verifiable command (verify_cmd). If verification cannot be automated, set verify_cmd to null and document manual process in description.
+Each Requirement is paired with a verify.md marker entry defined via interactive dialogue:
+- `[(.)]` = checked (interactive verification with human)
+- `[(.)]` = command (automated command execution)
+- `[]`/`()` = unconfirmed (pending human confirmation)
+
+Only `[(.)]` markers are executable. Unconfirmed markers serve as discussion placeholders.
 
 ## Example
 
@@ -74,10 +78,8 @@ cognitive_triad:
   requirements:
     - id: req_01
       description: "用户点击 Google 登录按钮后，OAuth flow 完整执行并获得 access_token"
-      verify_cmd: "curl -s /auth/google/callback?code=test | grep access_token"
     - id: req_02
       description: "refresh_token 以加密形式存储，不以明文形式出现在日志或响应中"
-      verify_cmd: null
   constraints:
     - "绝对不得在客户端存储 refresh_token"
     - "必须支持 token revoke"
@@ -90,6 +92,17 @@ todos:
   - text: "实现 token revoke"
     done: false
 ---
+```
+
+Corresponding verify.md:
+
+```markdown
+type: verify
+
+## Requirements
+
+[.] req_01 command curl -s /auth/google/callback?code=test | grep access_token
+[.] req_02 checked 人确认日志中无明文 token
 ```
 
 ## session.md Format
@@ -146,5 +159,5 @@ Judge verification surface:
 |------|----------------|
 | Tier 0 | Constraint violations check |
 | Tier 1 | Todo completion check |
-| Tier 2 | verify_cmd execution |
+| Tier 2 | verify.md marker execution |
 | Tier 3 | Semantic alignment (Agent judgment) |

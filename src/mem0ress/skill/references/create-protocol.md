@@ -56,7 +56,7 @@ Good Picture criteria:
 Answer: "What must be verifiable?"
 
 Requirements criteria:
-- Each has a verify_cmd (or null for manual)
+- Each has a verify.md marker entry (or [] for unconfirmed)
 - Derived from Picture
 - Collectively sufficient to achieve Picture
 - No circular dependencies
@@ -149,6 +149,6 @@ CLI creates task.md directly. Semantic coordination still applies — Agent shou
 
 - Defining Requirements before Picture (requirements serve the goal)
 - Adding Constraints that contradict Picture
-- Writing verify_cmd that requires LLM inference (must be executable)
+- Writing verify.md marker that requires LLM inference (must be human-confirmed before executable)
 - Using vague language in Picture ("improve", "better", "nice")
 - Skipping consistency check

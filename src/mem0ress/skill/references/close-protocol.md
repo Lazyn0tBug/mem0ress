@@ -58,7 +58,7 @@ Then Judge Agent evaluates:
 |------|-------------------|
 | Tier 0 | Constraint violations — hard failures |
 | Tier 1 | Todo completion — Checklist verification |
-| Tier 2 | Automated validation — verify_cmd execution |
+| Tier 2 | Automated validation — verify.md marker execution |
 
 Judge does NOT check semantic alignment — that's Agent's responsibility.
 
