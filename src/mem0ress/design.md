@@ -245,6 +245,7 @@ mem0 close <task_id>
 | `session.md` | TaskServiceImpl.update_session() 追加 Turn 块 |
 | `gotchas.md` | TaskServiceImpl.append_gotcha() 追加 Gotcha 块 |
 | `judge.md` | HarnessRunner.verify_task() 写入验证报告 |
+| `verify.md` | 主 Agent 追加 verify marker，Judge Agent 只读 |
 
 所有文件格式见 spec.md §5.4 文档数据模型。
 
@@ -259,6 +260,7 @@ mem0 close <task_id>
         ├── session.md        # 认知增量流
         ├── gotchas.md        # 关键发现
         ├── judge.md          # 验证报告
+        ├── verify.md         # 验证 marker
         │
         └── data/             # data plane
             ├── outputs/
@@ -377,7 +379,7 @@ activated_at: '2026-05-14T10:00:00+09:00'
 Tier 执行:
   - Tier 0: constraint violations（同步执行）
   - Tier 1: todo completion（同步执行）
-  - Tier 2: verify_cmd（MVP: stub 不执行，v0.2+ 实现）
+  - Tier 2: verify.md marker（读取 `[(.)/(.)/{.}]` 条目执行命令）
   - Tier 3: semantic alignment（Agent 自主判断）
 输出:
   Tier 0: PASS/FAIL
