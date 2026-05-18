@@ -119,6 +119,7 @@ mem0 create \
 | `gotcha` | 记录恢复关键发现 | 持久化到 gotchas.md |
 | `verify` | 请求 Judge 验证 alignment | 触发隔离检验 |
 | `decide` | 基于 Judge 结果决定下一步 | 读取判决，Agent 决策 |
+| `amend` | 修正 verify.md 条目 | 展示未确认条目，人机对话修正 |
 
 ---
 
@@ -299,10 +300,11 @@ activated_at: '2026-05-14T10:00:00+09:00'
 ```
 1. /cap create          → Skill 引导补全 picture/requirements/constraints
 2. Execute Work         → (Agent 自主执行)
-3. /cap snapshot        → 追加认知增量到 session.md
-4. /cap gotcha          → 记录关键发现（可选）
-5. /cap verify          → 触发 Judge 隔离验证
-6. /cap decide          → 基于判决结果决定下一步
+3. /cap amend           → 修正 verify.md 未确认条目（任意时刻）
+4. /cap snapshot        → 追加认知增量到 session.md
+5. /cap gotcha          → 记录关键发现（可选）
+6. /cap verify          → 触发 Judge 隔离验证
+7. /cap decide          → 基于判决结果决定下一步
 ```
 
 ---
@@ -379,7 +381,7 @@ activated_at: '2026-05-14T10:00:00+09:00'
 Tier 执行:
   - Tier 0: constraint violations（同步执行）
   - Tier 1: todo completion（同步执行）
-  - Tier 2: verify.md marker（读取 `[(.)/(.)/{.}]` 条目执行命令）
+  - Tier 2: verify.md marker（读取 `[(.)/(.)/{.}]` 执行命令；`[\✓]/(\✓)/{\✓}` 为已完成状态，不可 amend）
   - Tier 3: semantic alignment（Agent 自主判断）
 输出:
   Tier 0: PASS/FAIL
@@ -400,6 +402,21 @@ Tier 执行:
   - Tier 0/1 是否通过
   - Tier 3 判决状态
   - 下一步建议（给 Agent 参考，不是指令）
+```
+
+### 7.7 `/cap amend`
+
+在任意时刻修正 verify.md 条目。仅允许未确认条目（`[]`/`()`/`{}`）。
+
+```
+输入: /cap amend [--root .cap]
+交互:
+  - 仅展示未确认条目
+  - TUI: 更新现有 / 新增
+  - 已确认条目（[.]/(.)/.）不可修改
+  - 已完成条目（[\✓]/(\✓)/{\✓}）不可修改
+输出:
+  - session.md 追加 amend 记录
 ```
 
 ---
