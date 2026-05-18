@@ -1,6 +1,9 @@
 """Core schema definitions - TaskManifest, CognitiveTriad, TodoItem, Gotcha, TaskStatus."""
 
+from __future__ import annotations
+
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -15,7 +18,7 @@ class TaskStatus(StrEnum):
 
 
 class Requirement(BaseModel):
-    """Single requirement with optional verify_cmd for Tier 2 execution."""
+    """Requirement — intent only, not verified state. Verified state lives in verify.md."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -23,12 +26,45 @@ class Requirement(BaseModel):
     description: str = Field(description="Human-readable requirement description")
     persistent: bool = Field(
         default=False,
-        description="Whether this requirement is permanent (e.g., terminology consistency). Persistent requirements have ongoing verification semantics, not one-time completion.",
+        description=(
+            "Persistent requirements have ongoing verification semantics, "
+            "not one-time completion."
+        ),
     )
-    verify_cmd: str | None = Field(
-        default=None,
-        description="Shell command for Tier 2 verification (MVP: stub, not executed)",
+
+
+class VerifyEntry(BaseModel):
+    """Single entry in verify.md with marker-based state management.
+
+    Marker format: {type_prefix}{state_marker}
+    - Type prefix: [] (checked), () (command), {} (skip)
+    - State marker: . (confirmed), ✓ (completed), × (violated/constraint only)
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: str = Field(description="Entry ID (e.g., req_01, cons_01)")
+    category: Literal["requirement", "constraint"] = Field(description="Entry category")
+    check_type: Literal["checked", "command", "skip"] = Field(
+        description="Verification method: interactive, shell command, or skip",
     )
+    state: Literal[
+        "unconfirmed",  # [] / () / {}
+        "confirmed",  # [.] / (.) / {.}
+        "completed",  # [\✓] / (\✓) / {\✓}
+        "violated",  # [×] — constraints only
+    ] = Field(description="Current state")
+    description: str = Field(description="Human-readable description")
+    command: str | None = Field(default=None, description="Shell command (for command type)")
+    reason: str | None = Field(default=None, description="Reason / notes")
+
+
+class VerifyPlane(BaseModel):
+    """Collection of verify entries read from verify.md."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    entries: list[VerifyEntry] = Field(default_factory=list)
 
 
 class CognitiveTriad(BaseModel):
@@ -99,7 +135,7 @@ class StatusPlaneEntry(BaseModel):
         default_factory=list,
         description="偏差记录列表 (! marker)",
     )
-    subtasks: list["StatusPlaneEntry"] = Field(
+    subtasks: list[StatusPlaneEntry] = Field(
         default_factory=list,
         description="子任务列表 (└─ marker)",
     )

@@ -3,13 +3,8 @@
 This module implements Tier 1/2/3 verification logic:
 
 Tier 1: Mechanical state check (Todo + subtask closure)
-Tier 2: Objective requirements check (MVP: stub, verify_cmd not executed)
+Tier 2: Objective requirements check (reads verify.md entry state)
 Tier 3: Semantic alignment (prepared for Agent, performed by Agent)
-
-MVP note on Tier 2:
-- verify_cmd is stored but NOT executed in MVP
-- All requirements return passed=True with stub reporting
-- Real shell exec deferred to v0.2+
 
 Tier 3 is NOT automated by mem0ress. Per spec.md 7.2:
 - Tier 3 is triggered by Agent's 主动决策
@@ -24,7 +19,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from mem0ress.core.schema import TaskManifest, TaskStatus
+from mem0ress.core.schema import TaskManifest, TaskStatus, VerifyPlane
 from mem0ress.harness.judge import JudgeResult as JudgeResult
 from mem0ress.harness.judge import prepare_judge_context as prepare_judge_context
 
@@ -47,12 +42,14 @@ class HarnessRunner:
         self,
         manifest: TaskManifest,
         subtasks: list[TaskManifest] | None = None,
+        verify_plane: VerifyPlane | None = None,
     ) -> list[HarnessResult]:
         """Verify a task against three-tier validation.
 
         Args:
             manifest: Task manifest to verify
             subtasks: List of subtask manifests (empty if none)
+            verify_plane: VerifyPlane read from verify.md (None = file not found)
 
         Returns:
             List of HarnessResult for each tier
@@ -63,7 +60,7 @@ class HarnessRunner:
         results.append(self._verify_tier1(manifest, subtasks or []))
 
         # Tier 2: Objective requirements check
-        results.append(self._verify_tier2(manifest))
+        results.append(self._verify_tier2(manifest, verify_plane))
 
         # Tier 3: Semantic alignment context preparation
         # Actual judgment is performed by the Agent
@@ -108,11 +105,14 @@ class HarnessRunner:
             message="Tier 1 通过: 机械状态检查完成",
         )
 
-    def _verify_tier2(self, manifest: TaskManifest) -> HarnessResult:
-        """Tier 2: Objective requirements check (MVP stub).
+    def _verify_tier2(
+        self, manifest: TaskManifest, verify_plane: VerifyPlane | None
+    ) -> HarnessResult:
+        """Tier 2: Objective requirements check using verify.md entry state.
 
-        MVP 不执行 verify_cmd，只验证 requirements 结构完整。
-        verify_cmd 的实际执行留待 v0.2+。
+        Reads the VerifyPlane (parsed from verify.md) and checks that all
+        requirement entries have state != "unconfirmed". Unconfirmed entries
+        mean the requirement has not yet been verified.
         """
         requirements = manifest.cognitive_triad.requirements
 
@@ -123,21 +123,52 @@ class HarnessRunner:
                 message="Tier 2 通过: 无客观验收标准（跳过）",
             )
 
-        # MVP stub: 检查 requirements 结构，不执行 verify_cmd
-        unmet: list[str] = []
-        for req in requirements:
-            desc = req.description.strip() if req.description else "(无描述)"
-            if req.verify_cmd:
-                unmet.append(f"[stub] {req.id}: {desc} (verify_cmd 待执行: {req.verify_cmd})")
-            else:
-                unmet.append(f"[stub] {req.id}: {desc} (无 verify_cmd)")
+        # If no verify_plane, entries haven't been created yet
+        if verify_plane is None:
+            unverified = [
+                f"{req.id}: {req.description or '(无描述)'}" for req in requirements
+            ]
+            msg_lines = "\n".join(f"  - {u}" for u in unverified)
+            return HarnessResult(
+                tier=2,
+                passed=False,
+                message=(
+                    f"Tier 2: {len(unverified)} 项 requirement "
+                    f"尚未在 verify.md 中创建\n{msg_lines}"
+                ),
+                deviation="verify.md entries not created",
+            )
 
-        # MVP: 所有 requirements 都标记为 stub 状态，不算 FAIL
-        msg_lines = "\n".join(f"  - {u}" for u in unmet)
+        # Build map of verified entries by id
+        entry_map = {e.id: e for e in verify_plane.entries}
+        unverified: list[str] = []
+
+        for req in requirements:
+            entry = entry_map.get(req.id)
+            if entry is None:
+                unverified.append(
+                    f"{req.id}: {req.description or '(无描述)'} "
+                    "(entry not in verify.md)"
+                )
+            elif entry.state == "unconfirmed":
+                unverified.append(
+                    f"{req.id}: {req.description or '(无描述)'} "
+                    "(state=unconfirmed)"
+                )
+
+        if unverified:
+            msg_lines = "\n".join(f"  - {u}" for u in unverified)
+            return HarnessResult(
+                tier=2,
+                passed=False,
+                message=f"Tier 2: {len(unverified)} 项 requirement 未验证\n{msg_lines}",
+                deviation="unverified requirements",
+            )
+
         return HarnessResult(
             tier=2,
-            passed=True,  # MVP: stub 不算 FAIL，等 v0.2 真实执行
-            message=f"Tier 2 (MVP stub): {len(unmet)} 项 requirements\n{msg_lines}",
+            passed=True,
+            message=f"Tier 2 通过: {len(requirements)} 项 requirement 全部验证",
         )
 
     def _verify_tier3(self, manifest: TaskManifest) -> HarnessResult:

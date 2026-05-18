@@ -6,14 +6,14 @@ Amend verify.md entries at any point during task execution. Enables iterative re
 
 ## Three-State Constraint
 
-| State | marker | Can amend? |
+|| State | marker | Can amend? |
 |-------|--------|-----------|
 | Unconfirmed | `[]` / `()` / `{}` | ✅ |
-| Confirmed | `[.]` / `(.)` / `{.}` | ✅ (non-persistent only, before execution) |
-| Completed | `[\✓]` / `(\✓)` / `{\✓}` | ❌ |
-| Persistent | `[.]` / `(.)` / `{.}` (ongoing) | ❌ (never reaches completed state; only pass/fail per check) |
+| Confirmed | `[.]` / `(.)` / `{.}` | ✅ |
+| Completed (non-persistent) | `[\✓]` / `(\✓)` / `{\✓}` | ❌ |
+| Completed (persistent) | `[\✓]` / `(\✓)` / `{\✓}` | ✅ (can revert to `[.]` for re-verification) |
 
-**Rule**: Completed entries are immutable. Persistent requirements are also immutable once confirmed — they never reach a "completed" state, only pass/fail per check cycle.
+**Rule**: Non-persistent `[\✓]` / `(\✓)` / `{\✓}` are permanent — immutable. Persistent `[\✓]` means only "this check passed" — can revert to `[.]` / `(.)` / `{.}` on new semantic drift.
 
 ## State Transitions
 
@@ -37,8 +37,8 @@ User or Agent invokes `/cap amend`.
 
 ### Step 3a: Update Existing
 
-1. Display only: unconfirmed entries (`[]` / `()` / `{}`) AND non-persistent confirmed entries (`[.]` / `(.)` / `{.}`)
-2. Exclude: completed entries (`[\✓]` / `(\✓]` / `{\✓}`) and persistent requirements (which never reach completed state)
+1. Display only: unconfirmed entries (`[]` / `()` / `{}`) AND confirmed entries (`[.]` / `(.)` / `{.}`) AND completed persistent entries (`[\✓]` / `(\✓)` / `{\✓}` with `persistent: true`)
+2. Exclude: completed non-persistent entries (`[\✓]` / `(\✓)` / `{\✓}` with `persistent: false`) — these are permanent
 3. User selects entry by ID
 4. User provides new content (marker state, command, or description)
 5. Confirm write
