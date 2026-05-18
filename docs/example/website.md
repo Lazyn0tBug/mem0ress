@@ -60,6 +60,8 @@ completed_at: 2026-02-15T17:00:00Z
 - C-5: 绝不允许将 agent 描述为"完全自治"
         （除非明确说明 deterministic boundary）
 
+**verify_cmd 推导说明：** Agent 从需求语义生成验证命令（如"Lighthouse ≥ 90" → `lighthouse ... | jq`）。用户只需表达业务意图，Agent 负责转化为可执行测试。
+
 ---
 
 ## Todos

@@ -192,6 +192,21 @@ R-1（结构完整）与 C-2（不混层）存在潜在矛盾：
 若 Architecture 章节同时描述 runtime 和 cognition，容易混层。
 → 决议：在 Protocol Design 章节明确分离两节，分别描述。
 
+### Step 5: 推导 verify_cmd（Agent 辅助）
+
+每条 Requirement 生成后，Agent 负责推导对应的 `verify_cmd`：
+
+| Requirement | verify_cmd 推导 | 说明 |
+|------------|----------------|------|
+| R-1: 结构完整 | `python scripts/check_headings.py` | Agent 生成：检查 8 个章节 heading 是否存在 |
+| R-2: 术语一致 | `python scripts/check_glossary.py` | Agent 生成：扫描术语出现位置，检测重复定义 |
+| R-3: ≥3 个图 | `python scripts/check_diagrams.py` | Agent 生成：统计 markdown image reference 数量 |
+| R-4: 失败模型章节 | `python scripts/check_section.py` | Agent 生成：检查章节存在及 4 个子议题 |
+| R-5: ≥5000 词 | `python scripts/check_wordcount.py --min 5000` | Agent 生成：字数统计 |
+| R-6: 可独立阅读 | `manual` | Agent 判断：需 Tier 3 语义推断，无法自动验证 |
+
+**注意：** `verify_cmd` 命令由 Agent 生成，用户只需表达语义意图（如"白皮书需要至少3个架构图"），Agent 负责转化为可执行验证命令。
+
 ---
 
 ## 与软件交付案例的关键差异

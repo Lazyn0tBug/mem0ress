@@ -63,6 +63,8 @@ completed_at: 2025-01-15T15:12:00Z
 - C-2: 不允许在数据库中以明文存储任何用户凭证
 - C-3: 所有 OAuth callback URL 必须通过 HTTPS，不允许 HTTP 回调
 
+**verify_cmd 推导说明：** Agent 从需求语义生成验证命令（如"p99 < 300ms" → `pytest tests/perf/test_auth_latency.py`）。用户只需表达业务意图，Agent 负责转化为可执行测试。
+
 ---
 
 ## Todos

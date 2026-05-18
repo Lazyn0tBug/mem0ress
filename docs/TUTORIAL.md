@@ -117,7 +117,7 @@ constraints:
 
 **picture**：语义成功状态——"任务完成时，世界是什么样的"
 
-**requirements**：可验证条件清单
+**requirements**：可验证条件清单，由 Agent 从 Picture 推导生成。每条 Requirement 包含描述和 `verify_cmd`（验证命令）。用户只需表达语义意图，Agent 负责生成对应的验证方式。
 
 **constraints**：不可逾越的红线
 
