@@ -27,6 +27,7 @@
 | session.md | 追加写 | 只读 |
 | gotchas.md | 追加写 | 只读 |
 | judge.md | 只读 | 追加写 |
+| verify.md | 追加写 | 只读 |
 
 ---
 
@@ -70,7 +71,7 @@
 |------|---------|---------|
 | **Tier 0** | Constraint 约束检查 — 是否触碰红线 | 立即 FAIL |
 | **Tier 1** | Todo 完成检查 — 是否完成所有计划项 | 立即 FAIL |
-| **Tier 2** | verify_cmd 执行 — requirements 条件是否满足 | 立即 FAIL |
+| **Tier 2** | verify.md marker 执行 — requirements 条件是否满足 | 立即 FAIL |
 | **Tier 3**（条件） | 语义对齐 — Requirements 能否支撑 Picture | PASS / FAIL / UNCERTAIN |
 
 **Tier 3 语义约束**：证据不足时必须返回 **UNCERTAIN**，不得强行 PASS。
@@ -121,6 +122,7 @@
 | session.md | 主 Agent | 追加，不覆盖历史 |
 | gotchas.md | 主 Agent | 追加，不删除历史 |
 | judge.md | Judge Agent | 追加，不修改历史 |
+| verify.md | 主 Agent | 追加；`[.] / (.) / {.}` 条目可作为执行依据，`[] / () / {}` 仅作记录 |
 
 **写入权限语义**：
 - **主 Agent** 对 task.md 只有一次写入权（创建时），之后不可修改认知三要素

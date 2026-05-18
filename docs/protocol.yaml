@@ -66,5 +66,6 @@ files:
   session: session.md
   gotchas: gotchas.md
   judge: judge.md
+  verify: verify.md
 
 
