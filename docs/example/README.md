@@ -49,12 +49,12 @@ status: <status>
 
 ### Verify 层级职责
 
-| Tier | 检查内容 | 执行方式 |
+| Tier | 检查内容 | 触发方式 |
 |------|---------|---------|
-| Tier 0 | Constraints 违反 | 扫描 session.md / gotchas.md |
-| Tier 1 | Todo & Subtask 完成 | 读取 task.md |
-| Tier 2 | Requirements 满足 | 运行 `verify_cmd` |
-| Tier 3 | 语义对齐（条件触发） | Verify Agent 推断 |
+| Tier 0 | Constraints 违反 | 路径一（todo 完成）+ 路径二（人/阈值） |
+| Tier 1 | Todo & Subtask 完成（观察动作） | 路径一（自动含）+ 路径二（兜底） |
+| Tier 2 | Requirements 满足 | 路径一（todo 完成）+ 路径二（人/阈值） |
+| Tier 3 | 语义对齐（唯一硬门槛） | 仅作路径末端触发，无独立触发语义 |
 
 ### CLI 命令速查
 

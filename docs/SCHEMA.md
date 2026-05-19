@@ -150,7 +150,7 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 
 ---
 
-## 4. verify.md 字段
+## 4. verification.md 字段
 
 ### Frontmatter
 
@@ -173,15 +173,20 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 | `Overall Verdict` | enum | ✅ | PASSED / FAILED |
 | `Summary` | string | ✅ | FAILED 时必须说明是哪个 Tier 失败 |
 
-### 4.1 Tier 3 触发条件
+### 4.1 Tier 3 触发与失败
 
-Tier 3 通过对话确认 Picture 与实际产出的语义对齐，结论写入 VERIFY.md 的 Picture section。仅在以下条件之一成立时执行，其余情况标记为 SKIPPED：
+**Tier 3 无独立触发语义。** Tier 3 仅出现在双路径模型的路径末端：
 
-1. Picture 包含主观判断词汇（"无感知"、"流畅"、"友好"等）
-2. Constraints 与 Picture 之间存在语义歧义，需要语义裁定
-3. 主 Agent 或利益相关者在触发检验时显式设置 `tier3_requested: true`
+- **路径一（自然操作）：** 每 todo 完成 → Tier 0 → Tier 2 → Tier 3
+- **路径二（主动操作）：** 人主动 verify / 达到阈值 → Tier 0 → Tier 1 → Tier 2 → Tier 3
 
-Tier 0/1/2 任一 FAIL 时，Tier 3 强制 SKIPPED。
+**进入条件：**
+- 路径一：Tier 0 无 violation + Tier 2 满足 → 进入 Tier 3
+- 路径二：Tier 0 无 violation + Tier 1 满足 + Tier 2 满足 → 进入 Tier 3
+
+**Tier 3 失败行为：** FAIL → amend 循环（新增/修改 Requirement/Constraint → 重规划 → 继续）
+
+**Tier 0/1/2 任一 FAIL 时：** Tier 3 不执行（SKIPPED 或不进入 Tier 3）
 
 ---
 
@@ -216,11 +221,11 @@ Tier 0/1/2 任一 FAIL 时，Tier 3 强制 SKIPPED。
         ├── task.md        # 读写方：主 Agent（创建）/ 主 Agent（更新 Todo）
         ├── session.md     # 读写方：主 Agent（追加）/ Verify Agent（只读）
         ├── gotchas.md     # 读写方：主 Agent（追加）/ Verify Agent（只读）
-        ├── verify.md      # 读写方：Verify Agent（追加）/ 主 Agent（只读）
+        ├── verification.md  # 读写方：Verify Agent（追加）/ 主 Agent（只读）
         └── {subtask_id}/ # 子任务目录，结构同上
 ```
 
-**verify.md** 在 task.md 同级目录下，由 Verify Agent 追加写，主 Agent 只读。
+**verification.md** 在 task.md 同级目录下，由 Verify Agent 追加写，主 Agent 只读。
 
 父子关系由目录树表达，task.md 内不重复列子任务。
 
@@ -251,11 +256,11 @@ Tier 0/1/2 任一 FAIL 时，Tier 3 强制 SKIPPED。
 
 ---
 
-## 8. verify.md 字段
+## 8. verification.md 字段
 
 ### 职责边界
 
-verify.md 存储 **持续性 Requirement、非持续性 Requirement、Constraint** 的验证方式。Tier 3（语义对齐）不写入 verify.md，通过对话确认。
+verification.md 存储 **持续性 Requirement、非持续性 Requirement、Constraint** 的验证方式。Tier 3（语义对齐）不写入 verification.md，通过对话确认。
 
 ### Frontmatter
 

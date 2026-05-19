@@ -94,7 +94,8 @@ type: verify
 ### 验证记录 {N.M}
 
 **时间**: {YYYY-MM-DD HH:MM:SS}
-**触发者**: Verify Agent / 人主动触发
+**触发者**: Path 1（todo 完成）/ Path 2（人主动 verify）/ Path 2（阈值触发）
+**触发路径**: Tier 0 → Tier 2 → Tier 3 / Tier 0 → Tier 1 → Tier 2 → Tier 3
 **结论**: PASSED / FAILED
 
 #### Tier 0 — 约束验证

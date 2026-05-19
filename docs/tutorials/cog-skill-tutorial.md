@@ -59,7 +59,7 @@ Ambiguity, drift risk, unstable assumptions, blockers.
 /cap verify
 ```
 
-Verify Agent runs Tier 0/1/2 verification.
+Verify Agent runs Path 2 verification: Tier 0 → Tier 1 → Tier 2 → Tier 3.
 
 ### 5. Close the task
 
@@ -68,7 +68,7 @@ Verify Agent runs Tier 0/1/2 verification.
 ```
 
 1. Agent checks: Does current state semantically match Picture?
-2. Verify verifies: Tier 0/1/2 → PASS/FAIL
+2. Verify verifies: Path 2 (Tier 0 → Tier 1 → Tier 2 → Tier 3) → PASS/FAIL
 3. Agent decides: Ready → `mem0 close`; Not ready → continue work
 
 **No bypass**: Verify verification is always required.
@@ -94,15 +94,20 @@ Each task lives in `.cap/tasks/<task_id>/`:
 
 ## Tier Verification
 
-Every task passes through three tiers:
+Every task passes through four tiers with dual-path trigger model:
 
-| Tier | Name | What it checks |
-|------|------|----------------|
-| Tier 0 | Constraints | Scans session history for constraint violations — passive, runs every turn |
-| Tier 1 | Todos | Every todo item must be marked `done: true` |
-| Tier 2 | Requirements | Runs VERIFY.md marker execution for each requirement (MVP: auto-PASS stub) |
+| Tier | Name | What it checks | Trigger |
+|------|------|----------------|---------|
+| Tier 0 | Constraints | Scans session history for constraint violations — passive | Path 1 + Path 2 |
+| Tier 1 | Todos | Every todo item must be marked `done: true` — observation action | Path 1 (auto) + Path 2 (fallback) |
+| Tier 2 | Requirements | Runs VERIFY.md marker execution for each requirement | Path 1 + Path 2 |
+| Tier 3 | Semantic Alignment | Picture alignment — only at path end, no independent trigger | Path end only |
 
-**No bypass rule**: A task cannot close without passing all three tiers.
+**Dual-path trigger:**
+- **Path 1 (natural):** On todo complete → Tier 0 → Tier 2 → Tier 3
+- **Path 2 (manual/threshold):** Human-triggered or max interval → Tier 0 → Tier 1 → Tier 2 → Tier 3
+
+**No bypass rule**: A task cannot close without passing all four tiers.
 
 ## task_id Generation
 
@@ -191,7 +196,7 @@ Agent: /cap gotcha
 [Continue work]
 
 Agent: /cap verify
-  → Verify returns: Tier 0 PASS, Tier 1 PASS, Tier 2 PASS
+  → Verify returns: Path 2 (Tier 0 → Tier 1 → Tier 2 → Tier 3) → ALL PASS
 
 Agent: /cap close
   → Semantic alignment check: yes

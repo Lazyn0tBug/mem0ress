@@ -195,7 +195,7 @@ completed_at: 2025-01-15T15:12:00Z
 
 ---
 
-## verify.md（完整检验记录）
+## verification.md（完整检验记录）
 
 ### Verify Turn 2.1 — 首次检验（FAILED）
 
@@ -370,7 +370,7 @@ Verify Turn 2.1 运行 `pytest tests/perf/test_auth_latency.py`，结果 p99=487
         ├── task.md       # status: COMPLETED，所有 Todo [x]
         ├── session.md    # 3 个 Turn 快照（1.1 / 1.2 / 1.3）
         ├── gotchas.md    # 1 条 Gotcha（G-1）
-        └── verify.md      # 2 次检验（Turn 2.1 FAILED / Turn 2.2 PASSED）
+        └── verification.md  # 2 次检验（Turn 2.1 FAILED / Turn 2.2 PASSED）
 ```
 
 ---
@@ -389,11 +389,9 @@ Verify 在 Tier 2 第一项（R-1）失败后，跳过 R-2/R-3/R-4 的验证执�
 理由：后续 Requirement 的验证在前置失败结论已知的情况下不可信。
 这避免了无效的检验资源消耗。
 
-### 3. Tier 3 条件触发
+### 3. Tier 3 触发模型
 
-Tier 3（语义对齐）不是自动触发，而是在 Tier 2 全部通过后，
-由 Verify Agent 判断 Picture 是否包含需要语义验证的主观体验描述时触发。
-本案例中 Picture 包含"感知不到登录动作"，因此触发 Tier 3。
+本案例中，Tier 3 作为路径末端自动触发——当 Todo 完成触发路径一时（Tier 0 → Tier 2 → Tier 3），或在人的主动 verify 下触发路径二时（Tier 0 → Tier 1 → Tier 2 → Tier 3），Tier 3 在 Tier 0 无 violation + Tier 2 满足后自动进入。Tier 3 无独立触发语义。
 
 ### 4. Gotcha 追加时机
 

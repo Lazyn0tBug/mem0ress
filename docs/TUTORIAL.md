@@ -56,7 +56,7 @@ mem0 create --picture "完成一份白皮书"
 - `task.md` — 任务定义（picture、requirements、constraints）
 - `session.md` — 认知增量流（append-only）
 - `gotchas.md` — 关键发现（模糊点、风险、假设）
-- `verify.md` — Verify 验证记录
+- `verification.md` — Verify 验证记录
 
 ### 1.3 工作循环
 
@@ -77,7 +77,7 @@ mem0 done
 mem0 done <task_id>
 ```
 
-要求 Verify 通过（Tier 0 约束无违规 + Tier 1 Todo 完成 + Tier 2 可选自动验证）。
+要求 Verify 通过（路径二：Tier 0 约束无违规 + Tier 1 Todo 完成 + Tier 2 结构化检查 + Tier 3 语义对齐）。
 
 ---
 
@@ -92,7 +92,7 @@ mem0 done <task_id>
 │       ├── task.md       # 任务定义（语义权威）
 │       ├── session.md    # 认知增量（append-only）
 │       ├── gotchas.md    # 关键发现
-│       ├── verify.md      # Verify 验证记录
+│       ├── verification.md  # Verify 验证记录
 │       └── data/         # 执行产物（可选）
 │           ├── outputs/
 │           ├── evidence/
@@ -117,7 +117,7 @@ constraints:
 
 **picture**：语义成功状态——"任务完成时，世界是什么样的"
 
-**requirements**：可验证条件清单，对应 verify.md 的 marker 条目（`[.]` / `(.)` / `{.}` 格式）。用户只需表达语义意图，Agent 负责生成对应的验证 marker。verify.md 只存储 Constraint 和适合交互式对话的 Requirement 子集；Tier 2 deterministic 验证由 marker 直接执行，不通过 verify.md 条目。
+**requirements**：可验证条件清单，对应 verification.md 的 marker 条目（`[.]` / `(.)` / `{.}` 格式）。用户只需表达语义意图，Agent 负责生成对应的验证 marker。verification.md 只存储 Constraint 和适合交互式对话的 Requirement 子集；Tier 2 deterministic 验证由 marker 直接执行，不通过 verification.md 条目。
 
 **constraints**：不可逾越的红线
 
@@ -151,7 +151,7 @@ append-only 的增量流。只记录有意义的认知变化：
 - 需要与业务方确认目标受众定位
 ```
 
-### 2.5 verify.md — Verify 验证记录
+### 2.5 verification.md — Verify 验证记录
 
 Verify Agent 的验证结果：
 
@@ -289,11 +289,12 @@ mem0 report [task_id]
 
 **验证层级**：
 
-| Tier | 内容 | 说明 |
-|------|------|------|
-| Tier 0 | 约束验证 | 检查 constraints 是否被违反 |
-| Tier 1 | Todo 验证 | 检查 requirements 完成度 |
-| Tier 2 | 自动验证 | 结构化检查（可选） |
+| Tier | 内容 | 说明 | 触发方式 |
+|------|------|------|---------|
+| Tier 0 | 约束验证 | 检查 constraints 是否被违反 | 路径一 + 路径二 |
+| Tier 1 | Todo 验证 | 检查 requirements 完成度（观察动作，每轮次执行） | 路径一（自动含）+ 路径二（兜底） |
+| Tier 2 | 自动验证 | 结构化检查 | 路径一 + 路径二 |
+| Tier 3 | 语义对齐 | 唯一硬门槛，无独立触发语义 | 仅作路径末端 |
 
 **使用场景**：完成一个阶段后、提交前、遇到方向问题时。
 
@@ -345,7 +346,7 @@ requirements:
 
 验证失败时：
 
-1. 查看 `verify.md` 中的失败原因
+1. 查看 `verification.md` 中的失败原因
 2. 使用 `/cap gotcha` 记录发现的模糊点
 3. 修复问题
 4. 再次执行 `/cap verify`
@@ -422,7 +423,7 @@ requirements:
 | **constraints** | 不可逾越的红线 |
 | **session.md** | append-only 认知增量流 |
 | **gotchas.md** | 关键发现（模糊点、风险、阻塞） |
-| **verify.md** | Verify 验证记录 |
+| **verification.md** | Verify 验证记录 |
 | **Tier 0** | 约束验证（必须通过） |
 | **Tier 1** | Todo 验证 |
 | **Tier 2** | 自动验证（可选） |
