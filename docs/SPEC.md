@@ -542,13 +542,10 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务验证
   1. 认知构建：主 Agent 读取状态平面（PlaneAssembler 实时组装）
   2. 执行：主 Agent 执行 Todo；可选：带外追加 gotchas.md
   3. Session 写入：主 Agent 追加 session.md 快照；更新 task.md Todo 状态
-  4. 检验触发（条件触发，非每轮必须）：
-     主 Agent 设 status → VERIFYING
-     宿主框架启动 Verify Agent
-     Verify Agent 执行四层检验
-     Verify Agent 写入 VERIFY.md
-     主 Agent 读取 VERIFY.md 结论
-     主 Agent 退出 VERIFYING 状态
+  4. Tier 1 观察 + 验证触发判断：
+     每轮次：Tier 1 自动执行（进度检查，更新状态快照，不触发 Tier 3）
+     若有 todo 完成：自动触发路径一（Tier 0 → Tier 2 → Tier 3）
+     若人主动 verify 或达到阈值：触发路径二（Tier 0 → Tier 1 → Tier 2 → Tier 3）
   5. 决策：主 Agent 自主决策下一步
 轮次结束
 ```
@@ -563,15 +560,32 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务验证
 
 **宿主框架（Host Framework）**负责保障协议运行的基础设施，包括：管理文件系统布局、保证 Verify Agent 与主 Agent 的上下文隔离、向 Verify Agent 注入 task_id、处理 VERIFYING 超时保护。宿主框架不参与任务执行逻辑，不干预 Verify Agent 的检验结论。
 
-#### 5.1.3 检验触发条件
+#### 5.1.3 验证触发条件
 
-检验不在每个轮次都触发。主 Agent 在以下情况触发检验：
+验证有两种触发路径（详见 §5.4.3）：
 
-1. **所有 Todo 已标记完成**（必须触发）
-2. **主 Agent 判断当前阶段性成果需要验证**（主动触发）
-3. **利益相关者显式请求检验**（按需触发）
+**路径一：自然操作（每 todo 完成时触发）**
 
-检验触发是主 Agent 的主动动作，不是系统自动行为。
+```
+每 todo 完成 → Tier 0 → Tier 2 → Tier 3
+```
+
+- 每有一个 todo 从 `[]` 变为 `[\✓]`，自动触发路径一
+- Tier 3 作为闭合条件自动出现在末端
+
+**路径二：主动操作（人触发 / 阈值触发）**
+
+```
+人主动 verify / 达到最大间隔阈值 → Tier 0 → Tier 1 → Tier 2 → Tier 3
+```
+
+- 人主动提出 verify 时，触发路径二，Tier 0/1/2 全部执行
+- 达到最大间隔阈值时，同样触发路径二
+- Tier 3 作为闭合条件自动出现在末端
+
+**Tier 1 的观察动作：** 每轮次结束时，系统自动执行 Tier 1（进度检查）并更新状态快照。这是观察动作，不属于 verify 操作，不触发 Tier 3。
+
+**触发是主 Agent 的主动动作：** 人提出 verify 需求后，由主 Agent 触发宿主框架启动 Verify Agent。Verify Agent 被动等待，不主动发起验证。
 
 #### 5.1.4 VERIFYING 超时保护
 
