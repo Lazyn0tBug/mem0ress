@@ -223,6 +223,8 @@
 
 ### /cap amend 命令
 
+**amend 是唯一 mutation 原语。** create = amend(mode=initial)——新任务的创建是 amend 的首次调用；已有条目的修正是 amend 的后续调用。
+
 在任意时刻发起对 VERIFY.md 的修正。
 
 **交互流程**：
