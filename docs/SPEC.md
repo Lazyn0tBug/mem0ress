@@ -641,15 +641,15 @@ verify.md 只存两类：
 ```markdown
 ## Requirements
 
-[.]  req-1  checked   新读者能理解 worldview     # 已确认，执行
-(.)  req-2  command   npm run build               # 已确认，执行
-()   req-3  command   lighthouse --quiet          # 待讨论，不执行
-[]   req-4  checked   待确认                       # 待讨论，不执行
+[.]  R-1  checked   新读者能理解 worldview     # 已确认，执行
+(.)  R-2  command   npm run build               # 已确认，执行
+()   R-3  command   lighthouse --quiet          # 待讨论，不执行
+[]   R-4  checked   待确认                       # 待讨论，不执行
 
 ## Constraints
 
-{.}  cons-1  skip     性能优化在 v2 处理           # 已确认，执行
-{}   cons-2  skip     待讨论                       # 待讨论，不执行
+{.}  C-1  skip     性能优化在 v2 处理           # 已确认，执行
+{}   C-2  skip     待讨论                       # 待讨论，不执行
 ```
 
 **verify.md 内容变更规则：** 验证过程中若发现某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态，不直接删除历史记录。
@@ -671,16 +671,16 @@ verify.md 中每条验证条目由「类型前缀」和「有效性标记」共�
 ```markdown
 ## Requirements
 
-[.]  req-1  checked   新读者能理解 worldview
-(.)  req-2  command   npm run build
-()   req-3  command   lighthouse --quiet   # 待讨论
-[]   req-4  checked   待确认
+[.]  R-1  checked   新读者能理解 worldview
+(.)  R-2  command   npm run build
+()   R-3  command   lighthouse --quiet   # 待讨论
+[]   R-4  checked   待确认
 
 ## Constraints
 
-{.}  cons-1  skip     性能优化在 v2 处理
-[.]  cons-2  checked  术语必须与 spec 一致
-[×]  cons-3  failed  发现了未声明的全局状态——suspended，等待解决
+{.}  C-1  skip     性能优化在 v2 处理
+[.]  C-2  checked  术语必须与 spec 一致
+[×]  C-3  failed  发现了未声明的全局状态——suspended，等待解决
 ```
 
 **verify.md 写入前提：** 人确认方法后写入，未经人确认的内容不允许写入 verify.md。
