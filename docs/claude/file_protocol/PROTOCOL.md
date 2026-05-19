@@ -53,7 +53,7 @@
 - session.md 和 gotchas.md 只追加，不修改历史内容
 - judge.md 只追加，不修改历史内容
 - task.md 是唯一允许覆盖写的文件（更新 Todo 状态、更新 status）
-- task.md 的 Picture / Requirements / Constraints 一旦写入不允许修改；如需变更，创建新版本任务
+- task.md 的 Picture / Requirements / Constraints 在创建时写入，可通过 amend 修正
 
 ---
 

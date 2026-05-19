@@ -72,7 +72,7 @@ graph TB
         DP["数据平面\n（当前代码版本）"]
     end
 
-    subgraph TIERS["任务验证（Verify Agent）"]
+    subgraph    TIERS["任务验证"]
         J["Verify Agent\n任务验证执行器"]
         C["约束验证"]
         R["需求验证"]
@@ -83,11 +83,11 @@ graph TB
     TASK --> SP
     TASK --> DP
     SP --> J
-    T0((("Tier 0\n进度检查")))
+    T0((("进度检查")))
     T0 -.->|本轮有 Todo 完成则设 pending_verify| J
     J --> C
     J --> R
-    J -->|硬门槛| T3
+    J -->|语义硬门槛| T3
 
     classDef prc fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef task fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
@@ -119,7 +119,7 @@ graph TB
 - Task-local 状态平面（单任务认知边界）
 - 五个协议文档：`task.md` / `session.md` / `gotchas.md` / `VERIFY.md`（`completion_summary.md` 可选）
 - One-Agent-One-Task 责任模型
-- 三层任务验证（约束验证 / 需求验证 / 语义对齐验证）+ Tier 0 自动进度检查
+- 三层任务验证（约束验证 / 需求验证 / 语义对齐验证）+ 进度检查
 - 语义对齐结构化输出协议（Picture Claims / Evidence Mapping / Residual Gap / UNCERTAIN）
 - 任务信息平面（状态平面 + 数据平面）
 - 父子任务两条通信通道
@@ -540,13 +540,13 @@ Agent 不得替代 Verify Agent 做出语义对齐判断，不得由状态平面
   1. 认知构建：主 Agent 读取状态平面（PlaneAssembler 实时组装）
   2. 执行：主 Agent 执行 Todo；可选：带外追加 gotchas.md
   3. Session 写入：主 Agent 追加 session.md 快照；更新 task.md Todo 状态
-  4. Tier 0 进度检查 → 若有 Todo 本轮完成则设置 `pending_verify`
+  4. 进度检查 → 若有 Todo 本轮完成则设置 `pending_verify`
   5. 若 `pending_verify` 有值则触发 Verify（三层检验）
   6. 决策：主 Agent 自主决策下一步
 轮次结束
 ```
 
-**pending_verify 机制**：Tier 0 每轮次结束时自动执行，检测本轮完成的 Todo，将其记录到 session 快照的 `pending_verify` 字段。Verify 执行完成后清除该字段。
+**pending_verify 机制**：每轮次结束时自动执行，检测本轮完成的 Todo，将其记录到 session 快照的 `pending_verify` 字段。Verify 执行完成后清除该字段。
 
 #### 5.1.2 参与方与职责边界
 
@@ -562,10 +562,10 @@ Agent 不得替代 Verify Agent 做出语义对齐判断，不得由状态平面
 
 **三层验证由 `pending_verify` 信号触发。**
 
-Tier 0 每轮次结束时自动执行，检测本轮是否有 Todo 完成。若有，则将本轮完成的 Todo 记录写入 session 快照的 `pending_verify` 字段。主 Agent 读取到 `pending_verify` 有值时，触发宿主框架启动 Verify Agent。
+进度检查每轮次结束时自动执行，检测本轮是否有 Todo 完成。若有，则将本轮完成的 Todo 记录写入 session 快照的 `pending_verify` 字段。主 Agent 读取到 `pending_verify` 有值时，触发宿主框架启动 Verify Agent。
 
 **触发方式：**
-- 自动触发：Todo 完成 → Tier 0 设置 `pending_verify` → Verify 执行 → 清除 `pending_verify`
+- 自动触发：Todo 完成 → 进度检查设置 `pending_verify` → Verify 执行 → 清除 `pending_verify`
 - 手动触发：人主动请求 verify 时，主 Agent 设置 `pending_verify` 并触发 Verify
 
 **Tier 3 作为闭合条件：** Tier 3 只能出现在验证路径末端，不能单独触发。
