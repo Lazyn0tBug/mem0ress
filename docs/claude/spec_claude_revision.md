@@ -30,7 +30,7 @@ definition: 辅助 AI Agent 构建目标态势并校准执行偏差的轻量级�
 
 **mem0ress 的核心机制：** 在任务执行全过程中，通过状态平面和数据平面这两类快照，确保 Agent 任何时刻都知道自己在哪里、目标偏没偏、下一步该做什么。
 
-**预设运行环境：** mem0ress 预设运行在**基于 Agent 的应用**中。这意味着运行时存在至少两个独立 Agent：执行任务的主 Agent（Main Agent）和专职执行任务验证的 Judge Agent。两者是独立的 Agent 实例，拥有各自的上下文窗口、系统提示和调用生命周期，通过文件系统（`judge.md`）进行异步协作，互不共享上下文。这一预设贯穿本规范所有设计决策，不适用于单 Agent 场景。
+**预设运行环境：** mem0ress 预设运行在**基于 Agent 的应用**中。这意味着运行时存在至少两个独立 Agent：执行任务的主 Agent（Main Agent）和专职执行任务验证的 Judge Agent。两者是独立的 Agent 实例，拥有各自的上下文窗口、系统提示和调用生命周期，通过文件系统（`VERIFY.md`）进行异步协作，互不共享上下文。这一预设贯穿本规范所有设计决策，不适用于单 Agent 场景。
 
 **目标用户：** AI/Agent 框架开发者。mem0ress 为开发者提供任务状态管理和目标态势感知能力，而非直接面向终端用户。
 
@@ -363,9 +363,9 @@ mem0ress 采用纯文本持久化 + 运行时组装的数据模型。认知数�
 * **task.md**：任务声明，`Picture`/`Requirements`/`Constraints` 的唯一真源。任务创建时写入，运行时以它为准。
 * **session.md**：轮次快照序列，含 data_plane 快照。每轮次结束后按时间追加，不改变 task.md。
 * **gotchas.md**：偏差记录，带外追加，不阻塞主流程。偏差确认后追加。
-* **judge.md**：Judge Agent 的检验记录文件，与 Task 生命周期同步。judge.md 与 Task 节点并列平铺于同一任务目录下，不属于 Task 的物理子节点——它是 Judge Agent 与主 Agent 之间唯一的协作介质，Judge Agent 将检验结果写入此文件，主 Agent 从此文件读取检验结论后自主决策。任务创建时生成（空文件），每次检验后追加。
+* **VERIFY.md**：Judge Agent 的检验记录文件，与 Task 生命周期同步。VERIFY.md 与 Task 节点并列平铺于同一任务目录下，不属于 Task 的物理子节点——它是 Judge Agent 与主 Agent 之间唯一的协作介质，Judge Agent 将检验结果写入此文件，主 Agent 从此文件读取检验结论后自主决策。任务创建时生成（空文件），每次检验后追加。
 
-task.md 是锚，模型从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；judge.md 承载任务验证逻辑，与 Task 生命周期同步。
+task.md 是锚，模型从它读取；Session 提供进度数据和 data_plane 快照，支撑认知构建；Gotchas 记录偏离，供后续复盘追溯；VERIFY.md 承载任务验证逻辑，与 Task 生命周期同步。
 
 纯文本持久化有三个原因：消除隐藏状态（所有数据可直接读取和修改，外部工具 git、grep、编辑器可直接操作）、时间切片而非可变状态（快照追加，不存在数据汤问题）、与 Agent 工具生态无缝衔接（文件工具天然支持，无需额外 SDK）。
 
@@ -377,7 +377,7 @@ graph TD
     TMPL["task.md"]
     SESS["session.md"]
     GOT["gotchas.md"]
-    JDG["judge.md"]
+    JDG["VERIFY.md"]
 
     ROOT --> TMPL
     ROOT --> SESS
@@ -406,7 +406,7 @@ Task、Session、Gotchas、Judge 文件的模板见`docs/templates`。
     ├── `task.md`       # 任务声明（`Picture`/`Requirements`/`Constraints`/Todo）
     ├── session.md    # 轮次快照序列（含 data_plane 快照）
     ├── gotchas.md    # 偏差记录（追加式）
-    └── judge.md      # Judge Agent task 文件
+    └── VERIFY.md      # Judge Agent task 文件
 ```
 
 具体各文档的内容格式和字段说明见 `docs/templates/`。
@@ -441,9 +441,9 @@ Session 快照是认知构建的数据来源。每个轮次的状态快照记录
 
 #### Judge Agent 的身份与运行方式
 
-Judge Agent 是独立于主 Agent 之外的另一个 Agent 实例。两者拥有各自独立的上下文窗口、系统提示和调用生命周期，不共享上下文，也不通过直接消息传递通信——唯一的协作介质是文件系统上的 `judge.md`。
+Judge Agent 是独立于主 Agent 之外的另一个 Agent 实例。两者拥有各自独立的上下文窗口、系统提示和调用生命周期，不共享上下文，也不通过直接消息传递通信——唯一的协作介质是文件系统上的 `VERIFY.md`。
 
-主 Agent 与 Judge Agent 的职责边界是：**主 Agent 执行，Judge Agent 检验**。主 Agent 不参与检验逻辑，Judge Agent 不参与执行决策。主 Agent 在轮次结束后触发 Judge Agent 调用，Judge Agent 完成检验后将结果写入 `judge.md`，主 Agent 读取结果并自主决策下一步。
+主 Agent 与 Judge Agent 的职责边界是：**主 Agent 执行，Judge Agent 检验**。主 Agent 不参与检验逻辑，Judge Agent 不参与执行决策。主 Agent 在轮次结束后触发 Judge Agent 调用，Judge Agent 完成检验后将结果写入 `VERIFY.md`，主 Agent 读取结果并自主决策下一步。
 
 ```mermaid
 %% label：主 Agent 与 Judge Agent 协作流
@@ -458,8 +458,8 @@ sequenceDiagram
     JA->>FS: 读取 task.md（PRC 模型）
     JA->>FS: 读取 session.md（最新快照）
     JA->>JA: 执行 Tier 0 → Tier 1 → Tier 2（→ Tier 3）
-    JA->>FS: 将检验结果写入 judge.md
-    MA->>FS: 读取 judge.md
+    JA->>FS: 将检验结果写入 VERIFY.md
+    MA->>FS: 读取 VERIFY.md
     MA->>MA: 自主决策下一步（修正 / 完成 / 废弃）
 ```
 
@@ -469,7 +469,7 @@ sequenceDiagram
 - `session.md`：最新轮次快照（含 `code_progress`、`todos`、`status`）
 - `gotchas.md`：历史偏差记录（供 Tier 0 参照）
 
-**Judge Agent 的输出：** 检验完成后将结构化结果追加写入 `judge.md`，格式包含：检验触发轮次、各 Tier 的通过状态（PASS / FAIL / SKIPPED）、每个 Tier 的具体发现（违反事实、未完成项、未满足的 Requirement）、整体检验结论（PASSED / FAILED）。Judge Agent 只写 `judge.md`，不修改任何其他文件。
+**Judge Agent 的输出：** 检验完成后将结构化结果追加写入 `VERIFY.md`，格式包含：检验触发轮次、各 Tier 的通过状态（PASS / FAIL / SKIPPED）、每个 Tier 的具体发现（违反事实、未完成项、未满足的 Requirement）、整体检验结论（PASSED / FAILED）。Judge Agent 只写 `VERIFY.md`，不修改任何其他文件。
 
 #### 四层关卡（Tiers）
 
@@ -481,7 +481,7 @@ sequenceDiagram
 
 * **Tier 1: Todo 完成检查。** Judge Agent 读取 task.md 中的 Todo 列表与 session.md 最新快照中的 `todos` 字段，逐项比对完成状态。同时检查所有直接子任务的状态：处于 COMPLETED 或 ABANDONED 为已关闭；处于 CREATED 或 IN_PROGRESS 为未完成，输出 FAIL 并列出未完成项。
 
-* **Tier 2: `Requirements` 满足检查。** Judge Agent 读取 task.md 中每条 Requirement 及其验收标准，与 session.md 的 `code_progress` 和 `docs_progress` 字段逐条比对，判断是否达标。每条 Requirement 的判断结论及依据一并写入 `judge.md`。Requirement 的验收标准必须在 task.md 中是可比对的客观描述（"界面美观"这类无法比对的描述不是有效 Requirement，在任务创建阶段应被拒绝写入）。
+* **Tier 2: `Requirements` 满足检查。** Judge Agent 读取 task.md 中每条 Requirement 及其验收标准，与 session.md 的 `code_progress` 和 `docs_progress` 字段逐条比对，判断是否达标。每条 Requirement 的判断结论及依据一并写入 `VERIFY.md`。Requirement 的验收标准必须在 task.md 中是可比对的客观描述（"界面美观"这类无法比对的描述不是有效 Requirement，在任务创建阶段应被拒绝写入）。
 
 * **Tier 3: 语义对齐检查。** Judge Agent 读取 `Picture` 与实际产出（来自 session.md 的 `code_progress`），执行语义层面的对齐判断——检验实际行为是否符合 `Picture` 所描绘的成功状态，而不仅仅是检验结构或字段。Tier 3 仅在以下情况触发：`Picture` 涉及主观判断或利益相关者感知时；`Constraints` 与 `Picture` 之间存在语义歧义时；主 Agent 或利益相关者在触发检验时显式请求时。
 
@@ -489,7 +489,7 @@ sequenceDiagram
 
 #### 决策执行规则
 
-检验结果写入 `judge.md` 后，Judge Agent 的职责结束。主 Agent 读取 `judge.md` 并自主决策：
+检验结果写入 `VERIFY.md` 后，Judge Agent 的职责结束。主 Agent 读取 `VERIFY.md` 并自主决策：
 
 - 检验通过（PASSED）→ 主 Agent 可将任务标记为 COMPLETED
 - 检验未通过（FAILED）→ 主 Agent 决定下一步（修正后重新触发检验、拆分子任务、或标记 ABANDONED）
@@ -546,9 +546,9 @@ mem0ress 的全部设计，都在试图让这个问题变得可回答。任务�
 | Node | 说明 |
 |------|------|
 | `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 task.md 获取） |
-| `Task` | 认知单元，包含 task.md、session.md、gotchas.md 三个物理子节点；gotchas.md 带外追加，不阻塞主流程；judge.md 与 Task 并列平铺，不属于 Task 的子节点 |
+| `Task` | 认知单元，包含 task.md、session.md、gotchas.md 三个物理子节点；gotchas.md 带外追加，不阻塞主流程；VERIFY.md 与 Task 并列平铺，不属于 Task 的子节点 |
 | `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以所有子任务完成为前提 |
-| `Judge Agent` | 独立于主 Agent 之外的检验 Agent，拥有独立的上下文窗口、系统提示和调用生命周期。由主 Agent 在轮次结束后触发调用，读取 task.md 和 session.md 执行四层检验，将结构化结果写入 judge.md，不修改任何其他文件。与主 Agent 之间不共享上下文，仅通过 judge.md 进行异步协作。judge.md 是其唯一输出文件，与 Task 节点并列平铺于同一任务目录下 |
+| `Judge Agent` | 独立于主 Agent 之外的检验 Agent，拥有独立的上下文窗口、系统提示和调用生命周期。由主 Agent 在轮次结束后触发调用，读取 task.md 和 session.md 执行四层检验，将结构化结果写入 VERIFY.md，不修改任何其他文件。与主 Agent 之间不共享上下文，仅通过 VERIFY.md 进行异步协作。VERIFY.md 是其唯一输出文件，与 Task 节点并列平铺于同一任务目录下 |
 
 ---
 
@@ -562,7 +562,7 @@ A: Judge Agent 是独立于主 Agent（Main Agent）之外的另一个 Agent 实
 两者的隔离是严格的：
 - **上下文隔离**：各自拥有独立的上下文窗口和系统提示，互不共享。Judge Agent 看不到主 Agent 的执行历史，只看文件系统上的快照。
 - **职责隔离**：主 Agent 不参与检验逻辑，Judge Agent 不参与执行决策。检验失败后如何处理，是主 Agent 的决策，不是 Judge Agent 的职责。
-- **通信隔离**：两者不直接通信，`judge.md` 是唯一的协作介质——Judge Agent 写，主 Agent 读。
+- **通信隔离**：两者不直接通信，`VERIFY.md` 是唯一的协作介质——Judge Agent 写，主 Agent 读。
 
 这种设计的目的是防止主 Agent 既当运动员又当裁判员。一个执行了数十轮的 Agent，其上下文已经充满了对任务的预设和局部优化，让它自我检验极易产生确认偏差。Judge Agent 作为"新鲜视角"介入，只基于文件系统中的客观快照做判断，不受主 Agent 执行历史的干扰。
 

@@ -14,7 +14,7 @@
 | 参与方 | 职责 |
 |--------|------|
 | **主 Agent（Main Agent）** | 执行任务：创建任务、拆解 Todo、推进执行、写入 session 快照、触发 Verify Agent、读取 Verify 结论、自主决策 |
-| **Verify Agent** | 检验任务：被动等待触发、执行四层任务验证、写入 verify.md |
+| **Verify Agent** | 检验任务：被动等待触发、执行四层任务验证、写入 VERIFY.md |
 | **宿主框架（Host Framework）** | 基础设施：管理文件系统布局、隔离上下文、注入 task_id、处理 VERIFYING 超时（默认 180s） |
 
 ---
@@ -26,7 +26,7 @@
 | task.md | 读 + 写（覆盖写） | 只读 |
 | session.md | 追加写 | 只读 |
 | gotchas.md | 追加写 | 只读 |
-| verify.md | 追加写 | 追加写 |
+| VERIFY.md | 追加写 | 追加写 |
 
 ---
 
@@ -70,7 +70,7 @@
 |------|--------|---------|------|---------|
 | Tier 0 | 约束验证 | Constraint 约束检查 — 是否触碰红线 | 参考信号（loop 或忽略） | FAIL → loop 或忽略 |
 | Tier 1 | 进度验证 | Todo 完成检查 — 是否完成计划项 | 参考约束（loop 或忽略） | FAIL → loop 或忽略 |
-| Tier 2 | 需求验证 | verify.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） | FAIL → loop 或忽略 |
+| Tier 2 | 需求验证 | VERIFY.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） | FAIL → loop 或忽略 |
 | Tier 3 | 语义对齐验证 | 语义对齐 — Requirements 能否支撑 Picture | **唯一硬门槛** | FAIL → amend 循环 |
 
 > **内部实现**：Verify Agent 内部执行 Tier 0（约束验证）/ Tier 1（进度验证）/ Tier 2（需求验证）/ Tier 3（语义对齐验证）。
@@ -87,7 +87,7 @@
 
 - 上下文仅含：`task_id` + 系统提示（不含主 Agent 执行历史）
 - 从文件系统读取依据，不接收运行时信息
-- 写入 verify.md，不修改其他文件
+- 写入 VERIFY.md，不修改其他文件
 
 ---
 
@@ -126,11 +126,11 @@
 | task.md | 主 Agent | cognitive_triad 创建后不可修改 |
 | session.md | 主 Agent | 追加，不覆盖历史 |
 | gotchas.md | 主 Agent | 追加，不删除历史 |
-| verify.md | 主 Agent / Verify Agent | 追加；`[.] / (.) / {.}` 条目可作为执行依据，`[] / () / {}` 仅作记录；已完成条目（`[\✓]` / `(\✓)` / `{\✓}`）不可 amend |
+| VERIFY.md | 主 Agent / Verify Agent | 追加；`[.] / (.) / {.}` 条目可作为执行依据，`[] / () / {}` 仅作记录；已完成条目（`[\✓]` / `(\✓)` / `{\✓}`）不可 amend |
 
 **写入权限语义**：
 - **主 Agent** 对 task.md 只有一次写入权（创建时），之后不可修改认知三要素
-- **Verify Agent** 对 verify.md 追加，不读取 runtime 内存状态（隔离验证）
+- **Verify Agent** 对 VERIFY.md 追加，不读取 runtime 内存状态（隔离验证）
 
 ---
 
@@ -144,7 +144,7 @@
 - **status**：当前生命周期阶段
 - **cognitive_triad**：认知三要素
   - **picture**：语义成功状态（任务完成时看起来是什么样的）
-  - **requirements**：可验证条件列表（验证方式定义在 verify.md）
+  - **requirements**：可验证条件列表（验证方式定义在 VERIFY.md）
   - **constraints**：不可逾越的红线列表
 - **gotcha_refs**：引用到 gotchas.md 的偏差记录
 - **todos**：可执行检查清单
@@ -165,7 +165,7 @@
 - 追加，不删除历史
 - 解决记录可追加，不覆盖原发现
 
-### verify.md — 验证定义
+### VERIFY.md — 验证定义
 
 主 Agent 和 Verify Agent 追加写的验证条目集合。包含所有 Requirement 和 Constraint 的验证方式定义，以及 Verify Agent 的检验结论记录。
 
@@ -223,7 +223,7 @@
 
 ### /cap amend 命令
 
-在任意时刻发起对 verify.md 的修正。
+在任意时刻发起对 VERIFY.md 的修正。
 
 **交互流程**：
 

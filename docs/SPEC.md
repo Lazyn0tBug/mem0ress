@@ -117,7 +117,7 @@ graph TB
 **v0.1-alpha 必须支持：**
 - 本地文件系统（`.cap/` 目录结构）
 - Task-local 状态平面（单任务认知边界）
-- 五个协议文档：`task.md` / `session.md` / `gotchas.md` / `verify.md`（`completion_summary.md` 可选）
+- 五个协议文档：`task.md` / `session.md` / `gotchas.md` / `VERIFY.md`（`completion_summary.md` 可选）
 - One-Agent-One-Task 责任模型
 - 四层任务验证（约束验证（Tier 0）/ 进度验证（Tier 1）/ 需求验证（Tier 2）/ 语义对齐验证（Tier 3））
 - 语义对齐结构化输出协议（Picture Claims / Evidence Mapping / Residual Gap / UNCERTAIN）
@@ -201,7 +201,7 @@ graph TD
 
 CAP 采用单任务 Agent 责任模型（One-Agent-One-Task Cognitive Responsibility Model）。
 
-在 CAP 中，Agent 在任意时刻只绑定一个活跃 Task。该 Agent 的认知平面只围绕当前 Task 的本地文档组装，包括 `task.md`、`session.md`、`gotchas.md` 和 `verify.md`。任务树表达的是任务之间的分解关系、依赖关系和完成关系，而不是单个 Agent 的全局上下文窗口。
+在 CAP 中，Agent 在任意时刻只绑定一个活跃 Task。该 Agent 的认知平面只围绕当前 Task 的本地文档组装，包括 `task.md`、`session.md`、`gotchas.md` 和 `VERIFY.md`。任务树表达的是任务之间的分解关系、依赖关系和完成关系，而不是单个 Agent 的全局上下文窗口。
 
 这意味着，一个 Agent 不需要也不应该在每一轮执行中读取整棵任务树。父任务、子任务、兄弟任务都不是默认上下文。它们只有在与当前 Task 的判断有关时，才以摘要形式进入当前 Task 的状态平面。
 
@@ -408,7 +408,7 @@ CAP 采用纯文本持久化 + 运行时组装的数据模型。认知数据以 
 * **task.md**：任务声明，`Picture`/`Requirements`/`Constraints` 的唯一真源。任务创建时写入，运行时以它为准。
 * **session.md**：轮次快照序列，含 data_plane 快照。每轮次结束后按时间追加，不改变 task.md。
 * **gotchas.md**：偏差记录，带外追加，不阻塞主流程。偏差确认后追加。
-* **verify.md**：Verify Agent 检验记录 + 验证协议。与 Task 生命周期同步，任务创建时生成（空文件），检验后追加。包含所有 Requirement 和 Constraint 的验证方式定义，以及 Verify Agent 的检验结论。`[.]` / `(.)` / `{.}` = 已确认可执行，`[]` / `()` / `{}` = 待讨论。人确认后写入，是 Agent 执行检验的依据。
+* **VERIFY.md**：Verify Agent 检验记录 + 验证协议。与 Task 生命周期同步，任务创建时生成（空文件），检验后追加。包含所有 Requirement 和 Constraint 的验证方式定义，以及 Verify Agent 的检验结论。`[.]` / `(.)` / `{.}` = 已确认可执行，`[]` / `()` / `{}` = 待讨论。人确认后写入，是 Agent 执行检验的依据。
 
 纯文本持久化有三个原因：消除隐藏状态（所有数据可直接读取和修改，外部工具 git、grep、编辑器可直接操作）、时间切片而非可变状态（快照追加，不存在数据汤问题）、与 Agent 工具生态无缝衔接（文件工具天然支持，无需额外 SDK）。
 
@@ -420,7 +420,7 @@ graph TD
     TMPL["task.md"]
     SESS["session.md"]
     GOT["gotchas.md"]
-    JDG["verify.md"]
+    JDG["VERIFY.md"]
 
     ROOT --> TMPL
     ROOT --> SESS
@@ -451,7 +451,7 @@ graph TD
 | FAQ.md | 设计哲学：认知所有权、聚焦原则等核心问题 |
 | `docs/example/` | 示例集：3 个完整案例（oauth-sso / whitepaper / website） |
 
-**文件读写权限：** 每个文件有唯一的写入方。主 Agent 读写 task.md（覆盖写 + Todo 更新），追加写 session.md 和 gotchas.md；Verify Agent 只追加写 verify.md，只读取 task.md、session.md、gotchas.md；verify.md 由人确认后写入，`[]` / `()` / `{}` 条目由 Agent 维护。写入规则：session.md / gotchas.md / verify.md 只追加不修改历史；task.md 是唯一允许覆盖写的文件；task.md 的 Picture / Requirements / Constraints 一旦写入不允许修改；verify.md 中只有 `[.]` / `(.)` / `{.}` 条目可作为执行依据，`[]` / `()` / `{}` 条目仅作记录。
+**文件读写权限：** 每个文件有唯一的写入方。主 Agent 读写 task.md（覆盖写 + Todo 更新），追加写 session.md 和 gotchas.md；Verify Agent 只追加写 VERIFY.md，只读取 task.md、session.md、gotchas.md；VERIFY.md 由人确认后写入，`[]` / `()` / `{}` 条目由 Agent 维护。写入规则：session.md / gotchas.md / VERIFY.md 只追加不修改历史；task.md 是唯一允许覆盖写的文件；task.md 的 Picture / Requirements / Constraints 一旦写入不允许修改；VERIFY.md 中只有 `[.]` / `(.)` / `{.}` 条目可作为执行依据，`[]` / `()` / `{}` 条目仅作记录。
 
 ```plaintext
 .cap/tasks/
@@ -459,7 +459,7 @@ graph TD
     ├── task.md       # 任务声明（Picture/Requirements/Constraints/Todo）
     ├── session.md    # 轮次快照序列（含 data_plane 快照）
     ├── gotchas.md    # 偏差记录（追加式）
-    └── verify.md     # Verify Agent 检验记录 + 验证协议
+    └── VERIFY.md     # Verify Agent 检验记录 + 验证协议
 ```
 
 ### 4.5 任务生命周期
@@ -546,8 +546,8 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务验证
      主 Agent 设 status → VERIFYING
      宿主框架启动 Verify Agent
      Verify Agent 执行四层检验
-     Verify Agent 写入 verify.md
-     主 Agent 读取 verify.md 结论
+     Verify Agent 写入 VERIFY.md
+     主 Agent 读取 VERIFY.md 结论
      主 Agent 退出 VERIFYING 状态
   5. 决策：主 Agent 自主决策下一步
 轮次结束
@@ -557,9 +557,9 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务验证
 
 协议有三个参与方，职责严格隔离，不允许跨越。
 
-**主 Agent（Main Agent）**负责执行任务，包括：创建任务、拆解 Todo、推进执行、写入 session 快照、触发 Verify Agent、读取 Verify 结论、自主决策下一步（修正 / 完成 / 废弃）。主 Agent 不执行检验逻辑，不写 verify.md。
+**主 Agent（Main Agent）**负责执行任务，包括：创建任务、拆解 Todo、推进执行、写入 session 快照、触发 Verify Agent、读取 Verify 结论、自主决策下一步（修正 / 完成 / 废弃）。主 Agent 不执行检验逻辑，不写 VERIFY.md。
 
-**Verify Agent（Verify Agent）**负责检验任务，包括：被动等待主 Agent 触发，读取文件系统快照，执行四层检验，将结论写入 verify.md。Verify Agent 不执行任何修复，不参与执行决策，不读取主 Agent 的执行历史，不写除 verify.md 之外的任何文件。
+**Verify Agent（Verify Agent）**负责检验任务，包括：被动等待主 Agent 触发，读取文件系统快照，执行四层检验，将结论写入 VERIFY.md。Verify Agent 不执行任何修复，不参与执行决策，不读取主 Agent 的执行历史，不写除 VERIFY.md 之外的任何文件。
 
 **宿主框架（Host Framework）**负责保障协议运行的基础设施，包括：管理文件系统布局、保证 Verify Agent 与主 Agent 的上下文隔离、向 Verify Agent 注入 task_id、处理 VERIFYING 超时保护。宿主框架不参与任务执行逻辑，不干预 Verify Agent 的检验结论。
 
@@ -579,7 +579,7 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务验证
 
 超时后宿主框架的处理义务：
 1. 强制结束 Verify Agent 调用
-2. 在 verify.md 追加超时记录（Turn + Timestamp + `Verdict: TIMEOUT`）
+2. 在 VERIFY.md 追加超时记录（Turn + Timestamp + `Verdict: TIMEOUT`）
 3. 将 task.md status 从 VERIFYING 恢复为 IN_PROGRESS
 4. 通知主 Agent 检验超时，由主 Agent 决定是否重试
 
@@ -603,7 +603,7 @@ Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械
 
 **Todo 与 Subtask 的边界：** Todo 是任务内部的机械步，不是独立的认知单元。Subtask 是独立的 Task，有自己的 Picture/Requirements/Constraints 三要素，是完整的认知闭包。区分标准是：是否有独立的 Picture——有独立 Picture 的是 Subtask，没有独立 Picture 的是 Todo。父任务的 Todo 完成后，父任务本身即进入 VERIFYING 状态；父任务的 Subtask 完成后，只向父任务传递完成信号，不改变父任务的状态。
 
-**任务创建顺序：** 任务创建必须按以下顺序进行，不允许跳步：Step 1 定义 Picture → Step 2 从 Picture 推导 Requirements → Step 3 从 Picture 推导 Constraints → Step 4 冲突检测（Requirements 与 Constraints 是否矛盾）→ Step 5 若有矛盾与利益相关者协商直到矛盾消除 → Step 6 拆解 Todos → Step 7 写入 task.md，初始化 session.md / gotchas.md / verify.md（空文件）。Step 4 不可跳过——矛盾的 Requirements / Constraints 写入后，Verify Agent 永远无法通过。
+**任务创建顺序：** 任务创建必须按以下顺序进行，不允许跳步：Step 1 定义 Picture → Step 2 从 Picture 推导 Requirements → Step 3 从 Picture 推导 Constraints → Step 4 冲突检测（Requirements 与 Constraints 是否矛盾）→ Step 5 若有矛盾与利益相关者协商直到矛盾消除 → Step 6 拆解 Todos → Step 7 写入 task.md，初始化 session.md / gotchas.md / VERIFY.md（空文件）。Step 4 不可跳过——矛盾的 Requirements / Constraints 写入后，Verify Agent 永远无法通过。
 
 **Requirements 合法性检查：** 在 Step 2 完成后，对每条 Requirement 执行合法性检查——必须有明确的验收标准（不允许"到时候再定"），验收标准必须是可判断的（不能依赖纯主观感受），不合法的 Requirement 不允许写入。验收标准的验证方式（`[] / () / {}` 类型前缀）通过 verify 定义工作流逐步澄清，不要求在 task.md 创建时确定。
 
@@ -615,28 +615,28 @@ Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械
 
 #### 5.4.1 验证定义工作流
 
-verify.md 记录验证方法，包含已确认和待讨论两类条目。
+VERIFY.md 记录验证方法，包含已确认和待讨论两类条目。
 
-**verify.md 职责边界：**
+**VERIFY.md 职责边界：**
 
-verify.md 只存两类：
+VERIFY.md 只存两类：
 - **Constraint** — 必须交互式对话确认，violation → `[×]`（参考信号，状态记录，不阻塞）
 - **Requirement（适合交互式对话的子集）** — 仅限适合对话验证的部分，非全集
 
-**验收检查 deterministic 验证不由 verify.md 条目承载，由 `[(.)]` marker 直接执行。语义对齐通过对话确认，不写入 verify.md。
+**验收检查 deterministic 验证不由 VERIFY.md 条目承载，由 `[(.)]` marker 直接执行。语义对齐通过对话确认，不写入 VERIFY.md。
 
 **三方分工：**
 
 * **人** — 提出验证需求（"我想验证 X"）
 * **Agent** — 提出验证方法（"用什么手段验证，技术上如何实现"）
-* **人** — 确认后将标记从 `[]` / `()` / `{}` 改为 `[.]` / `(.)` / `{.}`，写入 verify.md
+* **人** — 确认后将标记从 `[]` / `()` / `{}` 改为 `[.]` / `(.)` / `{.}`，写入 VERIFY.md
 
 **verify 定义时机：**
 
-* **create 时**：任务创建阶段，人提出验证需求，Agent 以 `[]` / `()` / `{}` 前缀写入 verify.md，开始澄清
+* **create 时**：任务创建阶段，人提出验证需求，Agent 以 `[]` / `()` / `{}` 前缀写入 VERIFY.md，开始澄清
 * **生命周期中**：任何轮次结束后，人可提出新的验证需求或更新已有验证方法
 
-**verify.md 条目标记规则：**
+**VERIFY.md 条目标记规则：**
 
 ```markdown
 ## Requirements
@@ -652,11 +652,11 @@ verify.md 只存两类：
 {}   C-2  skip     待讨论                       # 待讨论，不执行
 ```
 
-**verify.md 内容变更规则：** 验证过程中若发现某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态，不直接删除历史记录。
+**VERIFY.md 内容变更规则：** 验证过程中若发现某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态，不直接删除历史记录。
 
 **verify 类型标记：**
 
-verify.md 中每条验证条目由「类型前缀」和「有效性标记」共同决定含义：
+VERIFY.md 中每条验证条目由「类型前缀」和「有效性标记」共同决定含义：
 
 | 前缀 | 类型 | 说明 |
 |---|---|---|
@@ -683,11 +683,11 @@ verify.md 中每条验证条目由「类型前缀」和「有效性标记」共�
 [×]  C-3  failed  发现了未声明的全局状态——suspended，等待解决
 ```
 
-**verify.md 写入前提：** 人确认方法后写入，未经人确认的内容不允许写入 verify.md。
+**VERIFY.md 写入前提：** 人确认方法后写入，未经人确认的内容不允许写入 VERIFY.md。
 
 #### 5.4.2 三状态与 amend 命令
 
-verify.md 条目有三个状态：
+VERIFY.md 条目有三个状态：
 
 | 状态 | marker | 可作为执行依据 | 可 amend |
 |------|--------|--------------|---------|
@@ -739,7 +739,7 @@ verify.md 条目有三个状态：
 - `[×]` = 约束违规中（参考信号，不阻塞，解决后继续）
 - 每轮次必须重新验证
 
-**`/cap amend` 命令：** 在任意时刻修正 verify.md 条目。仅允许未确认条目（`[]` / `()` / `{}`）；已确认条目（`[.]` / `(.)` / `{.}`）执行前可 amend，执行后不可；已完成条目（`[\✓]` / `(\✓)` / `{\✓}`）非持续性不可修改，提示「已完成」；持续性可退回 `[.]` 重新验证；Constraint 的 `[×]`（违规中）可 amend（解决后转为 `[\✓]`）。amend 记录追加到 session.md（可审计）。
+**`/cap amend` 命令：** 在任意时刻修正 VERIFY.md 条目。仅允许未确认条目（`[]` / `()` / `{}`）；已确认条目（`[.]` / `(.)` / `{.}`）执行前可 amend，执行后不可；已完成条目（`[\✓]` / `(\✓)` / `{\✓}`）非持续性不可修改，提示「已完成」；持续性可退回 `[.]` 重新验证；Constraint 的 `[×]`（违规中）可 amend（解决后转为 `[\✓]`）。amend 记录追加到 session.md（可审计）。
 
 #### 5.4.3 四层检验关卡
 
@@ -758,7 +758,7 @@ verify.md 条目有三个状态：
 
 **决策执行规则：**
 
-检验完成后结果写入 `verify.md`，由主 Agent 从 `verify.md` 读取并决策下一步。
+检验完成后结果写入 `VERIFY.md`，由主 Agent 从 `VERIFY.md` 读取并决策下一步。
 
 语义对齐验证（Tier 3）PASS + 所有进度验证（Tier 1）和需求验证（Tier 2）已满足 → Agent 可标记任务完成
 语义对齐验证（Tier 3）FAIL → amend 循环（新增/修改 Requirement/Constraint → 重规划 → 继续）
@@ -790,9 +790,9 @@ ABANDONED 由 Agent 主动标记，与检验结果无关。
 | Tier 2 | 需求验证 | Requirements 验收检查 | 运行测试命令：执行可验证动作，记录命令输出 | task.md, session.md |
 | Tier 3 | 语义对齐验证 | 语义对齐检查 | LLM 推断：Verify Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
 
-**需求验证的关键约束：** 需求验证 deterministic 验证：`[(.)]` / `(\\.)` / `{\\.}` marker 为直接执行指令，由 Verify Agent 执行对应命令。语义对齐验证（Tier 3）：通过对话确认 Picture 与实际产出的语义偏差，不写入 verify.md。若验证过程中发现 verify.md 某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态。
+**需求验证的关键约束：** 需求验证 deterministic 验证：`[(.)]` / `(\\.)` / `{\\.}` marker 为直接执行指令，由 Verify Agent 执行对应命令。语义对齐验证（Tier 3）：通过对话确认 Picture 与实际产出的语义偏差，不写入 VERIFY.md。若验证过程中发现 VERIFY.md 某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态。
 
-**Verify Agent 输出约束：** Verify Agent 只报告事实，不给出修复建议，不判断"主 Agent 应该怎么做"，不修改 task.md / session.md / gotchas.md，不直接标记任务为 COMPLETED 或 ABANDONED。FAIL 结论写入 verify.md 后，Verify Agent 的职责结束，决策权回到主 Agent。
+**Verify Agent 输出约束：** Verify Agent 只报告事实，不给出修复建议，不判断"主 Agent 应该怎么做"，不修改 task.md / session.md / gotchas.md，不直接标记任务为 COMPLETED 或 ABANDONED。FAIL 结论写入 VERIFY.md 后，Verify Agent 的职责结束，决策权回到主 Agent。
 
 ```mermaid
 %% label：验证状态流转
@@ -828,13 +828,13 @@ stateDiagram-v2
 
 **子任务关闭协议：** 子任务进入 COMPLETED 时，父任务的认知锁定在"子任务 ID + 最终状态（COMPLETED / ABANDONED）"这条最小记录上。子任务可选择生成 closure note 作为人类可读归档，不影响父任务的状态平面组装。
 
-**主 Agent 决策空间：** 主 Agent 读取 verify.md 后可选择以下任意一条路径，无需外部批准：PASSED + 所有 Todo 完成后 → 调用 `complete_task` 进入 COMPLETED；PASSED + 发现新的 Todo → 继续执行；FAILED + 问题可修正 → 修正后重新触发检验；FAILED + 问题复杂 → 拆解子任务将问题分解；FAILED + 问题无解 → 调用 `abandon_task` 进入 ABANDONED；TIMEOUT → 重试检验或调用 `abandon_task`。主 Agent 不允许在 Verify Agent 未通过时调用 `complete_task`。
+**主 Agent 决策空间：** 主 Agent 读取 VERIFY.md 后可选择以下任意一条路径，无需外部批准：PASSED + 所有 Todo 完成后 → 调用 `complete_task` 进入 COMPLETED；PASSED + 发现新的 Todo → 继续执行；FAILED + 问题可修正 → 修正后重新触发检验；FAILED + 问题复杂 → 拆解子任务将问题分解；FAILED + 问题无解 → 调用 `abandon_task` 进入 ABANDONED；TIMEOUT → 重试检验或调用 `abandon_task`。主 Agent 不允许在 Verify Agent 未通过时调用 `complete_task`。
 
 **ABANDONED 的处理义务：** 任务进入 ABANDONED 时，主 Agent 有以下义务：在 gotchas.md 追加废弃原因（`如何处理` 字段写"任务废弃"及原因）；确保所有直接子任务也处于终态（COMPLETED 或 ABANDONED）。ABANDONED 不需要经过 Verify Agent 检验，主 Agent 可在任意时刻主动废弃。
 
 **Gotcha 追加协议：** Gotcha 是带外操作，不在标准轮次序列内，不阻塞主流程。必须追加 Gotcha 的情况：session.md 的 `Constraint Violations` 字段有记录（由宿主框架自动触发）；任务进入 ABANDONED。应当追加 Gotcha 的情况：执行路径发生非预期变更（发现原 Todo 无法执行）；发现 Requirements 或 Constraints 存在歧义并已处理。写入时机：在发现偏差的当前轮次写入，不要积累到任务结束再补写。
 
-**协议一致性保证：** CAP 不提供数据库级别的事务保证，一致性依赖调用方遵守以下规则——单写入方原则（每个文件只有一个写入方，不允许并发写入）；顺序追加原则（session.md / gotchas.md / verify.md 只追加不修改历史）；先写后读原则（主 Agent 写入 session.md 后再触发 Verify Agent 读取）。以下场景超出本协议当前版本的支持范围：并发子任务执行（多个子任务同时向同一父任务写入 session.md，未定义合并规则）；多 Agent 并行执行同一任务（违反单写入方原则）；事务性多步写入（若宿主框架崩溃在 session 写入和 verify 触发之间，协议不定义恢复行为）；跨 workspace 的任务依赖（协议只在单 workspace 内定义）。遇到这些场景时，宿主框架应在进入该场景前让度给人工干预。
+**协议一致性保证：** CAP 不提供数据库级别的事务保证，一致性依赖调用方遵守以下规则——单写入方原则（每个文件只有一个写入方，不允许并发写入）；顺序追加原则（session.md / gotchas.md / VERIFY.md 只追加不修改历史）；先写后读原则（主 Agent 写入 session.md 后再触发 Verify Agent 读取）。以下场景超出本协议当前版本的支持范围：并发子任务执行（多个子任务同时向同一父任务写入 session.md，未定义合并规则）；多 Agent 并行执行同一任务（违反单写入方原则）；事务性多步写入（若宿主框架崩溃在 session 写入和 verify 触发之间，协议不定义恢复行为）；跨 workspace 的任务依赖（协议只在单 workspace 内定义）。遇到这些场景时，宿主框架应在进入该场景前让度给人工干预。
 
 ### 5.6 Verify Agent 语义角色
 
@@ -863,9 +863,9 @@ CAP 的全部设计，都在试图让这个问题变得可回答。任务模型�
 | Node | 说明 |
 |------|------|
 | `Turn N` | 轮次节点（1.1, 1.2, 2.1...）。每轮次记录状态快照（code_progress/docs_progress/todos/status），由系统在轮次结束时自动追加。不含 Picture/Requirements/Constraints（从 task.md 获取） |
-| `Task` | 认知单元，包含 task.md、session.md、gotchas.md 三个物理子节点；gotchas.md 带外追加，不阻塞主流程；verify.md 与 Task 并列平铺，不属于 Task 的子节点 |
+| `Task` | 认知单元，包含 task.md、session.md、gotchas.md 三个物理子节点；gotchas.md 带外追加，不阻塞主流程；VERIFY.md 与 Task 并列平铺，不属于 Task 的子节点 |
 | `Subtask` | 子任务节点，嵌套于父任务目录下。通过目录深度表达依赖关系，父任务完成以所有子任务完成为前提 |
-| `Verify Agent` | 伴生组件，执行任务验证；Verify Agent 节点与 Task 节点并列平铺于同一任务目录下，verify.md 是其物理文件 |
+| `Verify Agent` | 伴生组件，执行任务验证；Verify Agent 节点与 Task 节点并列平铺于同一任务目录下，VERIFY.md 是其物理文件 |
 
 ---
 
