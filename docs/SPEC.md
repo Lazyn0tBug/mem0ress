@@ -75,7 +75,6 @@ graph TB
     subgraph TIERS["任务验证（Verify Agent）"]
         J["Verify Agent\n任务验证执行器"]
         C["约束验证"]
-        T1["进度检查"]
         R["需求验证"]
         T3["语义对齐验证"]
     end
@@ -84,8 +83,9 @@ graph TB
     TASK --> SP
     TASK --> DP
     SP --> J
+    T0((("Tier 0\n进度检查")))
+    T0 -.->|本轮有 Todo 完成则设 pending_verify| J
     J --> C
-    J --> T1
     J --> R
     J -->|硬门槛| T3
 
@@ -119,7 +119,7 @@ graph TB
 - Task-local 状态平面（单任务认知边界）
 - 五个协议文档：`task.md` / `session.md` / `gotchas.md` / `VERIFY.md`（`completion_summary.md` 可选）
 - One-Agent-One-Task 责任模型
-- 四层任务验证（进度检查（Tier 0）/ 约束验证（Tier 1）/ 需求验证（Tier 2）/ 语义对齐验证（Tier 3））
+- 三层任务验证（约束验证 / 需求验证 / 语义对齐验证）+ Tier 0 自动进度检查
 - 语义对齐结构化输出协议（Picture Claims / Evidence Mapping / Residual Gap / UNCERTAIN）
 - 任务信息平面（状态平面 + 数据平面）
 - 父子任务两条通信通道
@@ -451,7 +451,7 @@ graph TD
 | FAQ.md | 设计哲学：认知所有权、聚焦原则等核心问题 |
 | `docs/example/` | 示例集：3 个完整案例（oauth-sso / whitepaper / website） |
 
-**文件读写权限：** 每个文件有唯一的写入方。主 Agent 读写 task.md（覆盖写 + Todo 更新），追加写 session.md 和 gotchas.md；Verify Agent 只追加写 VERIFY.md，只读取 task.md、session.md、gotchas.md；VERIFY.md 由人确认后写入，`[]` / `()` / `{}` 条目由 Agent 维护。写入规则：session.md / gotchas.md / VERIFY.md 只追加不修改历史；task.md 是唯一允许覆盖写的文件；task.md 的 Picture / Requirements / Constraints 一旦写入不允许修改；VERIFY.md 中只有 `[.]` / `(.)` / `{.}` 条目可作为执行依据，`[]` / `()` / `{}` 条目仅作记录。
+**文件读写权限：** 每个文件有唯一的写入方。主 Agent 读写 task.md（覆盖写 + Todo 更新），追加写 session.md 和 gotchas.md；Verify Agent 只追加写 VERIFY.md，只读取 task.md、session.md、gotchas.md；VERIFY.md 由人确认后写入，`[]` / `()` / `{}` 条目由 Agent 维护。写入规则：session.md / gotchas.md / VERIFY.md 只追加不修改历史；task.md 是唯一允许覆盖写的文件；task.md 的 Picture / Requirements / Constraints 在创建时写入，可通过 amend 修正；VERIFY.md 中只有 `[.]` / `(.)` / `{.}` 条目可作为执行依据，`[]` / `()` / `{}` 条目仅作记录。
 
 ```plaintext
 .cap/tasks/
@@ -540,12 +540,13 @@ Agent 不得替代 Verify Agent 做出语义对齐判断，不得由状态平面
   1. 认知构建：主 Agent 读取状态平面（PlaneAssembler 实时组装）
   2. 执行：主 Agent 执行 Todo；可选：带外追加 gotchas.md
   3. Session 写入：主 Agent 追加 session.md 快照；更新 task.md Todo 状态
-  4. Tier 0 观察 + 验证触发判断：
-     每轮次：Tier 0 自动执行（进度检查，更新状态快照，不触发 Tier 3）
-     验证触发：执行完整验证路径（见 §5.4.3）
-  5. 决策：主 Agent 自主决策下一步
+  4. Tier 0 进度检查 → 若有 Todo 本轮完成则设置 `pending_verify`
+  5. 若 `pending_verify` 有值则触发 Verify（三层检验）
+  6. 决策：主 Agent 自主决策下一步
 轮次结束
 ```
+
+**pending_verify 机制**：Tier 0 每轮次结束时自动执行，检测本轮完成的 Todo，将其记录到 session 快照的 `pending_verify` 字段。Verify 执行完成后清除该字段。
 
 #### 5.1.2 参与方与职责边界
 
@@ -553,26 +554,21 @@ Agent 不得替代 Verify Agent 做出语义对齐判断，不得由状态平面
 
 **主 Agent（Main Agent）**负责执行任务，包括：创建任务、拆解 Todo、推进执行、写入 session 快照、触发 Verify Agent、读取 Verify 结论、自主决策下一步（修正 / 完成 / 废弃）。主 Agent 不执行检验逻辑，不写 VERIFY.md。
 
-**Verify Agent（Verify Agent）**负责检验任务，包括：被动等待主 Agent 触发，读取文件系统快照，执行四层检验，将结论写入 VERIFY.md。Verify Agent 不执行任何修复，不参与执行决策，不读取主 Agent 的执行历史，不写除 VERIFY.md 之外的任何文件。
+**Verify Agent（Verify Agent）**负责检验任务，包括：被动等待主 Agent 触发，读取文件系统快照，执行三层检验，将结论写入 VERIFY.md。Verify Agent 不执行任何修复，不参与执行决策，不读取主 Agent 的执行历史，不写除 VERIFY.md 之外的任何文件。
 
 **宿主框架（Host Framework）**负责保障协议运行的基础设施，包括：管理文件系统布局、保证 Verify Agent 与主 Agent 的上下文隔离、向 Verify Agent 注入 task_id、处理 VERIFYING 超时保护。宿主框架不参与任务执行逻辑，不干预 Verify Agent 的检验结论。
 
-#### 5.1.3 验证触发条件
+#### 5.1.3 验证触发机制
 
-验证触发方式有三种（触发后统一执行同一路径）：
+**三层验证由 `pending_verify` 信号触发。**
 
-```
-每 todo 完成 / 人主动 verify / 达到阈值 → 执行完整验证路径（见 §5.4.3）
-```
+Tier 0 每轮次结束时自动执行，检测本轮是否有 Todo 完成。若有，则将本轮完成的 Todo 记录写入 session 快照的 `pending_verify` 字段。主 Agent 读取到 `pending_verify` 有值时，触发宿主框架启动 Verify Agent。
 
-- 每有一个 todo 从 `[]` 变为 `[\✓]`，自动触发验证
-- 人主动提出 verify 时，触发验证
-- 达到最大间隔阈值时，强制触发验证
-- Tier 3 作为闭合条件自动出现在末端
+**触发方式：**
+- 自动触发：Todo 完成 → Tier 0 设置 `pending_verify` → Verify 执行 → 清除 `pending_verify`
+- 手动触发：人主动请求 verify 时，主 Agent 设置 `pending_verify` 并触发 Verify
 
-**Tier 0 的观察动作：** 每轮次结束时，系统自动执行 Tier 0（进度检查）并更新状态快照。这是观察动作，不属于 verify 操作，不触发 Tier 3。
-
-**触发是主 Agent 的主动动作：** 人提出 verify 需求后，由主 Agent 触发宿主框架启动 Verify Agent。Verify Agent 被动等待，不主动发起验证。
+**Tier 3 作为闭合条件：** Tier 3 只能出现在验证路径末端，不能单独触发。
 
 #### 5.1.4 VERIFYING 超时保护
 
@@ -801,27 +797,23 @@ amend 记录追加到 session.md（可审计）。
 
 #### 5.4.3 验证单路径模型
 
-触发条件见 §5.1.3，触发后统一执行以下路径：
+触发条件：进度检查检测到 `pending_verify` 有值（见 §5.1.3），触发后统一执行以下路径：
 
 ```
-Tier 0：进度检查（观察动作，不属于 verify，不触发 Tier 3）
 Tier 1：Constraint 违规检查
 Tier 2：deterministic 验证（命令式验证方法）
 Tier 3：前两层通过后自动触发，作为闭合条件
 ```
 
-Tier 0 每轮次结束时自动执行（进度检查，更新状态快照）。
-
 **Tier 3 无独立触发语义：** Tier 3 只能出现在路径的末端，不能单独触发。
 
-**四层检验各层性质：**
+**三层检验各层性质：**
 
-| Tier | 名称 | 性质 | 是否算 verify |
-|------|------|------|--------------|
-| Tier 0 | 进度检查 | 观察动作，每轮次执行，更新状态快照 | 否（观察） |
-| Tier 1 | 约束验证 | 参考信号，Constraint 违规不等同于任务失败，Agent 可 loop 或忽略 | 是 |
-| Tier 2 | 需求验证 | deterministic 验证，可 replay，逐步满足，不阻塞 | 是 |
-| Tier 3 | 语义对齐验证 | **唯一硬门槛**，无独立触发语义，作为闭合条件出现 | 是 |
+| Tier | 名称 | 性质 |
+|------|------|------|
+| Tier 1 | 约束验证 | 参考信号，Constraint 违规不等同于任务失败，Agent 可 loop 或忽略 |
+| Tier 2 | 需求验证 | deterministic 验证，可 replay，逐步满足，不阻塞 |
+| Tier 3 | 语义对齐验证 | **唯一硬门槛**，无独立触发语义，作为闭合条件出现 |
 
 **决策执行规则：**
 
@@ -839,7 +831,6 @@ ABANDONED 由 Agent 主动标记，与检验结果无关。
 
 | Tier | 检查层 | 语义职责 | 执行方式 | 依赖文件 |
 |------|--------|---------|---------|---------|
-| Tier 0 | 进度检查 | Todo & Subtask 完成检查（观察，不算 verify） | 纯逻辑：读取 task.md Todo 状态 + 扫描子任务目录 | task.md |
 | Tier 1 | 约束验证 | Constraints 约束检查 | 纯逻辑：扫描 session.md + gotchas.md 中的违反记录 | task.md, session.md, gotchas.md |
 | Tier 2 | 需求验证 | Requirements 验收检查 | 运行测试命令：执行可验证动作，记录命令输出 | task.md, session.md |
 | Tier 3 | 语义对齐验证 | 语义对齐检查（无独立触发语义） | LLM 推断：Verify Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
@@ -860,10 +851,10 @@ verify:
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#fce4ec', 'primaryTextColor': '#880e4f', 'primaryBorderColor': '#c62828', 'lineColor': '#90a4ae' } } }%%
 stateDiagram-v2
     [*] --> IN_PROGRESS
-    IN_PROGRESS --> Tier0: 每轮次（观察，不触发 Tier 3）
-    Tier0 --> IN_PROGRESS: 更新状态快照
+    IN_PROGRESS --> Tier0: 每轮次（进度检查）
+    Tier0 --> IN_PROGRESS: 有 Todo 完成则设 pending_verify
 
-    IN_PROGRESS --> Verify: 每 todo 完成 / 人主动 verify / 达到阈值
+    IN_PROGRESS --> Verify: pending_verify 有值
     Verify --> Tier1
     Tier1 --> Tier2: 无 violation 或已记录
     Tier2 --> Tier3: Tier 1/2 通过

@@ -14,7 +14,7 @@
 | 参与方 | 职责 |
 |--------|------|
 | **主 Agent（Main Agent）** | 执行任务：创建任务、拆解 Todo、推进执行、写入 session 快照、触发 Verify Agent、读取 Verify 结论、自主决策 |
-| **Verify Agent** | 检验任务：被动等待触发、执行四层任务验证、写入 VERIFY.md |
+| **Verify Agent** | 检验任务：被动等待 `pending_verify` 触发、执行 Tier 1/2/3 检验、写入 VERIFY.md |
 | **宿主框架（Host Framework）** | 基础设施：管理文件系统布局、隔离上下文、注入 task_id、处理 VERIFYING 超时（默认 180s） |
 
 ---
@@ -34,11 +34,14 @@
 
 ```
 轮次开始
-  1. 认知构建 → 2. 执行（可选追加 gotchas.md）→ 3. Session 写入 → 4. 检验触发（条件）→ 5. 决策
+  1. 认知构建 → 2. 执行（可选追加 gotchas.md）→ 3. Session 写入
+  4. Tier 0 进度检查 → 若有 Todo 本轮完成则设置 pending_verify
+  5. 若 pending_verify 有值则触发 Verify（Tier 1/2/3）
+  6. 决策
 轮次结束
 ```
 
-**检验触发条件**（满足以下任一条件即触发）：所有 Todo 已完成；主 Agent 主动请求；利益相关者显式请求。
+**pending_verify 机制**：每轮次结束时，Tier 0 检测本轮完成的 Todo，将其记录到 session 快照的 `pending_verify` 字段。Verify Agent 执行完成后清除该字段。
 
 ---
 
@@ -66,17 +69,15 @@
 
 ## 5. 任务验证语义
 
-| Tier | 检查层 | 语义职责 | 性质 | 是否触发 Tier 3 |
-|------|--------|---------|------|--------------|
-| Tier 0 | 进度检查 | Todo 完成检查 — 是否完成计划项 | 观察动作（每轮次执行），不属于 verify 操作 | 否（观察） |
-| Tier 1 | 约束验证 | Constraint 约束检查 — 是否触碰红线 | 参考信号（loop 或忽略） | 是 |
-| Tier 2 | 需求验证 | VERIFY.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） | 是 |
-| Tier 3 | 语义对齐验证 | 语义对齐 — Requirements 能否支撑 Picture | **唯一硬门槛**，无独立触发语义 | 仅作路径末端 |
+| Tier | 检查层 | 语义职责 | 性质 |
+|------|--------|---------|------|
+| Tier 1 | 约束验证 | Constraint 约束检查 — 是否触碰红线 | 参考信号（loop 或忽略） |
+| Tier 2 | 需求验证 | VERIFY.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） |
+| Tier 3 | 语义对齐验证 | 语义对齐 — Requirements 能否支撑 Picture | **唯一硬门槛**，无独立触发语义 |
 
 **验证单路径模型：** 验证触发有三种方式（每 todo 完成 / 人主动 verify / 达到阈值），触发后统一执行完整验证路径，见 SPEC.md §5.4.3。
 
 **各 Tier 职责：**
-- Tier 0：进度检查（观察动作，不属于 verify，不触发 Tier 3）
 - Tier 1：Constraint 违规检查
 - Tier 2：deterministic 验证
 - Tier 3：前两层通过后自动触发，作为闭合条件
@@ -129,13 +130,13 @@
 
 | 文件 | 写入者 | 约束 |
 |------|--------|------|
-| task.md | 主 Agent | cognitive_triad 创建后不可修改 |
+| task.md | 主 Agent | 认知三要素在创建时写入，可通过 amend 修正 |
 | session.md | 主 Agent | 追加，不覆盖历史 |
 | gotchas.md | 主 Agent | 追加，不删除历史 |
-| VERIFY.md | 主 Agent / Verify Agent | 追加；`[.] / (.) / {.}` 条目可作为执行依据，`[] / () / {}` 仅作记录；已完成条目（`[\✓]` / `(\✓)` / `{\✓}`）不可 amend |
+| VERIFY.md | 主 Agent / Verify Agent | 追加；`[.] / (.) / {.}` 条目可作为执行依据，`[] / () / {}` 仅作记录；已完成条目（`[✓]`）可退回 `[.]` 重新验证；Verify 执行完成后清除 `pending_verify` |
 
 **写入权限语义**：
-- **主 Agent** 对 task.md 只有一次写入权（创建时），之后不可修改认知三要素
+- **主 Agent** 对 task.md 只有一次写入权（创建时），认知三要素在创建时写入，可通过 amend 修正
 - **Verify Agent** 对 VERIFY.md 追加，不读取 runtime 内存状态（隔离验证）
 
 ---
