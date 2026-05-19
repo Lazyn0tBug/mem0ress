@@ -158,9 +158,11 @@ Judge verification surface:
 
 ## Tier Definitions
 
-| Tier | Responsibility |
-|------|----------------|
-| Tier 0 | Constraint violations check |
-| Tier 1 | Todo completion check |
-| Tier 2 | verify.md marker execution |
-| Tier 3 | Semantic alignment (Agent judgment) |
+| Tier | Responsibility | Nature |
+|------|----------------|--------|
+| Tier 0 | Constraint violations check | Reference signal (non-blocking) |
+| Tier 1 | Todo completion check | Reference constraint (non-blocking) |
+| Tier 2 | verify.md marker execution | Assessment reference (gradual) |
+| Tier 3 | Semantic alignment | **Hard gate** (FAIL triggers amend loop) |
+
+**Pre-requisite for Tier 3**: all Tier 1/2 entries must be satisfied (or explicitly skipped by human).

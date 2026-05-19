@@ -67,14 +67,18 @@
 
 ## 5. Judge Tier 语义
 
-|| Tier | 语义职责 | 失败行为 |
-|------|---------|---------|
-| **Tier 0** | Constraint 约束检查 — 是否触碰红线 | SUSPEND（暂停，不继续）+ 人判断 |
-| **Tier 1** | Todo 完成检查 — 是否完成所有计划项 | 立即 FAIL |
-| **Tier 2** | verify.md marker 执行 — requirements 条件是否满足 | 立即 FAIL |
-| **Tier 3**（条件） | 语义对齐 — Requirements 能否支撑 Picture | PASS / FAIL / UNCERTAIN |
+| Tier | 语义职责 | 性质 | 失败行为 |
+|------|---------|------|---------|
+| **Tier 0** | Constraint 约束检查 — 是否触碰红线 | 参考信号（loop 或忽略） | 状态记录，不阻塞 |
+| **Tier 1** | Todo 完成检查 — 是否完成计划项 | 参考约束（loop 或忽略） | 状态记录，不阻塞 |
+| **Tier 2** | verify.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） | 状态记录，不阻塞 |
+| **Tier 3** | 语义对齐 — Requirements 能否支撑 Picture | **唯一硬门槛** | FAIL → amend 循环 |
 
-**Tier 0 语义约束**：Constraint 违规不等于任务失败。违规时任务 SUSPEND，等待解决；解决后继续。人判断无法解决时可 override 继续（附理由）。Tier 3 语义约束：证据不足时必须返回 **UNCERTAIN**，不得强行 PASS。
+**进入 Tier 3 的前置条件**：必须所有 Tier 1/2 条目已满足（或已由人确认跳过）。
+
+**Tier 3 失败流程**：FAIL → 触发 amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 继续执行 → 重新检验。
+
+Tier 3 语义约束：证据不足时必须返回 **UNCERTAIN**，不得强行 PASS。
 
 ---
 

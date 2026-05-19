@@ -379,17 +379,19 @@ activated_at: '2026-05-14T10:00:00+09:00'
   - Judge 只接收 task_id + filesystem protocol
   - Judge 不得接收 runtime memory / hidden state / full history
 Tier 执行:
-  - Tier 0: constraint violations（同步执行）
-  - Tier 1: todo completion（同步执行）
-  - Tier 2: verify.md marker（读取 `[(.)/(.)/{.}]` 执行命令；`[\✓]/(\✓)/{\✓}` 为已完成状态，不可 amend）
-  - Tier 3: semantic alignment（Agent 自主判断）
+  - Tier 0: constraint violations（参考信号，不阻塞；可 loop 或忽略）
+  - Tier 1: todo completion（参考约束，不阻塞；可 loop 或忽略）
+  - Tier 2: verify.md marker（逐步迭代，动态满足；不阻塞）
+  - Tier 3: semantic alignment（唯一硬门槛）
 输出:
-  Tier 0: SUSPEND（violation → 暂停，不 FAIL；解决后继续；人可 override）
-  Tier 1: PASS/FAIL
-  Tier 2: PASS/FAIL（stub）
-  Tier 3: UNCERTAIN / PASS / FAIL
+  Tier 0: 状态记录（loop 或忽略）
+  Tier 1: 状态记录（loop 或忽略）
+  Tier 2: 状态记录（逐步满足）
+  Tier 3: PASS / UNCERTAIN / FAIL
 
-Tier 0 语义约束：Constraint 违规不等于任务失败。违规时任务 SUSPEND，等待解决；解决后继续。人判断无法解决时可 override 继续（附理由）。Tier 3 语义约束：证据不足时必须返回 UNCERTAIN，不得强行 PASS。
+进入 Tier 3 前置条件：所有 Tier 1/2 条目已满足或已确认跳过
+
+Tier 3 FAIL → amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 重新检验
 
 ### 7.5.1 verify.md 三类实体状态机
 

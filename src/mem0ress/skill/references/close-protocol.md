@@ -28,12 +28,11 @@ Skill triggers Judge verification
         ↓
 Judge reviews filesystem protocol (NO runtime memory)
         ↓
-Judge returns: Tier 0/1/2 results → PASS/FAIL
+Judge returns: Tier 0/1/2 results (informational, non-blocking)
         ↓
 Agent evaluates:
-  Judge PASS + no semantic gaps → mem0 close <task_id>
-  Judge FAIL → Address specific failures, re-verify
-  Semantic misalignment → Clarification Mode first
+  Tier 3 PASS + all Tier 1/2 satisfied → mem0 close <task_id>
+  Tier 3 FAIL → amend loop (new/updated Requirement/Constraint → new Todo plan → re-execute)
         ↓
 CLI closes task (judge + mark COMPLETED atomically)
 ```
@@ -52,7 +51,7 @@ Before triggering Judge, Agent checks:
 
 **Note on persistent requirements**: Requirements marked `persistent: true` transition to `[\✓]` when at least one todo is completed and one session round ends with Tier 2 pass. Their `[\✓]` marks phase completion, not permanent closure — new semantic drift in subsequent rounds can trigger re-verification (revert to `[.]`).
 
-**Note on Constraint violations**: Constraint violations do NOT cause FAIL. Instead, the task enters SUSPEND state (`[×]` in verify.md) until resolved. Human may override with justification if the constraint cannot be resolved.
+**Note on Constraint violations**: Constraint violations are Tier 0 signals — informational only, non-blocking. Agent may loop (modify and retry) or ignore. If ignored and resolved later, the task continues normally.
 
 If semantic misalignment exists → Clarification Mode first.
 
@@ -60,11 +59,12 @@ If semantic misalignment exists → Clarification Mode first.
 
 Then Judge Agent evaluates:
 
-| Tier | What Judge Checks |
-|------|-------------------|
-| Tier 0 | Constraint violations — SUSPEND (do not FAIL), wait for resolution |
-| Tier 1 | Todo completion — Checklist verification |
-| Tier 2 | Automated validation — `[(.)]` / `(\.)` / `{\.}` marker execution |
+| Tier | What Judge Checks | Nature |
+|------|-------------------|--------|
+| Tier 0 | Constraint violations — informational signal, loop or ignore | Reference signal (non-blocking) |
+| Tier 1 | Todo completion — informational, loop or ignore | Reference constraint (non-blocking) |
+| Tier 2 | Automated validation — `[(.)]` / `(\.)` / `{\.}` marker execution | Assessment reference (gradual) |
+| Tier 3 | Semantic alignment — only hard gate | **Hard gate** |
 
 Judge does NOT check semantic alignment — that's Agent's responsibility.
 

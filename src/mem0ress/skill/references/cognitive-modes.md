@@ -106,10 +106,10 @@ Judge MUST NOT receive:
 ### Completion Criteria
 
 Judge returns structured verdict:
-- Tier 0: PASS | FAIL (constraint violations)
-- Tier 1: PASS | FAIL (todo completion)
-- Tier 2: PASS | FAIL | SKIP (verify.md marker results)
-- Tier 3: ALIGNED | MISALIGNED | UNCERTAIN (semantic judgment)
+- Tier 0: informational (constraint violations — loop or ignore, non-blocking)
+- Tier 1: informational (todo completion — loop or ignore, non-blocking)
+- Tier 2: gradual (verify.md markers — progressive, non-blocking)
+- Tier 3: hard gate (semantic alignment — FAIL triggers amend loop; returns ALIGNED | MISALIGNED | UNCERTAIN)
 
 ### Post-Judge Decision
 
