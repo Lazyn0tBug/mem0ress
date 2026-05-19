@@ -112,27 +112,6 @@ graph TB
 
 附录提供状态机、节点类型和技术细节的完整参考。
 
-## 附录 0: MVP Scope（v0.1 边界定义）
-
-**v0.1-alpha 必须支持：**
-- 本地文件系统（`.cap/` 目录结构）
-- Task-local 状态平面（单任务认知边界）
-- 五个协议文档：`task.md` / `session.md` / `gotchas.md` / `VERIFY.md`（`completion_summary.md` 可选）
-- One-Agent-One-Task 责任模型
-- 三层任务验证（约束验证 / 需求验证 / 语义对齐验证）+ 进度检查
-- 语义对齐结构化输出协议（Picture Claims / Evidence Mapping / Residual Gap / UNCERTAIN）
-- 任务信息平面（状态平面 + 数据平面）
-- 父子任务两条通信通道
-
-**v0.1-alpha 不支持（列入 v0.2 路线图）：**
-- 多 Worker 并发写入
-- 全自动任务拆分
-- 多 Agent 调度
-- 数据库后端
-- 向量记忆
-- 完整 Schema 校验（SCHEMA.md）
-- VSCode / GitHub / Slack 工具集成
-
 ## 2. 核心洞察
 
 三个洞察之间存在一条推导链——前一个洞察是后一个洞察的前提。
@@ -257,11 +236,13 @@ CAP 的概念体系围绕任务展开。本章描述任务的核心概念、两�
 
 **Constraints（约束）**是任务的外部属性，为任务的过程和结果定义边界条件。Constraints 不是任务的第三层组成部分，而是贯穿任务全程的约束线。违反 Constraints 即使 Requirements 全部满足、Picture 看似达成，任务也不算完成。Agent 联合领域知识推导 Constraints，利益相关者确认。违反时系统必须能检测到并拦住——如果系统感知不到，就不适合作为 Constraints，应该放到 Requirements 里。
 
-**三者的逻辑关系：**
+**三者的逻辑关系：** 见下表与图 3。
 
-`Picture` 锚定方向，`Requirements` 提供可检验的验收条件，`Constraints` 划定不可逾越的边界——三者共同构成任务完整定义。`Requirements` 是 `Picture` 的必要条件，`Picture` 是任务完成的充分条件。`Constraints` 独立于两者之外，作为贯穿全程的约束线存在。
-
-**模型要素的定义角色：**
+| 要素 | 定义角色 | 与其他要素的关系 |
+|------|---------|----------------|
+| Picture | 方向锚点 | 任务完成的充分条件 |
+| Requirements | 可验证标准 | Picture 的必要条件 |
+| Constraints | 边界约束 | 贯穿全程，独立于 Picture/Requirements |
 
 | 要素 | 主要定义者 | 参与者 |
 |------|-----------|--------|
@@ -451,7 +432,21 @@ graph TD
 | FAQ.md | 设计哲学：认知所有权、聚焦原则等核心问题 |
 | `docs/example/` | 示例集：3 个完整案例（oauth-sso / whitepaper / website） |
 
-**文件读写权限：** 每个文件有唯一的写入方。主 Agent 读写 task.md（覆盖写 + Todo 更新），追加写 session.md 和 gotchas.md；Verify Agent 只追加写 VERIFY.md，只读取 task.md、session.md、gotchas.md；VERIFY.md 由人确认后写入，`[]` / `()` / `{}` 条目由 Agent 维护。写入规则：session.md / gotchas.md / VERIFY.md 只追加不修改历史；task.md 是唯一允许覆盖写的文件；task.md 的 Picture / Requirements / Constraints 在创建时写入，可通过 amend 修正；VERIFY.md 中只有 `[.]` / `(.)` / `{.}` 条目可作为执行依据，`[]` / `()` / `{}` 条目仅作记录。
+**文件读写权限：**
+
+| 文件 | 写入方 | 写入方式 | 读取权 |
+|------|-------|---------|--------|
+| task.md | 主 Agent | 覆盖写（Picture/Requirements/Constraints/Todo） | 主 Agent、Verify Agent |
+| session.md | 主 Agent | 追加写（轮次快照序列） | 主 Agent、Verify Agent |
+| gotchas.md | 主 Agent | 追加写（偏差记录） | 主 Agent、Verify Agent |
+| VERIFY.md | Verify Agent（追加写）+ 人（确认后写入） | 追加写 | 主 Agent、Verify Agent |
+
+**写入规则：**
+
+- session.md / gotchas.md / VERIFY.md：只追加，不修改历史
+- task.md：唯一允许覆盖写的文件
+- task.md 的 Picture / Requirements / Constraints：在创建时写入，可通过 amend 修正
+- VERIFY.md：`[.]` / `(. )` / `{.}` 条目可作为执行依据，`[]` / `()` / `{}` 条目仅作记录
 
 ```plaintext
 .cap/tasks/
@@ -552,19 +547,17 @@ Agent 不得替代 Verify Agent 做出语义对齐判断，不得由状态平面
 
 协议有三个参与方，职责严格隔离，不允许跨越。
 
-**主 Agent（Main Agent）**负责执行任务，包括：创建任务、拆解 Todo、推进执行、写入 session 快照、触发 Verify Agent、读取 Verify 结论、自主决策下一步（修正 / 完成 / 废弃）。主 Agent 不执行检验逻辑，不写 VERIFY.md。
-
-**Verify Agent（Verify Agent）**负责检验任务，包括：被动等待主 Agent 触发，读取文件系统快照，执行三层检验，将结论写入 VERIFY.md。Verify Agent 不执行任何修复，不参与执行决策，不读取主 Agent 的执行历史，不写除 VERIFY.md 之外的任何文件。
-
-**宿主框架（Host Framework）**负责保障协议运行的基础设施，包括：管理文件系统布局、保证 Verify Agent 与主 Agent 的上下文隔离、向 Verify Agent 注入 task_id、处理 VERIFYING 超时保护。宿主框架不参与任务执行逻辑，不干预 Verify Agent 的检验结论。
+| 参与方 | 职责范围 | 不做的事项 |
+|--------|---------|----------|
+| **主 Agent** | 执行任务（创建任务、拆解 Todo、推进执行、写入 session 快照、触发 Verify Agent、读取 Verify 结论、自主决策下一步） | 不执行检验逻辑，不写 VERIFY.md |
+| **Verify Agent** | 检验任务（被动等待触发、读取文件系统快照、执行三层检验、将结论写入 VERIFY.md） | 不执行任何修复，不参与执行决策，不写除 VERIFY.md 之外的任何文件 |
+| **宿主框架** | 保障协议运行的基础设施（管理文件系统布局、保证上下文隔离、向 Verify Agent 注入 task_id、处理 VERIFYING 超时保护） | 不参与任务执行逻辑，不干预 Verify Agent 的检验结论 |
 
 #### 5.1.3 验证触发机制
 
 **三层验证由 `pending_verify` 信号触发。**
 
 进度检查每轮次结束时自动执行，检测本轮是否有 Todo 完成。若有，则将本轮完成的 Todo 记录写入 session 快照的 `pending_verify` 字段。主 Agent 读取到 `pending_verify` 有值时，触发宿主框架启动 Verify Agent。
-
-**触发方式：**
 - 自动触发：Todo 完成 → 进度检查设置 `pending_verify` → Verify 执行 → 清除 `pending_verify`
 - 手动触发：人主动请求 verify 时，主 Agent 设置 `pending_verify` 并触发 Verify
 
@@ -575,12 +568,13 @@ Agent 不得替代 Verify Agent 做出语义对齐判断，不得由状态平面
 宿主框架负责 VERIFYING 状态的超时保护。**默认超时：180 秒。**
 
 超时后宿主框架的处理义务：
+
 1. 强制结束 Verify Agent 调用
 2. 在 VERIFY.md 追加超时记录（Turn + Timestamp + `Verdict: TIMEOUT`）
 3. 将 task.md status 从 VERIFYING 恢复为 IN_PROGRESS
 4. 通知主 Agent 检验超时，由主 Agent 决定是否重试
 
-宿主框架不允许在超时后直接标记任务为 FAILED 或 COMPLETED，决策权属于主 Agent。
+> 宿主框架不允许在超时后直接标记任务为 FAILED 或 COMPLETED，决策权属于主 Agent。
 
 ### 5.2 认知构建
 
@@ -600,7 +594,17 @@ Todo 步进拆解：在锚定模型后，Agent 将任务拆解为具体的机械
 
 **Todo 与 Subtask 的边界：** Todo 是任务内部的机械步，不是独立的认知单元。Subtask 是独立的 Task，有自己的 Picture/Requirements/Constraints 三要素，是完整的认知闭包。区分标准是：是否有独立的 Picture——有独立 Picture 的是 Subtask，没有独立 Picture 的是 Todo。父任务的 Todo 完成后，父任务本身即进入 VERIFYING 状态；父任务的 Subtask 完成后，只向父任务传递完成信号，不改变父任务的状态。
 
-**任务创建顺序：** 任务创建必须按以下顺序进行，不允许跳步：Step 1 定义 Picture → Step 2 从 Picture 推导 Requirements → Step 3 从 Picture 推导 Constraints → Step 4 冲突检测（Requirements 与 Constraints 是否矛盾）→ Step 5 若有矛盾与利益相关者协商直到矛盾消除 → Step 6 拆解 Todos → Step 7 写入 task.md，初始化 session.md / gotchas.md / VERIFY.md（空文件）。Step 4 不可跳过——矛盾的 Requirements / Constraints 写入后，Verify Agent 永远无法通过。
+**任务创建顺序：** 任务创建必须按以下顺序进行，不允许跳步：
+
+1. 定义 Picture
+2. 从 Picture 推导 Requirements
+3. 从 Picture 推导 Constraints
+4. 冲突检测（Requirements 与 Constraints 是否矛盾）
+5. 若有矛盾与利益相关者协商直到矛盾消除
+6. 拆解 Todos
+7. 写入 task.md，初始化 session.md / gotchas.md / VERIFY.md（空文件）
+
+> Step 4 不可跳过——矛盾的 Requirements / Constraints 写入后，Verify Agent 永远无法通过。
 
 **Requirements 合法性检查：** 在 Step 2 完成后，对每条 Requirement 执行合法性检查——必须有明确的验收标准（不允许"到时候再定"），验收标准必须是可判断的（不能依赖纯主观感受），不合法的 Requirement 不允许写入。验收标准的验证方式（`[] / () / {}` 类型前缀）通过 verify 定义工作流逐步澄清，不要求在 task.md 创建时确定。
 
@@ -617,9 +621,12 @@ VERIFY.md 记录验证方法，包含已确认和待讨论两类条目。
 **VERIFY.md 职责边界：**
 
 VERIFY.md 只存三类：
-- **Constraint** — 必须交互式对话确认，violation → `[×]`（参考信号，状态记录，不阻塞）
-- **Requirement** — Tier 2 对话的目标是生成确定性验证方法
-- **Picture** — Tier 3 对话的目标是对任务成果进行语言判断
+
+| 条目类型 | 验证方式 | 目的 |
+|---------|---------|------|
+| **Constraint** | 交互式对话确认，violation → `[×]`（参考信号，状态记录，不阻塞） | 确认约束是否被违反 |
+| **Requirement** | Tier 2 对话生成确定性验证方法 | 生成可执行的验证命令/步骤 |
+| **Picture** | Tier 3 对话对任务成果进行语言判断 | 评估整体语义对齐 |
 
 **验收检查 deterministic 验证不由 VERIFY.md 条目承载，由 `[(.)]` marker 直接执行。语义对齐通过对话确认，结论写入 Picture section，不在此文件定义具体标准。**
 
@@ -880,7 +887,24 @@ stateDiagram-v2
 
 **Gotcha 追加协议：** Gotcha 是带外操作，不在标准轮次序列内，不阻塞主流程。必须追加 Gotcha 的情况：session.md 的 `Constraint Violations` 字段有记录（由宿主框架自动触发）；任务进入 ABANDONED。应当追加 Gotcha 的情况：执行路径发生非预期变更（发现原 Todo 无法执行）；发现 Requirements 或 Constraints 存在歧义并已处理。写入时机：在发现偏差的当前轮次写入，不要积累到任务结束再补写。
 
-**协议一致性保证：** CAP 不提供数据库级别的事务保证，一致性依赖调用方遵守以下规则——单写入方原则（每个文件只有一个写入方，不允许并发写入）；顺序追加原则（session.md / gotchas.md / VERIFY.md 只追加不修改历史）；先写后读原则（主 Agent 写入 session.md 后再触发 Verify Agent 读取）。以下场景超出本协议当前版本的支持范围：并发子任务执行（多个子任务同时向同一父任务写入 session.md，未定义合并规则）；多 Agent 并行执行同一任务（违反单写入方原则）；事务性多步写入（若宿主框架崩溃在 session 写入和 verify 触发之间，协议不定义恢复行为）；跨 workspace 的任务依赖（协议只在单 workspace 内定义）。遇到这些场景时，宿主框架应在进入该场景前让度给人工干预。
+**协议一致性保证：** CAP 不提供数据库级别的事务保证，一致性依赖调用方遵守以下规则：
+
+| 规则 | 说明 |
+|------|------|
+| 单写入方原则 | 每个文件只有一个写入方，不允许并发写入 |
+| 顺序追加原则 | session.md / gotchas.md / VERIFY.md 只追加，不修改历史 |
+| 先写后读原则 | 主 Agent 写入 session.md 后再触发 Verify Agent 读取 |
+
+**超出本协议当前版本支持范围的场景：**
+
+| 场景 | 说明 |
+|------|------|
+| 并发子任务执行 | 多个子任务同时向同一父任务写入 session.md，未定义合并规则 |
+| 多 Agent 并行执行同一任务 | 违反单写入方原则 |
+| 事务性多步写入 | 若宿主框架崩溃在 session 写入和 verify 触发之间，协议不定义恢复行为 |
+| 跨 workspace 的任务依赖 | 协议只在单 workspace 内定义 |
+
+> 遇到这些场景时，宿主框架应在进入该场景前让度给人工干预。
 
 ### 5.6 Verify Agent 语义角色
 

@@ -72,10 +72,9 @@ graph TB
         DP["数据平面\n（当前代码版本）"]
     end
 
-    subgraph TIERS["任务验证（Verify Agent）"]
+    subgraph    TIERS["任务验证"]
         J["Verify Agent\n任务验证执行器"]
         C["约束验证"]
-        T1["进度检查"]
         R["需求验证"]
         T3["语义对齐验证"]
     end
@@ -84,10 +83,11 @@ graph TB
     TASK --> SP
     TASK --> DP
     SP --> J
+    T0((("进度检查")))
+    T0 -.->|本轮有 Todo 完成则设 pending_verify| J
     J --> C
-    J --> T1
     J --> R
-    J -->|硬门槛| T3
+    J -->|语义硬门槛| T3
 
     classDef prc fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef task fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
@@ -119,7 +119,7 @@ graph TB
 - Task-local 状态平面（单任务认知边界）
 - 五个协议文档：`task.md` / `session.md` / `gotchas.md` / `VERIFY.md`（`completion_summary.md` 可选）
 - One-Agent-One-Task 责任模型
-- 四层任务验证（进度检查（Tier 0）/ 约束验证（Tier 1）/ 需求验证（Tier 2）/ 语义对齐验证（Tier 3））
+- 三层任务验证（约束验证 / 需求验证 / 语义对齐验证）+ 进度检查
 - 语义对齐结构化输出协议（Picture Claims / Evidence Mapping / Residual Gap / UNCERTAIN）
 - 任务信息平面（状态平面 + 数据平面）
 - 父子任务两条通信通道
@@ -253,7 +253,7 @@ CAP 的概念体系围绕任务展开。本章描述任务的核心概念、两�
 
 `Picture` 之所以不可缺席，是因为 Agent 具备语义理解能力。传统编程依赖穷举测试用例来判定任务完成——所有分支必须被覆盖、所有边界必须被检验。而 Agent 可以理解自然语言描绘的图景，即使没有穷举测试，也能通过语义理解判断任务是否真正完成。这意味着可以用少量检验点配合语义理解来判定完成情况，而不必为每个细节编写测试。
 
-**Requirements（需求）**是任务完成的可验证标准。Requirements 将 Picture 转化为具体的检验点，但 Requirements 满足不等于任务满足——Requirements 是 Picture 满足的必要条件，而非充分条件。任务满足等价于 Picture 满足。Agent 依据 Picture 推导 Requirements，利益相关者确认。每个 Requirement 都必须有明确的验收标准——"界面美观大方"这种依赖主观判断的不是有效的 Requirements。可选标记 `persistent: true` 标识持续性需求（如"术语一致性"），此类需求的 `[\✓]` 仅表示"本次验证通过"，不代表 requirement 永久解决。
+**Requirements（需求）**是任务完成的可验证标准。Requirements 将 Picture 转化为具体的检验点，但 Requirements 满足不等于任务满足——Requirements 是 Picture 满足的必要条件，而非充分条件。任务满足等价于 Picture 满足。Agent 依据 Picture 推导 Requirements，利益相关者确认。每个 Requirement 都必须有明确的验收标准——"界面美观大方"这种依赖主观判断的不是有效的 Requirements。
 
 **Constraints（约束）**是任务的外部属性，为任务的过程和结果定义边界条件。Constraints 不是任务的第三层组成部分，而是贯穿任务全程的约束线。违反 Constraints 即使 Requirements 全部满足、Picture 看似达成，任务也不算完成。Agent 联合领域知识推导 Constraints，利益相关者确认。违反时系统必须能检测到并拦住——如果系统感知不到，就不适合作为 Constraints，应该放到 Requirements 里。
 
@@ -451,7 +451,7 @@ graph TD
 | FAQ.md | 设计哲学：认知所有权、聚焦原则等核心问题 |
 | `docs/example/` | 示例集：3 个完整案例（oauth-sso / whitepaper / website） |
 
-**文件读写权限：** 每个文件有唯一的写入方。主 Agent 读写 task.md（覆盖写 + Todo 更新），追加写 session.md 和 gotchas.md；Verify Agent 只追加写 VERIFY.md，只读取 task.md、session.md、gotchas.md；VERIFY.md 由人确认后写入，`[]` / `()` / `{}` 条目由 Agent 维护。写入规则：session.md / gotchas.md / VERIFY.md 只追加不修改历史；task.md 是唯一允许覆盖写的文件；task.md 的 Picture / Requirements / Constraints 一旦写入不允许修改；VERIFY.md 中只有 `[.]` / `(.)` / `{.}` 条目可作为执行依据，`[]` / `()` / `{}` 条目仅作记录。
+**文件读写权限：** 每个文件有唯一的写入方。主 Agent 读写 task.md（覆盖写 + Todo 更新），追加写 session.md 和 gotchas.md；Verify Agent 只追加写 VERIFY.md，只读取 task.md、session.md、gotchas.md；VERIFY.md 由人确认后写入，`[]` / `()` / `{}` 条目由 Agent 维护。写入规则：session.md / gotchas.md / VERIFY.md 只追加不修改历史；task.md 是唯一允许覆盖写的文件；task.md 的 Picture / Requirements / Constraints 在创建时写入，可通过 amend 修正；VERIFY.md 中只有 `[.]` / `(.)` / `{.}` 条目可作为执行依据，`[]` / `()` / `{}` 条目仅作记录。
 
 ```plaintext
 .cap/tasks/
@@ -527,11 +527,9 @@ Agent 不得替代 Verify Agent 做出语义对齐判断，不得由状态平面
 
 ## 5. 逻辑与流程设计
 
-Task 的执行循环围绕三个核心动作展开：认知构建、任务验证和状态更新。这三个动作在每个轮次结束后依次执行，构成完整的感知-判断-更新闭环——每轮次结束时 Agent 感知状态变更，构建新的认知快照，与既有目标对照，检验偏差并决策下一步。
+继承 §3.4 的设计决策，执行循环围绕三个核心动作展开：认知构建、任务验证和状态更新。这三个动作在每个轮次结束后依次执行，构成完整的感知-判断-更新闭环。
 
 ### 5.1 执行循环
-
-Task 的执行循环围绕三个核心动作展开：认知构建、任务验证和状态更新。这三个动作在每个轮次结束后依次执行，构成完整的感知-判断-更新闭环。
 
 #### 5.1.1 标准轮次序列
 
@@ -542,13 +540,13 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务验证
   1. 认知构建：主 Agent 读取状态平面（PlaneAssembler 实时组装）
   2. 执行：主 Agent 执行 Todo；可选：带外追加 gotchas.md
   3. Session 写入：主 Agent 追加 session.md 快照；更新 task.md Todo 状态
-  4. Tier 0 观察 + 验证触发判断：
-     每轮次：Tier 0 自动执行（进度检查，更新状态快照，不触发 Tier 3）
-     若有 todo 完成：自动触发路径一（Tier 1 → Tier 2 → Tier 3）
-     若人主动 verify 或达到阈值：触发路径二（Tier 1 → Tier 0 → Tier 2 → Tier 3）
-  5. 决策：主 Agent 自主决策下一步
+  4. 进度检查 → 若有 Todo 本轮完成则设置 `pending_verify`
+  5. 若 `pending_verify` 有值则触发 Verify（三层检验）
+  6. 决策：主 Agent 自主决策下一步
 轮次结束
 ```
+
+**pending_verify 机制**：每轮次结束时自动执行，检测本轮完成的 Todo，将其记录到 session 快照的 `pending_verify` 字段。Verify 执行完成后清除该字段。
 
 #### 5.1.2 参与方与职责边界
 
@@ -556,36 +554,21 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务验证
 
 **主 Agent（Main Agent）**负责执行任务，包括：创建任务、拆解 Todo、推进执行、写入 session 快照、触发 Verify Agent、读取 Verify 结论、自主决策下一步（修正 / 完成 / 废弃）。主 Agent 不执行检验逻辑，不写 VERIFY.md。
 
-**Verify Agent（Verify Agent）**负责检验任务，包括：被动等待主 Agent 触发，读取文件系统快照，执行四层检验，将结论写入 VERIFY.md。Verify Agent 不执行任何修复，不参与执行决策，不读取主 Agent 的执行历史，不写除 VERIFY.md 之外的任何文件。
+**Verify Agent（Verify Agent）**负责检验任务，包括：被动等待主 Agent 触发，读取文件系统快照，执行三层检验，将结论写入 VERIFY.md。Verify Agent 不执行任何修复，不参与执行决策，不读取主 Agent 的执行历史，不写除 VERIFY.md 之外的任何文件。
 
 **宿主框架（Host Framework）**负责保障协议运行的基础设施，包括：管理文件系统布局、保证 Verify Agent 与主 Agent 的上下文隔离、向 Verify Agent 注入 task_id、处理 VERIFYING 超时保护。宿主框架不参与任务执行逻辑，不干预 Verify Agent 的检验结论。
 
-#### 5.1.3 验证触发条件
+#### 5.1.3 验证触发机制
 
-验证有两种触发路径（详见 §5.4.3）：
+**三层验证由 `pending_verify` 信号触发。**
 
-**路径一：自然操作（每 todo 完成时触发）**
+进度检查每轮次结束时自动执行，检测本轮是否有 Todo 完成。若有，则将本轮完成的 Todo 记录写入 session 快照的 `pending_verify` 字段。主 Agent 读取到 `pending_verify` 有值时，触发宿主框架启动 Verify Agent。
 
-```
-每 todo 完成 → Tier 1 → Tier 2 → Tier 3
-```
+**触发方式：**
+- 自动触发：Todo 完成 → 进度检查设置 `pending_verify` → Verify 执行 → 清除 `pending_verify`
+- 手动触发：人主动请求 verify 时，主 Agent 设置 `pending_verify` 并触发 Verify
 
-- 每有一个 todo 从 `[]` 变为 `[\✓]`，自动触发路径一
-- Tier 3 作为闭合条件自动出现在末端
-
-**路径二：主动操作（人触发 / 阈值触发）**
-
-```
-人主动 verify / 达到最大间隔阈值 → Tier 1 → Tier 0 → Tier 2 → Tier 3
-```
-
-- 人主动提出 verify 时，触发路径二，Tier 1/1/2 全部执行
-- 达到最大间隔阈值时，同样触发路径二
-- Tier 3 作为闭合条件自动出现在末端
-
-**Tier 0 的观察动作：** 每轮次结束时，系统自动执行 Tier 0（进度检查）并更新状态快照。这是观察动作，不属于 verify 操作，不触发 Tier 3。
-
-**触发是主 Agent 的主动动作：** 人提出 verify 需求后，由主 Agent 触发宿主框架启动 Verify Agent。Verify Agent 被动等待，不主动发起验证。
+**Tier 3 作为闭合条件：** Tier 3 只能出现在验证路径末端，不能单独触发。
 
 #### 5.1.4 VERIFYING 超时保护
 
@@ -603,7 +586,7 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务验证
 
 认知构建是轮次结束后生成状态平面快照的动作。它在任何节点（刚启动时、执行中、或检验失败后）都需要执行，为 Agent 提供当前任务的可判断状态。
 
-状态平面是当前绑定 Task 的忠实投影，具有以下特性：只输出当前状态，不做偏差判断；实时扫描，每次调用直接读文件系统，不缓存；状态平面是当下组装的结果，不是被维护的缓存——不存在任何时刻的状态被后续快照覆盖的可能性；在当前 Task 边界内不做相关性排序、不挑选、不截断；非侵入，只读不写，不改变任何状态。状态平面不默认展开整棵任务树，也不默认读取父任务或子任务的完整状态——父子任务信息只有在当前 Task 的 Picture 判断需要时，才以摘要形式进入状态平面。
+状态平面是当前绑定 Task 的忠实投影，具有以下特性：只输出当前状态，不做偏差判断；实时扫描，每次调用直接读文件系统，不缓存——不存在任何时刻的状态被后续快照覆盖的可能性；在当前 Task 边界内不做相关性排序、不挑选、不截断；非侵入，只读不写，不改变任何状态。状态平面不默认展开整棵任务树，也不默认读取父任务或子任务的完整状态——父子任务信息只有在当前 Task 的 Picture 判断需要时，才以摘要形式进入状态平面。
 
 状态平面的显示内容包括：任务树结构（父子关系）；每个任务的 todo 完成度（如 "2/3 Todos 完成"）；任务状态（CREATED / IN_PROGRESS / COMPLETED / ABANDONED）；偏差记录（Gotchas）指针；Session 最近变化指针（指向 Session 中最近的状态快照位置，供 Agent 按需追溯）。`Picture`/`Requirements`/`Constraints` 从 task.md 获取，不显示在状态平面中。
 
@@ -654,25 +637,42 @@ VERIFY.md 只存三类：
 * **create 时**：任务创建阶段，人提出验证需求，Agent 以 `[]` / `()` / `{}` 前缀写入 VERIFY.md，开始澄清
 * **生命周期中**：任何轮次结束后，人可提出新的验证需求或更新已有验证方法
 
-**VERIFY.md 条目标记规则：**
+**VERIFY.md 条目格式：**
 
 ```markdown
-## Requirements
+## Picture
 
-[.]  R-1  checked   新读者能理解 worldview     # 已确认，执行
-(.)  R-2  command   npm run build               # 已确认，执行
-()   R-3  command   lighthouse --quiet          # 待讨论，不执行
-[]   R-4  checked   待确认                       # 待讨论，不执行
+[.] T3-1
+   description: 架构分层清晰，认知所有权段落到位
+   conclusion: 已对齐
+
+[.] T3-2
+   description: worldview 无语义漂移
+   conclusion: 已对齐
 
 ## Constraints
 
-{.}  C-1  skip     性能优化在 v2 处理           # 已确认，执行
-{}   C-2  skip     待讨论                       # 待讨论，不执行
+[.] C-1
+   description: 禁止使用未定义的术语
+   verification_method: checked
+   conclusion: 通过
 
-## Picture
+(.) C-2
+   description: 必须有 rollback 方案
+   verification_method: command
+   conclusion: npm run rollback-test 通过
 
-[.]  T3-1  checked   架构分层清晰，认知所有权段落到位  # Tier 3 结论
-[.]  T3-2  checked   worldview 无语义漂移              # Tier 3 结论
+## Requirements
+
+[.] R-1
+   description: 新读者能独立理解 worldview
+   verification_method: checked
+   conclusion: 需要补充 §3 架构图
+
+(.) R-2
+   description: npm run build 必须成功
+   verification_method: command
+   conclusion: 通过
 ```
 
 **VERIFY.md 内容变更规则：** 验证过程中若发现某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态，不直接删除历史记录。
@@ -693,23 +693,39 @@ VERIFY.md 中每条验证条目由「类型前缀」和「有效性标记」共�
 **格式示例：**
 
 ```markdown
-## Requirements
+## Picture
 
-[.]  R-1  checked   新读者能理解 worldview
-(.)  R-2  command   npm run build
-()   R-3  command   lighthouse --quiet   # 待讨论
-[]   R-4  checked   待确认
+[.] T3-1
+   description: 架构分层清晰，认知所有权段落到位
+   conclusion: 已对齐
+
+[.] T3-2
+   description: worldview 无语义漂移
+   conclusion: 已对齐
 
 ## Constraints
 
-{.}  C-1  skip     性能优化在 v2 处理
-[.]  C-2  checked  术语必须与 spec 一致
-[×]  C-3  failed  发现了未声明的全局状态——suspended，等待解决
+[.] C-1
+   description: 禁止使用未定义的术语
+   verification_method: checked
+   conclusion: 通过
 
-## Picture
+(.) C-2
+   description: 必须有 rollback 方案
+   verification_method: command
+   conclusion: npm run rollback-test 通过
 
-[.]  T3-1  checked  架构分层清晰，认知所有权段落到位
-[.]  T3-2  checked  worldview 无语义漂移
+## Requirements
+
+[.] R-1
+   description: 新读者能独立理解 worldview
+   verification_method: checked
+   conclusion: 需要补充 §3 架构图
+
+(.) R-2
+   description: npm run build 必须成功
+   verification_method: command
+   conclusion: 通过
 ```
 
 **VERIFY.md 写入前提：** 人确认方法后写入，未经人确认的内容不允许写入 VERIFY.md。
@@ -739,26 +755,19 @@ Picture 结论：
 
 **三类实体的状态机差异：**
 
-| 实体 | `[]` → `[.]` | `[.]` → `[\✓]` | `[\✓]` 可逆？ | 完成概念 |
+| 实体 | `[]` → `[.]` | `[.]` → `[✓]` | `[✓]` 可逆？ | 完成概念 |
 |------|-------------|----------------|-------------|---------|
-| Non-persistent requirement | ✅ | ✅ | ❌ | ✅（永久） |
-| Persistent requirement | ✅ | ✅（阶段性） | ✅（语义漂移时） | ✅（阶段性） |
+| Requirement | ✅ | ✅ | ✅（退回 [.] 重新验证） | ✅（本次验证通过） |
 | Constraint | ✅ | ✅（违规解决） | ❌ | ✅（violation resolved） |
 | Picture | ✅ | —（无已完成状态） | — | ✅（每次对话更新结论） |
 
-**Non-persistent requirement：**
+**Requirement：**
 
 ```
-[] → [.] → [\✓]  (永久完成，不退回)
+[] → [.] → [✓]  (本次验证通过，可退回 [.] 重新验证)
 ```
 
-**Persistent requirement：**
-
-```
-[] → [.] → [\✓]  (阶段性完成；下一轮次出现新的语义漂移时，可退回 [.] 重新验证)
-```
-
-- `[\\✓]` 标记时机：至少一个 todo 完成 + 至少一轮次结束 + 需求验证通过
+- `[✓]` 标记时机：至少一个 todo 完成 + 至少一轮次结束 + 需求验证通过
 - 退回触发：下一轮次发现新的语义漂移，由 Verify Agent 或人主动提出
 
 **Constraint：**
@@ -769,7 +778,7 @@ Picture 结论：
        [×]  (violated — 参考信号，状态记录，解决后继续)
 ```
 
-- `[\✓]` = 约束已解决
+- `[✓]` = 约束已解决
 - `[×]` = 约束违规中（参考信号，不阻塞，解决后继续）
 - 每轮次必须重新验证
 
@@ -780,66 +789,37 @@ Picture 结论：
 所有类型的条目均可 amend：
 - 未确认条目（`[]` / `()` / `{}`）：直接 amend
 - 确认条目（`[.]` / `(.)` / `{.}`）：执行前可 amend，执行后不可
-- 已完成条目（`[\✓]` / `(\✓)` / `{\✓}`）：非持续性不可修改；持续性可退回 `[.]` 重新验证
-- Constraint 的 `[×]`（违规中）：解决后转为 `[\✓]`
+- 已完成条目（`[✓]`）：可退回 `[.]` 重新验证
+- Constraint 的 `[×]`（违规中）：解决后转为 `[✓]`
 - Picture 结论（`[.]`）：结论可更新，Picture 条目无"已完成"状态
 
 amend 记录追加到 session.md（可审计）。
 
-#### 5.4.3 验证触发模型
+#### 5.4.3 验证单路径模型
 
-**双操作语义：** 验证触发只有两种操作语义，Tier 3 无独立触发。
-
-**路径一：自然操作（每 todo 完成时触发）**
+触发条件：进度检查检测到 `pending_verify` 有值（见 §5.1.3），触发后统一执行以下路径：
 
 ```
-每 todo 完成 → Tier 1 → Tier 2 → Tier 3
+Tier 1：Constraint 违规检查
+Tier 2：deterministic 验证（命令式验证方法）
+Tier 3：前两层通过后自动触发，作为闭合条件
 ```
 
-- Tier 1：Constraint 违规检查
-- Tier 2：deterministic 验证（命令式验证方法）
-- Tier 3：前两层通过后自动触发，作为闭合条件
+**Tier 3 无独立触发语义：** Tier 3 只能出现在路径的末端，不能单独触发。
 
-**路径二：主动操作（人触发 / 阈值触发）**
+**三层检验各层性质：**
 
-```
-人主动 verify / 达到最大间隔阈值 → Tier 1 → Tier 0 → Tier 2 → Tier 3
-```
-
-- Tier 1/1/2 全部执行，不允许指定某一层
-- Tier 3 作为闭合条件出现在末端
-- 阈值由系统配置（如"每 N 轮必须主动 verify 一次"）
-
-**Tier 0 的特殊定位：** 每轮次结束时，系统自动执行 Tier 0（进度检查），但这是**观察动作**，不属于 verify 操作，不触发 Tier 3。
-
-```
-每轮次：Tier 0（观察）→ 更新状态快照（不触发 Tier 3）
-```
-
-Tier 0 的作用是让状态平面保持最新，使人和 Agent 随时能看到 todo 进度。它不是 verify 的组成部分。
-
-**Tier 3 无独立触发语义：** Tier 3 只能出现在上述两条路径的末端，不能单独触发。
-
-```
-❌ Tier 3 单独触发
-✅ Tier 1 → Tier 2 → Tier 3（路径一）
-✅ Tier 1/1/2 → Tier 3（路径二）
-```
-
-**四层检验各层性质：**
-
-| Tier | 名称 | 性质 | 是否算 verify |
-|------|------|------|--------------|
-| Tier 1 | 约束验证 | 参考信号，Constraint 违规不等同于任务失败，Agent 可 loop 或忽略 | 路径一 + 路径二 |
-| Tier 0 | 进度检查 | 观察动作，每轮次执行，更新状态快照 | 路径一（自动含） + 路径二（兜底） |
-| Tier 2 | 需求验证 | deterministic 验证，可 replay，逐步满足，不阻塞 | 路径一 + 路径二 |
-| Tier 3 | 语义对齐验证 | **唯一硬门槛**，无独立触发语义，作为闭合条件出现 | 仅作为路径末端 |
+| Tier | 名称 | 性质 |
+|------|------|------|
+| Tier 1 | 约束验证 | 参考信号，Constraint 违规不等同于任务失败，Agent 可 loop 或忽略 |
+| Tier 2 | 需求验证 | deterministic 验证，可 replay，逐步满足，不阻塞 |
+| Tier 3 | 语义对齐验证 | **唯一硬门槛**，无独立触发语义，作为闭合条件出现 |
 
 **决策执行规则：**
 
 检验完成后结果写入 `VERIFY.md`，由主 Agent 从 `VERIFY.md` 读取并决策下一步。
 
-- Tier 3 PASS + Tier 0 + Tier 2 满足 → Agent 可标记任务完成
+- Tier 3 PASS + Tier 1 + Tier 2 满足 → Agent 可标记任务完成
 - Tier 3 FAIL → amend 循环（新增/修改 Requirement/Constraint → 重规划 → 继续）
 - Tier 3 UNCERTAIN → 人判断是否可以完成，或触发 amend
 
@@ -851,7 +831,6 @@ ABANDONED 由 Agent 主动标记，与检验结果无关。
 
 | Tier | 检查层 | 语义职责 | 执行方式 | 依赖文件 |
 |------|--------|---------|---------|---------|
-| Tier 0 | 进度检查 | Todo & Subtask 完成检查（观察，不算 verify） | 纯逻辑：读取 task.md Todo 状态 + 扫描子任务目录 | task.md |
 | Tier 1 | 约束验证 | Constraints 约束检查 | 纯逻辑：扫描 session.md + gotchas.md 中的违反记录 | task.md, session.md, gotchas.md |
 | Tier 2 | 需求验证 | Requirements 验收检查 | 运行测试命令：执行可验证动作，记录命令输出 | task.md, session.md |
 | Tier 3 | 语义对齐验证 | 语义对齐检查（无独立触发语义） | LLM 推断：Verify Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
@@ -864,31 +843,25 @@ ABANDONED 由 Agent 主动标记，与检验结果无关。
 
 ```yaml
 verify:
-  max_interval_rounds: 10  # 每 N 轮未主动 verify 则强制触发路径二
+  max_interval_rounds: 10  # 每 N 轮未主动 verify 则强制触发验证
 ```
 
 ```mermaid
-%% label：验证触发模型
+%% label：验证单路径模型
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#fce4ec', 'primaryTextColor': '#880e4f', 'primaryBorderColor': '#c62828', 'lineColor': '#90a4ae' } } }%%
 stateDiagram-v2
     [*] --> IN_PROGRESS
-    IN_PROGRESS --> Tier0: 每轮次（观察，不触发 Tier 3）
-    Tier0 --> IN_PROGRESS: 更新状态快照
+    IN_PROGRESS --> Tier0: 每轮次（进度检查）
+    Tier0 --> IN_PROGRESS: 有 Todo 完成则设 pending_verify
 
-    IN_PROGRESS --> Path1: 每 todo 完成
-    Path1 --> Tier1
+    IN_PROGRESS --> Verify: pending_verify 有值
+    Verify --> Tier1
     Tier1 --> Tier2: 无 violation 或已记录
     Tier2 --> Tier3: Tier 1/2 通过
     Tier3 --> PASS: 语义对齐
     Tier3 --> FAIL: 语义未对齐
     FAIL --> IN_PROGRESS: amend → 重规划
     PASS --> COMPLETED
-
-    IN_PROGRESS --> Path2: 人主动 verify / 达到阈值
-    Path2 --> Tier1
-    Tier1 --> Tier0
-    Tier0 --> Tier2
-    Tier2 --> Tier3
 
     COMPLETED --> [*]
 ```
