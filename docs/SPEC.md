@@ -753,7 +753,7 @@ VERIFY.md 条目有三个状态：
 
 ```
 未确认 → 确认：人机对话确认验证方式 → [.] / (.) / {.}
-确认 → 已完成：验证执行（pass/skip）→ [✓] / (\) / {\)
+确认 → 已完成：验证执行（pass/skip）→ [✓] / (✓) / {✓}
 已完成 → 退回: [✓] → [.] 重新验证
 ```
 
@@ -766,7 +766,7 @@ VERIFY.md 条目有三个状态：
 所有类型的条目均可 amend：
 - 未确认条目（`[]` / `()` / `{}`）：直接 amend
 - 确认条目（`[.]` / `(.)` / `{.}`）：执行前可 amend，执行后不可
-- 已完成条目（`[✓]` / `(\)` / `{\)`）：可退回 `[.]` 重新验证
+- 已完成条目（`[✓]` / `(✓)` / `{✓}`）：可退回 `[.]` 重新验证
 - Picture 结论（`[.]`）：结论可更新，Picture 条目无"已完成"状态
 
 amend 记录追加到 session.md（可审计）。
@@ -811,7 +811,7 @@ ABANDONED 由 Agent 主动标记，与检验结果无关。
 | Tier 2 | 需求验证 | Requirements 验收检查 | 运行测试命令：执行可验证动作，记录命令输出 | task.md, session.md |
 | Tier 3 | 语义对齐验证 | 语义对齐检查（无独立触发语义） | LLM 推断：Verify Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
 
-**需求验证的关键约束：** `[(.)]` / `(\.)` / `{\.}` marker 为直接执行指令，由 Verify Agent 执行对应命令。Tier 3：通过对话确认 Picture 与实际产出的语义偏差，结论写入 Picture section。若验证过程中发现 VERIFY.md 某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态。
+**需求验证的关键约束：** `(.)` 为直接执行指令，由 Verify Agent 执行对应命令。
 
 **Verify Agent 输出约束：** Verify Agent 只报告事实，不给出修复建议，不判断"主 Agent 应该怎么做"，不修改 task.md / session.md / gotchas.md，不直接标记任务为 COMPLETED 或 ABANDONED。FAIL 结论写入 VERIFY.md 后，Verify Agent 的职责结束，决策权回到主 Agent。
 

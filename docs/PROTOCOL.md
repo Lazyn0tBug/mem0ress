@@ -37,25 +37,19 @@ transitions:
   ABANDONED: []
 
 ## 验证层级
-# tier0 为进度信号，不属于验证路径
 # Tier 1/2/3 为验证单路径的三个阶段
 tiers:
-  tier0:
-    name: 进度检查
-    check: pending_verify_trigger
-    description: 检测本轮完成的 Todo，设置 pending_verify 触发验证
-    on_fail: N/A
-  Tier_1:
+  Tier 1:
     name: 约束验证
     check: constraint_validation
     description: Constraint 违规检查，参考信号（loop 或忽略）
     on_fail: RECORD_ONLY
-  Tier_2:
+  Tier 2:
     name: 需求验证
     check: requirement_validation
     description: deterministic 验证，评估参考，逐步满足
     on_fail: RECORD_ONLY
-  Tier_3:
+  Tier 3:
     name: 语义对齐验证
     check: semantic_alignment
     description: 唯一硬门槛，FAIL → amend 循环
@@ -138,7 +132,6 @@ constraints:
 
 | Tier | 检查层 | 语义职责 | 性质 |
 |------|--------|---------|------|
-| tier0 | 进度检查 | pending_verify 触发信号 | 前置条件，不属于验证路径 |
 | Tier 1 | 约束验证 | Constraint 约束检查 — 是否触碰红线 | 参考信号（loop 或忽略） |
 | Tier 2 | 需求验证 | VERIFY.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） |
 | Tier 3 | 语义对齐验证 | 语义对齐 — Requirements 能否支撑 Picture | **唯一硬门槛**，无独立触发语义 |
@@ -146,7 +139,7 @@ constraints:
 **验证单路径模型：** 验证触发有三种方式（每 todo 完成 / 人主动 verify / 达到阈值），触发后统一执行完整验证路径：
 
 ```
-tier0（进度检查）→ Tier 1（约束验证）→ Tier 2（需求验证）→ Tier 3（语义对齐验证）
+Tier 1（约束验证）→ Tier 2（需求验证）→ Tier 3（语义对齐验证）
 ```
 
 **语义对齐失败流程**：若语义对齐判定未对齐 → 触发 amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 继续执行 → 重新检验。
