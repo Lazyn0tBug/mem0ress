@@ -802,6 +802,32 @@ ABANDONED 由 Agent 主动标记，与检验结果无关。
 
 **Judge Agent 输出约束：** Judge Agent 只报告事实，不给出修复建议，不判断"主 Agent 应该怎么做"，不修改 task.md / session.md / gotchas.md，不直接标记任务为 COMPLETED 或 ABANDONED。FAIL 结论写入 judge.md 后，Judge Agent 的职责结束，决策权回到主 Agent。
 
+```mermaid
+%% label：验证状态流转
+%%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#fce4ec', 'primaryTextColor': '#880e4f', 'primaryBorderColor': '#c62828', 'lineColor': '#90a4ae' } } }%%
+stateDiagram-v2
+    [*] --> CREATED
+    CREATED --> IN_PROGRESS: 任意 Todo 完成
+    IN_PROGRESS --> VERIFYING: 轮次结束 / 主动触发
+
+    state VERIFYING {
+        [*] --> Tier0
+        Tier0 --> Tier1: 无 violation
+        Tier0 --> Tier1: 有 violation（记录，继续）
+        Tier1 --> Tier2: Tier 1 满足或跳过
+        Tier2 --> Tier3: Tier 2 满足或跳过
+        Tier3 --> PASS: 语义对齐
+        Tier3 --> FAIL: 语义未对齐
+        FAIL --> IN_PROGRESS: amend → 重规划
+        PASS --> [*]
+    }
+
+    VERIFYING --> COMPLETED: Tier 3 PASS
+    VERIFYING --> ABANDONED: 主动废弃
+    ABANDONED --> [*]
+    COMPLETED --> [*]
+```
+
 ### 5.5 状态更新
 
 状态更新将检验结果反映到 Task 状态，并处理决策执行。
