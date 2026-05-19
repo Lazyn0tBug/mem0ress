@@ -254,6 +254,10 @@ Tier 0/1/2 任一 FAIL 时，Tier 3 强制 SKIPPED。
 
 ## 8. verify.md 字段
 
+### 职责边界
+
+verify.md 存储 **持续性 Requirement、非持续性 Requirement、Constraint** 的验证方式。Tier 3（语义对齐）不写入 verify.md，通过对话确认。
+
 ### Frontmatter
 
 | 字段 | 类型 | 必填 |
@@ -277,6 +281,7 @@ Tier 0/1/2 任一 FAIL 时，Tier 3 强制 SKIPPED。
 | `{}` | skip / 未确认 | ❌ | ✅ |
 | `{.}` | skip / 已确认 | ✅ | ✅（执行前） |
 | `{\✓}` | skip / 已完成 | ✅ | ❌ |
+| `[×]` | Constraint 违规中 | ❌ | ✅（解决后转为 `[\✓]`） |
 
 **状态转移规则**：
 
@@ -288,22 +293,28 @@ Tier 0/1/2 任一 FAIL 时，Tier 3 强制 SKIPPED。
 
 ### 条目类型
 
-| id 前缀 | 含义 |
-|---------|------|
-| `R-N` | Requirement 验证项 |
-| `C-N` | Constraint 验证项 |
+|| id 前缀 | 含义 |
+||---------|------|
+|| `R-N` | 非持续性 Requirement 验证项 |
+|| `P-N` | 持续性 Requirement 验证项 |
+|| `C-N` | Constraint 验证项 |
 
 ### 示例
 
 ```markdown
 type: verify
 
-## Requirements
+## Requirements（非持续性）
 
 [.] R-1 command 编译通过
 (.) R-2 command 单元测试全部通过
 [\✓] R-3 checked 术语与 spec 一致（阶段性完成）
 [] R-4 checked 待讨论
+
+## Persistent Requirements（持续性）
+
+[.] R-5 checked 术语一致性（持续验证）
+[\✓] R-6 checked 架构分层清晰（阶段性完成）
 
 ## Constraints
 

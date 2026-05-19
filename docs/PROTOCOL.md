@@ -69,9 +69,9 @@
 
 | Tier | 检查层 | 语义职责 | 性质 | 失败行为 |
 |------|--------|---------|------|---------|
-| Tier 0 | 约束验证 | Constraint 约束检查 — 是否触碰红线 | 参考信号（loop 或忽略） | 状态记录，不阻塞 |
-| Tier 1 | 进度验证 | Todo 完成检查 — 是否完成计划项 | 参考约束（loop 或忽略） | 状态记录，不阻塞 |
-| Tier 2 | 需求验证 | verify.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） | 状态记录，不阻塞 |
+| Tier 0 | 约束验证 | Constraint 约束检查 — 是否触碰红线 | 参考信号（loop 或忽略） | FAIL → loop 或忽略 |
+| Tier 1 | 进度验证 | Todo 完成检查 — 是否完成计划项 | 参考约束（loop 或忽略） | FAIL → loop 或忽略 |
+| Tier 2 | 需求验证 | verify.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） | FAIL → loop 或忽略 |
 | Tier 3 | 语义对齐验证 | 语义对齐 — Requirements 能否支撑 Picture | **唯一硬门槛** | FAIL → amend 循环 |
 
 > **内部实现**：Judge Agent 内部执行 Tier 0（约束验证）/ Tier 1（进度验证）/ Tier 2（需求验证）/ Tier 3（语义对齐验证）。
