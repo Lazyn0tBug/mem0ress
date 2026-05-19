@@ -70,6 +70,7 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 |------|------|------|------|
 | `status` | enum | ✅ | 见 §2.1 |
 | `created_at` | timestamp | ✅ | 创建时间 ISO8601 |
+| `gotcha_refs` | list[string] | ❌ | 指向 gotchas.md 中偏差记录的引用，格式为 `[G-N, ...]` |
 
 **task_id 由目录拓扑表达，不由 frontmatter 字段定义。**
 
@@ -236,23 +237,22 @@ verification.md 存储 **持续性 Requirement、非持续性 Requirement、Cons
 
 | marker | 含义 | 可作为执行依据 | 可 amend？ |
 |--------|------|--------------|-----------|
-| `[]` | checked / 未确认 | ❌ | ✅ |
-| `[.]` | checked / 已确认 | ✅ | ✅（执行前） |
-| `[\✓]` | checked / 已完成 | ✅ | ❌ |
-| `()` | command / 未确认 | ❌ | ✅ |
-| `(.)` | command / 已确认 | ✅ | ✅（执行前） |
-| `(\✓)` | command / 已完成 | ✅ | ❌ |
-| `{}` | skip / 未确认 | ❌ | ✅ |
-| `{.}` | skip / 已确认 | ✅ | ✅（执行前） |
-| `{\✓}` | skip / 已完成 | ✅ | ❌ |
-| `[×]` | Constraint 违规中 | ❌ | ✅（解决后转为 `[\✓]`） |
+| `[]` | 未确认 | ❌ | ✅ |
+| `[.]` | 已确认（checked） | ✅ | ✅（执行前） |
+| `[✓]` | 已完成 | ✅ | ❌（除非退回重新验证） |
+| `()` | 未确认（command） | ❌ | ✅ |
+| `(.)` | 已确认（command） | ✅ | ✅（执行前） |
+| `(✓)` | 已完成（command） | ✅ | ❌ |
+| `{}` | 未确认（skip） | ❌ | ✅ |
+| `{.} ` | 已确认（skip） | ✅ | ✅（执行前） |
+| `{✓} | 已完成（skip） | ✅ | ❌ |
 
 **状态转移规则**：
 
 ```
 未确认 → 确认：人机对话确认验证方式 → [.] / (.) / {.}
-确认 → 已完成：验证执行（pass/skip/fail）→ [\✓] / (\✓) / {\✓}
-已完成后不可逆向转移
+确认 → 已完成：验证执行（pass/skip）→ [✓] / (✓) / {✓}
+已完成后可退回 [.] 重新验证
 ```
 
 ### 条目类型
@@ -273,19 +273,19 @@ type: verify
 
 [.] R-1 command 编译通过
 (.) R-2 command 单元测试全部通过
-[\✓] R-3 checked 术语与 spec 一致（阶段性完成）
+[✓] R-3 checked 术语与 spec 一致（阶段性完成）
 [] R-4 checked 待讨论
 
 ## Persistent Requirements（持续性）
 
 [.] P-1 checked 术语一致性（持续验证）
-[\✓] P-2 checked 架构分层清晰（阶段性完成）
+[✓] P-2 checked 架构分层清晰（阶段性完成）
 
 ## Constraints
 
 [.] C-1 checked 不使用 inline CSS
 {.} C-2 skip 性能优化在 v2 处理
-[\✓] C-3 checked 约束已解决
+[✓] C-3 checked 约束已满足
 
 ## Picture（语义对齐）
 

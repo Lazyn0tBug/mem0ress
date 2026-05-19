@@ -129,7 +129,7 @@ This creates:
 ├── task.md       # Full task manifest
 ├── session.md    # Empty (created)
 ├── gotchas.md    # Empty (created)
-└── judge.md      # Empty (created)
+└── VERIFY.md     # Empty (created)
 ```
 
 ## Skipping Semantic Coordination (MVP)

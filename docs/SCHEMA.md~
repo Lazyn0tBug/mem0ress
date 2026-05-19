@@ -70,6 +70,7 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 |------|------|------|------|
 | `status` | enum | ✅ | 见 §2.1 |
 | `created_at` | timestamp | ✅ | 创建时间 ISO8601 |
+| `gotcha_refs` | list[string] | ❌ | 指向 gotchas.md 中偏差记录的引用，格式为 `[G-N, ...]` |
 
 **task_id 由目录拓扑表达，不由 frontmatter 字段定义。**
 
@@ -147,46 +148,6 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 **Evidence 的 purpose 字段意义：** purpose 描述"该证据证明了什么"，与 Picture 维度对应，供 Verify Agent 建立 Picture Claim → Evidence 映射。
 
 **Todos 写法约定：** session.md 的 Todos 字段记录**全量状态**（所有 Todo 的当前完成情况），不只记录本轮新完成的项。这样每个 Turn 块是独立可读的，不需要回溯历史才能知道当前进度。
-
----
-
-## 4. verification.md 字段
-
-### Frontmatter
-
-| 字段 | 类型 | 必填 |
-|------|------|------|
-| `task_id` | string | ✅ |
-| `type` | `"verify"` | ✅ |
-
-### Turn 块字段
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `Turn {N.M}` | string | ✅ | 与触发时的 session Turn 一致 |
-| `Timestamp` | timestamp | ✅ | Verify Agent 开始检验的时间 |
-| `Verdict` | enum | ✅ | PASSED / FAILED |
-| `Tier 0` | checklist | ✅ | Todo + 子任务检查 |
-| `Tier 1` | table | ✅ | 每条 Constraint 一行 |
-| `Tier 2` | table | ✅ | 每条 Requirement 一行 |
-| `Tier 3` | block | 条件 | 对话确认后写入 Picture section；见 §4.1 |
-| `Overall Verdict` | enum | ✅ | PASSED / FAILED |
-| `Summary` | string | ✅ | FAILED 时必须说明是哪个 Tier 失败 |
-
-### 4.1 Tier 3 触发与失败
-
-**Tier 3 无独立触发语义。** Tier 3 仅出现在双路径模型的路径末端：
-
-- **路径一（自然操作）：** 每 todo 完成 → Tier 1 → Tier 2 → Tier 3
-- **路径二（主动操作）：** 人主动 verify / 达到阈值 → Tier 1 → Tier 0 → Tier 2 → Tier 3
-
-**进入条件：**
-- 路径一：Tier 1 无 violation + Tier 2 满足 → 进入 Tier 3
-- 路径二：Tier 0 满足 + Tier 1 无 violation + Tier 2 满足 → 进入 Tier 3
-
-**Tier 3 失败行为：** FAIL → amend 循环（新增/修改 Requirement/Constraint → 重规划 → 继续）
-
-**Tier 1/1/2 任一 FAIL 时：** Tier 3 不执行（SKIPPED 或不进入 Tier 3）
 
 ---
 
@@ -276,23 +237,22 @@ verification.md 存储 **持续性 Requirement、非持续性 Requirement、Cons
 
 | marker | 含义 | 可作为执行依据 | 可 amend？ |
 |--------|------|--------------|-----------|
-| `[]` | checked / 未确认 | ❌ | ✅ |
-| `[.]` | checked / 已确认 | ✅ | ✅（执行前） |
-| `[\✓]` | checked / 已完成 | ✅ | ❌ |
-| `()` | command / 未确认 | ❌ | ✅ |
-| `(.)` | command / 已确认 | ✅ | ✅（执行前） |
-| `(\✓)` | command / 已完成 | ✅ | ❌ |
-| `{}` | skip / 未确认 | ❌ | ✅ |
-| `{.}` | skip / 已确认 | ✅ | ✅（执行前） |
-| `{\✓}` | skip / 已完成 | ✅ | ❌ |
-| `[×]` | Constraint 违规中 | ❌ | ✅（解决后转为 `[\✓]`） |
+| `[]` | 未确认 | ❌ | ✅ |
+| `[.]` | 已确认（checked） | ✅ | ✅（执行前） |
+| `[✓]` | 已完成 | ✅ | ❌（除非退回重新验证） |
+| `()` | 未确认（command） | ❌ | ✅ |
+| `(.)` | 已确认（command） | ✅ | ✅（执行前） |
+| `(✓)` | 已完成（command） | ✅ | ❌ |
+| `{}` | 未确认（skip） | ❌ | ✅ |
+| `{.} ` | 已确认（skip） | ✅ | ✅（执行前） |
+| `{✓} | 已完成（skip） | ✅ | ❌ |
 
 **状态转移规则**：
 
 ```
 未确认 → 确认：人机对话确认验证方式 → [.] / (.) / {.}
-确认 → 已完成：验证执行（pass/skip/fail）→ [\✓] / (\✓) / {\✓}
-已完成后不可逆向转移
+确认 → 已完成：验证执行（pass/skip）→ [✓] / (\) / {\)}
+已完成后可退回 [.] 重新验证
 ```
 
 ### 条目类型
@@ -313,19 +273,19 @@ type: verify
 
 [.] R-1 command 编译通过
 (.) R-2 command 单元测试全部通过
-[\✓] R-3 checked 术语与 spec 一致（阶段性完成）
+[✓] R-3 checked 术语与 spec 一致（阶段性完成）
 [] R-4 checked 待讨论
 
 ## Persistent Requirements（持续性）
 
 [.] P-1 checked 术语一致性（持续验证）
-[\✓] P-2 checked 架构分层清晰（阶段性完成）
+[✓] P-2 checked 架构分层清晰（阶段性完成）
 
 ## Constraints
 
 [.] C-1 checked 不使用 inline CSS
 {.} C-2 skip 性能优化在 v2 处理
-[\✓] C-3 checked 约束已解决
+[✓] C-3 checked 约束已满足
 
 ## Picture（语义对齐）
 

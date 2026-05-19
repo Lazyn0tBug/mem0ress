@@ -93,7 +93,7 @@ Each `/cap` command is a **semantic interaction entrypoint**, not a command bind
 | `/cap gotcha` | Record recovery-critical discovery |
 | `/cap verify` | Request Judge Agent verification |
 | `/cap decide` | Read Judge verdict, determine next action |
-| `/cap amend` | Amend verify.md marker (update or add entry) |
+| `/cap amend` | Amend VERIFY.md marker (update or add entry) |
 
 **CLI role**: Protocol persistence step — executes file operations AFTER semantic coordination completes.
 
@@ -214,7 +214,7 @@ session.md records this amend (auditable)
 
 ### 7.2 Detailed Schema
 
-See `references/protocol.yaml`
+See `../PROTOCOL.md`
 
 ## 8. Cognitive Modes Detailed Reference
 

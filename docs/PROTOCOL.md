@@ -1,11 +1,78 @@
 # mem0ress Behavioral Protocol
 
-> protocol.md defines WHAT the system means.
 > schema.md defines the canonical structural authority.
-> protocol.yaml defines HOW the runtime executes.
-> yaml MUST NOT introduce semantics not defined in schema.md.
+> SPEC.md defines the architectural semantics.
+>本文档定义参与方行为规范与运行时配置。
 
-本文档是 mem0ress 的 behavioral protocol layer — 回答"参与方如何行为"。
+---
+schema_ref: ./schema.md
+spec_ref: ./SPEC.md
+
+# 运行时配置
+# 本节为机器可读配置区，与下方行为协议语义完全一致。
+
+version: "1.0"
+
+## 状态机
+states:
+  - CREATED
+  - IN_PROGRESS
+  - VERIFYING
+  - COMPLETED
+  - ABANDONED
+
+transitions:
+  CREATED:
+    - IN_PROGRESS
+    - ABANDONED
+  IN_PROGRESS:
+    - VERIFYING
+    - COMPLETED
+    - ABANDONED
+  VERIFYING:
+    - COMPLETED
+    - IN_PROGRESS
+    - ABANDONED
+  COMPLETED: []
+  ABANDONED: []
+
+## 验证层级
+# tier0 为进度信号，不属于验证路径
+# Tier 1/2/3 为验证单路径的三个阶段
+tiers:
+  tier0:
+    name: 进度检查
+    check: pending_verify_trigger
+    description: 检测本轮完成的 Todo，设置 pending_verify 触发验证
+    on_fail: N/A
+  Tier_1:
+    name: 约束验证
+    check: constraint_validation
+    description: Constraint 违规检查，参考信号（loop 或忽略）
+    on_fail: RECORD_ONLY
+  Tier_2:
+    name: 需求验证
+    check: requirement_validation
+    description: deterministic 验证，评估参考，逐步满足
+    on_fail: RECORD_ONLY
+  Tier_3:
+    name: 语义对齐验证
+    check: semantic_alignment
+    description: 唯一硬门槛，FAIL → amend 循环
+    on_fail: PASS_FAIL_UNCERTAIN
+    on_uncertain: HUMAN_DECISION
+
+## 超时配置
+timeouts:
+  verifying_default: 180      # seconds
+  tier3_default: 300          # seconds
+
+## 协议约束
+constraints:
+  no_concurrent_session_writes: true
+  no_multi_agent_same_task: true
+  no_cross_workspace_dependencies: true
+  verifying_is_transient: true    # 不可停留，必须转移
 
 ---
 
@@ -35,13 +102,13 @@
 ```
 轮次开始
   1. 认知构建 → 2. 执行（可选追加 gotchas.md）→ 3. Session 写入
-  4. Tier 0 进度检查 → 若有 Todo 本轮完成则设置 pending_verify
+  4. tier0 进度检查 → 若有 Todo 本轮完成则设置 pending_verify
   5. 若 pending_verify 有值则触发 Verify（Tier 1/2/3）
   6. 决策
 轮次结束
 ```
 
-**pending_verify 机制**：每轮次结束时，Tier 0 检测本轮完成的 Todo，将其记录到 session 快照的 `pending_verify` 字段。Verify Agent 执行完成后清除该字段。
+**pending_verify 机制**：每轮次结束时，tier0 检测本轮完成的 Todo，将其记录到 session 快照的 `pending_verify` 字段。Verify Agent 执行完成后清除该字段。
 
 ---
 
@@ -71,11 +138,16 @@
 
 | Tier | 检查层 | 语义职责 | 性质 |
 |------|--------|---------|------|
+| tier0 | 进度检查 | pending_verify 触发信号 | 前置条件，不属于验证路径 |
 | Tier 1 | 约束验证 | Constraint 约束检查 — 是否触碰红线 | 参考信号（loop 或忽略） |
 | Tier 2 | 需求验证 | VERIFY.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） |
 | Tier 3 | 语义对齐验证 | 语义对齐 — Requirements 能否支撑 Picture | **唯一硬门槛**，无独立触发语义 |
 
-**验证单路径模型：** 验证触发有三种方式（每 todo 完成 / 人主动 verify / 达到阈值），触发后统一执行完整验证路径，见 SPEC.md §5.4.3。
+**验证单路径模型：** 验证触发有三种方式（每 todo 完成 / 人主动 verify / 达到阈值），触发后统一执行完整验证路径：
+
+```
+tier0（进度检查）→ Tier 1（约束验证）→ Tier 2（需求验证）→ Tier 3（语义对齐验证）
+```
 
 **语义对齐失败流程**：若语义对齐判定未对齐 → 触发 amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 继续执行 → 重新检验。
 
@@ -165,76 +237,17 @@
 - 追加，不删除历史
 - 解决记录可追加，不覆盖原发现
 
-### VERIFY.md — 验证定义
+### VERIFY.md — 验证条目格式
 
-主 Agent 和 Verify Agent 追加写的验证条目集合。包含所有 Requirement 和 Constraint 的验证方式定义，以及 Verify Agent 的检验结论记录。
+验证条目格式和 marker 语义详见 [SPEC.md §5.4.1](../SPEC.md#_541-验证定义工作流)。
 
-**状态转移规则：**
+**核心约束**：
+- `[.]` / `(.)` / `{.}` 条目可作为执行依据，`[]` / `()` / `{}` 仅作记录
+- 已完成条目可退回 `[.]` 重新验证
+- Verify 执行完成后清除 `pending_verify`
 
-```
-未确认 → 确认：人机对话确认验证方式 → [.] / (.) / {.}]
-确认 → 已完成：验证执行（pass/skip/fail）→ [\✓] / (\✓) / {\✓}]
-已完成后不可逆向转移
-```
-
-**三类实体的状态机差异：**
-
-| 实体 | `[]` → `[.]` | `[.]` → `[✓]` | `[✓]` 可逆？ | 完成概念 |
-|------|-------------|----------------|-------------|---------|
-| Requirement | ✅ | ✅ | ✅（退回 [.] 重新验证） | ✅（本次验证通过） |
-| Constraint | ✅ | ✅（违规解决） | ❌ | ✅（violation resolved） |
-
-**Requirement：**
-
-```
-[] → [.] → [✓]  (本次验证通过，可退回 [.] 重新验证)
-```
-
-- `[✓]` 标记时机：至少一个 todo 完成 + 至少一轮次结束 + 需求验证通过
-
-**Constraint：**
-
-```
-[] → [.] → [\✓]  (已解决)
-          ↓
-       [×]  (violated — 状态记录，Agent 继续)
-```
-
-- `[\✓]` = 约束已解决
-- `[×]` = 约束违规中（状态记录，不 FAIL，不阻塞）
-- 每轮次必须重新验证
-
-**状态约束**：
-
-| 状态 | marker | 可 amend？ |
-|------|--------|-----------|
-| 未确认 | `[]` / `()` / `{}` | ✅ |
-| 确认 | `[.]` / `(.)` / `{.}` | ✅（执行前） |
-| 已完成 | `[\✓]` / `(\✓)` / `{\✓}` | ❌ |
-| Constraint 违规 | `[×]` | ✅（解决后转为 `[\✓]`） |
+详细状态转移规则、amend 协议见 [SPEC.md §5.4.2](../SPEC.md#_542-三状态与-amend-命令)。
 
 ### /cap amend 命令
 
-**amend 是唯一 mutation 原语。** create = amend(mode=initial)——新任务的创建是 amend 的首次调用；已有条目的修正是 amend 的后续调用。
-
-在任意时刻发起对 VERIFY.md 的修正。
-
-**交互流程**：
-
-```
-/cap amend
-  → 仅展示未确认条目（[] / () / {}）
-  → TUI 询问：「更新现有 marker」还是「新增 marker」
-  → 用户指定要修正的条目
-  → 用户提供新内容
-  → 确认写入
-  → session.md 记录此次 amend
-```
-
-**约束**：
-
-- 仅未确认条目（`[]` / `()` / `{}`）可 amend
-- 已确认条目（`[.]` / `(.)` / `{.}`）执行前可 amend，执行后不可
-- 已完成条目（`[✓]`）：可退回 `[.]` 重新验证
-- Constraint 的 `[×]`（违规中）可 amend（解决后转为 `[\✓]`）
-- amend 记录追加到 session.md（可审计）
+详见 [SPEC.md §5.4.2](../SPEC.md#_542-三状态与-amend-命令)。
