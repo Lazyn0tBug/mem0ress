@@ -23,7 +23,7 @@ Skill = Semantic Coordination Layer，不是 Workflow Coordinator。
 - 请求补充 Picture
 - 请求澄清 Constraints
 - 请求验证 Requirement
-- 请求 Judge 重新解释 alignment
+- 请求 Verify Agent 重新解释 alignment
 - 请求 Agent 生成候选方案
 
 **Skill 不得拥有：**
@@ -46,7 +46,7 @@ Slash Command = Semantic Interaction Entrypoint，不是 Command Binding。
   - 语义澄清
   - 补全 Constraints
   - Agent 提案
-  - Judge 检验 alignment
+  - Verify Agent 检验 alignment
 ```
 
 ### 1.4 Stable Capability Runtime 的定义
@@ -68,7 +68,7 @@ Phase 0 使用 `.cap/` 作为认知基座根目录，与 spec.md 的命名约定
         ├── task.md           # 任务清单（语义权威表面）
         ├── session.md        # 追加式认知增量流
         ├── gotchas.md        # 关键发现记录
-        ├── judge.md          # Judge 验证结果
+        ├── verify.md         # Verify Agent 验证结果
         │
         └── data/             # data plane
             ├── outputs/      # 执行产物
@@ -95,10 +95,10 @@ CLI 是 Stable Capability Runtime 的第一种实现形态。
 | `mem0 create` | 创建任务（含 task_id 生成） | write |
 | `mem0 abandon` | 标记任务废弃 | write |
 | `mem0 update` | 追加认知增量到 session.md | write |
-| `mem0 judge` | 触发 Tier 0/1/2 验证 | write |
-| `mem0 close` | judge 通过后标记 COMPLETED | write |
+| `mem0 verify` | 触发 Tier 0/1/2 验证 | write |
+| `mem0 close` | verify 通过后标记 COMPLETED | write |
 | `mem0 done` | close 的别名 | write |
-| `mem0 report` | 显示最新 judge 报告 | query |
+| `mem0 report` | 显示最新 verify 报告 | query |
 
 ### 2.2 create 命令
 
@@ -118,8 +118,8 @@ mem0 create \
 | `/cap amend` | 修正 verify.md 未确认条目 | 交互式条目编辑 |
 | `/cap snapshot` | 追加认知增量 | 压缩记录到 session.md |
 | `/cap gotcha` | 记录恢复关键发现 | 持久化到 gotchas.md |
-| `/cap verify` | 请求 Judge 验证 alignment | 触发隔离检验 |
-| `/cap decide` | 基于判决结果决定下一步 | 读取 judge.md 判决摘要 |
+| `/cap verify` | 请求 Verify Agent 验证 alignment | 触发隔离检验 |
+| `/cap decide` | 基于验证结果决定下一步 | 读取 verify.md 验证摘要 |
 
 ---
 
@@ -138,13 +138,13 @@ Skill 是 **Semantic Coordination Layer**，不是 Workflow Orchestrator。
 Skill 根据当前认知状态，动态引导主 Agent 进入正确的认知模式：
 
 ```
-主 Agent + Judge Agent（仅此两者）
+主 Agent + Verify Agent（仅此两者）
     ↓
 Skill 评估认知状态
     ↓
 Picture 不明确 → 主 Agent 进入 Clarification Mode
 Constraints 冲突 → 主 Agent 进入 Analysis Mode
-Requirements 需验证 → 主 Agent 请求 Judge Agent 验证
+  - Requirements 需验证 → 主 Agent 请求 Verify Agent 验证
     ↓
 补全完成 → CLI persistence
 ```
@@ -163,7 +163,7 @@ Constraints 冲突？
   → 主 Agent Analysis Mode："这些约束之间是否存在矛盾？"
        ↓
 Requirements 不可验证？
-  → 主 Agent 请求 Judge Agent 确认
+  → 主 Agent 请求 Verify Agent 确认
        ↓
 主 Agent 确认补全完成
        ↓
@@ -174,7 +174,7 @@ CLI persistence：创建 .cap/tasks/<task_id>/task.md
 
 **Phase 1：Skill 层（语义协调协议）**
 - [ ] 创建 `skills/mem0ress/mem0ress/SKILL.md`
-- [ ] 定义认知状态评估规则（何时需要 Clarification / Analysis / Judge）
+- [ ] 定义认知状态评估规则（何时需要 Clarification / Analysis / Verify）
 - [ ] 创建 `references/protocol.yaml`（从 spec §5.5 提取）
 
 **Phase 2：CLI 层（Persistence）**
@@ -200,7 +200,7 @@ CLI persistence：创建 .cap/tasks/<task_id>/task.md
 1. 生成 6 位 base36 task_id：`{timestamp_low}{counter}`
 2. 创建 `.mem0ress/tasks/<task_id>/`
 3. 生成 task.md（via SubstrateParser）
-4. 生成 session.md、gotchas.md、judge.md
+4. 生成 session.md、gotchas.md、verify.md
 5. 更新 `.current_task` 指针
 
 ### 2.3 close 命令
@@ -217,7 +217,7 @@ mem0 close <task_id>
 4. 全部 PASS → `TaskServiceImpl.complete_task()` → status=COMPLETED
 5. 清理 `.current_task` 指针
 
-**No bypass rule**：不经过 Judge 验证的任务不得 close。
+**No bypass rule**：不经过 Verify Agent 验证的任务不得 close。
 
 ### 2.4 其他命令
 
@@ -227,7 +227,7 @@ mem0 close <task_id>
 **update**：`mem0 update [--content "..."]`
 追加 Turn snapshot 到 session.md，压缩记录，不含 chain-of-thought。
 
-**judge**：`mem0 judge [--root .mem0ress]`
+**verify**：`mem0 verify [--root .mem0ress]`
 执行 Tier 0/1/2，输出纯文本 PASS/FAIL（无 ANSI markup）。
 
 **abandon**：`mem0 abandon <task_id>`
@@ -236,7 +236,7 @@ mem0 close <task_id>
 **done**：close 的别名，内部调用同一逻辑。
 
 **report**：`mem0 report <task_id>`
-读取 judge.md，打印最新验证报告。
+读取 verify.md，打印最新验证报告。
 
 ### 2.5 文件协议落地
 
@@ -245,8 +245,7 @@ mem0 close <task_id>
 | `task.md` | TaskServiceImpl.create_task() 生成，SubstrateParser 序列化 |
 | `session.md` | TaskServiceImpl.update_session() 追加 Turn 块 |
 | `gotchas.md` | TaskServiceImpl.append_gotcha() 追加 Gotcha 块 |
-| `judge.md` | HarnessRunner.verify_task() 写入验证报告 |
-| `verify.md` | 主 Agent 追加 verify marker，Judge Agent 只读 |
+| `verify.md` | HarnessRunner.verify_task() 写入验证报告；Verify Agent 写入验证结论 |
 
 所有文件格式见 spec.md §5.4 文档数据模型。
 
@@ -260,8 +259,7 @@ mem0 close <task_id>
         ├── task.md           # 任务清单
         ├── session.md        # 认知增量流
         ├── gotchas.md        # 关键发现
-        ├── judge.md          # 验证报告
-        ├── verify.md         # 验证 marker
+        ├── verify.md          # 验证报告 + 验证 marker
         │
         └── data/             # data plane
             ├── outputs/
@@ -277,7 +275,7 @@ activated_at: '2026-05-14T10:00:00+09:00'
 ```
 
 - `create` → 写入 task_id + timestamp
-- `update/judge/close` → 无 task_id 时读取此指针
+- `update/verify/close` → 无 task_id 时读取此指针
 - `close` 成功 → 清除 task_id，保留 activated_at
 
 **安全机制**：`safe_write` + SHA-256 hash comparison，并发写入触发 ConflictError。
@@ -303,7 +301,7 @@ activated_at: '2026-05-14T10:00:00+09:00'
 3. /cap amend           → 修正 verify.md 未确认条目（任意时刻）
 4. /cap snapshot        → 追加认知增量到 session.md
 5. /cap gotcha          → 记录关键发现（可选）
-6. /cap verify          → 触发 Judge 隔离验证
+6. /cap verify          → 触发 Verify Agent 隔离验证
 7. /cap decide          → 基于判决结果决定下一步
 ```
 
@@ -371,13 +369,13 @@ activated_at: '2026-05-14T10:00:00+09:00'
 
 ### 7.5 `/cap verify`
 
-触发 Judge 隔离验证。
+触发 Verify Agent 隔离验证。
 
 ```
 输入: /cap verify [--root .cap]
 隔离保证:
-  - Judge 只接收 task_id + filesystem protocol
-  - Judge 不得接收 runtime memory / hidden state / full history
+  - Verify Agent 只接收 task_id + filesystem protocol
+  - Verify Agent 不得接收 runtime memory / hidden state / full history
 Tier 执行:
   - Tier 0: constraint violations（参考信号，不阻塞；可 loop 或忽略）
   - Tier 1: todo completion（参考约束，不阻塞；可 loop 或忽略）
@@ -408,7 +406,7 @@ Tier 3 FAIL → amend 循环 → 新增/修改 Requirement 或 Constraint → �
 ```
 
 - `[\✓]` 标记时机：至少一个 todo 完成 + 至少一轮次结束 + Tier 2 验证通过
-- 退回触发：下一轮次发现新的语义漂移，由 Judge 或人主动提出
+- 退回触发：下一轮次发现新的语义漂移，由 Verify Agent 或人主动提出
 
 **Constraint：**
 
@@ -425,15 +423,15 @@ Tier 3 FAIL → amend 循环 → 新增/修改 Requirement 或 Constraint → �
 
 ### 7.6 `/cap decide`
 
-读取 judge.md 判决结果，Agent 决定下一步动作。
+读取 verify.md 验证结果，Agent 决定下一步动作。
 
 ```
 输入: /cap decide [--root .cap]
 决策权永远属于 Hermes，skill 不得自主决定。
 输出:
-  - 最新 judge 判决摘要
+  - 最新 verify 验证摘要
   - Tier 0/1 是否通过
-  - Tier 3 判决状态
+  - Tier 3 验证状态
   - 下一步建议（给 Agent 参考，不是指令）
 ```
 
@@ -476,9 +474,9 @@ Tier 3 FAIL → amend 循环 → 新增/修改 Requirement 或 Constraint → �
 
 ### Step 4: `/cap decide` 命令
 
-- [ ] 实现 `read_judge_verdict()` 函数
+- [ ] 实现 `read_verify_verdict()` 函数
 - [ ] 添加 CLI 命令 `/cap decide`
-- [ ] 输出格式化判决摘要
+- [ ] 输出格式化验证摘要
 
 ### Step 5: Skill 层（语义协调协议）
 
@@ -547,7 +545,7 @@ run tests
 /cap decide
 ```
 
-成功标准：实现存活于 context reset；snapshots 保持压缩；Judge 验证保持隔离；runtime 保持确定性。
+成功标准：实现存活于 context reset；snapshots 保持压缩；Verify Agent 验证保持隔离；runtime 保持确定性。
 
 ---
 
@@ -558,7 +556,7 @@ run tests
 | session.md 变成 transcript | 压缩失败 |
 | recovery 需要完整回放 | 认知失败 |
 | runtime 吸收 reasoning | 架构失败 |
-| Judge 收到 hidden state | 隔离失败 |
+| Verify Agent 收到 hidden state | 隔离失败 |
 | slash commands 变成 workflows | 协议失败 |
 | Skill 变成 workflow coordinator | CAP 回归 orchestration 框架 |
 
