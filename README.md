@@ -37,12 +37,14 @@ mem0ress 是一个面向 AI Agent 开发者的**认知对齐平面（Cognitive A
 
 ### 四层检验（Tiers）
 
-| Tier | 内容 | 执行者 |
-|------|------|--------|
-| Tier 0 | Constraints 违反检查 | 自动触发 |
-| Tier 1 | Todo 完成 + 子任务关闭检查 | 自动触发 |
-| Tier 2 | Requirements 满足检查 | 自动触发 |
-| Tier 3 | 语义对齐判断（Picture vs 实际产出） | Agent 主动决策 |
+| Tier | 内容 | 执行者 | 性质 |
+|------|------|--------|------|
+| Tier 0 | Constraints 违反检查 | 自动触发 | 参考信号（loop 或忽略，不阻塞） |
+| Tier 1 | Todo 完成 + 子任务关闭检查 | 自动触发 | 参考约束（loop 或忽略，不阻塞） |
+| Tier 2 | Requirements 满足检查 | 自动触发 | 评估参考（逐步满足，不阻塞） |
+| Tier 3 | 语义对齐判断（Picture vs 实际产出） | Agent 主动决策 | **唯一硬门槛**（FAIL → amend 循环） |
+
+**进入 Tier 3 前置条件**：所有 Tier 1/2 条目已满足或已由人确认跳过。
 
 ---
 
