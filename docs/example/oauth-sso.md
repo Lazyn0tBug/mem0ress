@@ -391,7 +391,7 @@ Verify 在 Tier 2 第一项（R-1）失败后，跳过 R-2/R-3/R-4 的验证执�
 
 ### 3. Tier 3 触发模型
 
-本案例中，Tier 3 作为路径末端自动触发——验证触发时（每 todo 完成 / 人主动 verify / 达到阈值），执行 Tier 0 → Tier 1 → Tier 2 → Tier 3，Tier 3 在 Tier 1 无 violation + Tier 2 满足后自动进入。Tier 3 无独立触发语义。
+Tier 3 在 Tier 1 无 violation + Tier 2 满足后自动进入，无独立触发语义（见 SPEC.md §5.4.3）。
 
 ### 4. Gotcha 追加时机
 

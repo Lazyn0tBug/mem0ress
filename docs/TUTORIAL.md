@@ -77,7 +77,7 @@ mem0 done
 mem0 done <task_id>
 ```
 
-要求 Verify 通过（Tier 0 Todo 完成 + Tier 1 约束无违规 + Tier 2 结构化检查 + Tier 3 语义对齐）。
+要求 Verify 通过（见 SPEC.md §5.4.3）。
 
 ---
 

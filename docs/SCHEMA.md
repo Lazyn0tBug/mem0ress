@@ -175,15 +175,7 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 
 ### 4.1 Tier 3 触发与失败
 
-**Tier 3 无独立触发语义。** Tier 3 仅出现在验证路径的末端：
-
-```
-每 todo 完成 / 人主动 verify / 达到阈值 → Tier 0 → Tier 1 → Tier 2 → Tier 3
-```
-
-- Tier 0：进度检查（观察动作，不触发 Tier 3）
-- Tier 1：Constraint 违规检查
-- Tier 2：deterministic 验证
+**Tier 3 无独立触发语义。** Tier 3 仅出现在验证路径末端，前提条件见 SPEC.md §5.4.3。
 
 **进入条件：** Tier 1 无 violation + Tier 2 满足 → 进入 Tier 3
 

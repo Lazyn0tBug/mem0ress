@@ -3,23 +3,23 @@ task_id: null
 type: verify
 ---
 
-# verify.md
+# VERIFY.md
 
-`verify.md` 是验证协议的 Canonical 真源。每个 Task 创建时生成（空文件），随着任务执行逐步填充。
+`VERIFY.md` 是验证协议的 Canonical 真源。每个 Task 创建时生成（空文件），随着任务执行逐步填充。
 
-**与 task.md 的关系**：task.md 的 Constraints 和 Requirements 条目不在此重复。task.md 的验证结果字段是对 verify.md 中对应条目的引用（Reference Record），verify.md 才是 Canonical。
+**与 task.md 的关系**：task.md 的 Constraints 和 Requirements 条目不在此重复。task.md 的验证结果字段是对 VERIFY.md 中对应条目的引用（Reference Record），VERIFY.md 才是 Canonical。
 
 ## 核心设计原则
 
 1. **验证方式通过交互式对话确认，不追求预先全覆盖**
-2. **验证方式和验证结论都记录在 verify.md，是 Canonical 记录**
+2. **验证方式和验证结论都记录在 VERIFY.md，是 Canonical 记录**
 3. **Agent 可写验证结论，执行所依据的程序由人预先验证**
 4. **Tier 2（确定性验证）和 Tier 3（语义对齐）通过不同目标的人机对话确认验证方式**
 
 ## 文件结构
 
 ```markdown
-# verify.md
+# VERIFY.md
 
 ## Constraints
 ## Requirements
@@ -95,7 +95,7 @@ type: verify
 
 **时间**: {YYYY-MM-DD HH:MM:SS}
 **触发者**: 每 todo 完成 / 人主动 verify / 达到阈值
-**触发路径**: Tier 0 → Tier 1 → Tier 2 → Tier 3
+**触发路径**: 见 SPEC.md §5.4.3
 **结论**: PASSED / FAILED
 
 #### Tier 0 — 进度验证

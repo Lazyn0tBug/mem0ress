@@ -73,13 +73,10 @@
 | Tier 2 | 需求验证 | VERIFY.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） | 是 |
 | Tier 3 | 语义对齐验证 | 语义对齐 — Requirements 能否支撑 Picture | **唯一硬门槛**，无独立触发语义 | 仅作路径末端 |
 
-**验证单路径模型：** 验证触发有三种方式（每 todo 完成 / 人主动 verify / 达到阈值），触发后统一执行同一路径：
+**验证单路径模型：** 验证触发有三种方式（每 todo 完成 / 人主动 verify / 达到阈值），触发后统一执行完整验证路径，见 SPEC.md §5.4.3。
 
-```
-每 todo 完成 / 人主动 verify / 达到阈值 → Tier 0 → Tier 1 → Tier 2 → Tier 3
-```
-
-- **Tier 0 观察动作：** 每轮次自动执行，更新状态快照，不触发 Tier 3
+**各 Tier 职责：**
+- Tier 0：进度检查（观察动作，不属于 verify，不触发 Tier 3）
 - Tier 1：Constraint 违规检查
 - Tier 2：deterministic 验证
 - Tier 3：前两层通过后自动触发，作为闭合条件

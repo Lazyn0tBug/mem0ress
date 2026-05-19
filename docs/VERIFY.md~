@@ -94,19 +94,19 @@ type: verify
 ### 验证记录 {N.M}
 
 **时间**: {YYYY-MM-DD HH:MM:SS}
-**触发者**: Path 1（todo 完成）/ Path 2（人主动 verify）/ Path 2（阈值触发）
-**触发路径**: Tier 0 → Tier 2 → Tier 3 / Tier 0 → Tier 1 → Tier 2 → Tier 3
+**触发者**: 每 todo 完成 / 人主动 verify / 达到阈值
+**触发路径**: Tier 0 → Tier 1 → Tier 2 → Tier 3
 **结论**: PASSED / FAILED
 
-#### Tier 0 — 约束验证
+#### Tier 0 — 进度验证
+- Todo: {done}/{total} 完成
+- 子任务: {done}/{total} 完成
+
+#### Tier 1 — 约束验证
 | Constraint | 验证结果 |
 |------------|----------|
 | C-1 | (.) |
 | C-2 | [×] |
-
-#### Tier 1 — 进度验证
-- Todo: {done}/{total} 完成
-- 子任务: {done}/{total} 完成
 
 #### Tier 2 — 需求验证
 | Requirement | 验证结果 | 说明 |
