@@ -35,16 +35,16 @@ mem0ress 是一个面向 AI Agent 开发者的**认知对齐平面（Cognitive A
 | **状态平面**（Status Plane） | "我在哪？" | 每次 Agent 唤醒时强制挂载 |
 | **数据平面**（Data Plane） | "操作的是哪个版本的代码？" | Agent 需要操作具体数据时按需挂载 |
 
-### 四层检验（Tiers）
+### 四层检验
 
-| Tier | 内容 | 执行者 | 性质 |
-|------|------|--------|------|
-| Tier 0 | Constraints 违反检查 | 自动触发 | 参考信号（loop 或忽略，不阻塞） |
-| Tier 1 | Todo 完成 + 子任务关闭检查 | 自动触发 | 参考约束（loop 或忽略，不阻塞） |
-| Tier 2 | Requirements 满足检查 | 自动触发 | 评估参考（逐步满足，不阻塞） |
-| Tier 3 | 语义对齐判断（Picture vs 实际产出） | Agent 主动决策 | **唯一硬门槛**（FAIL → amend 循环） |
+| 内部编号 | 名称 | 内容 | 执行者 | 性质 |
+|---------|------|------|--------|------|
+| Tier 0 | 约束验证 | Constraints 违反检查 | 自动触发 | 参考信号（loop 或忽略，不阻塞） |
+| Tier 1 | 进度验证 | Todo 完成 + 子任务关闭检查 | 自动触发 | 参考约束（loop 或忽略，不阻塞） |
+| Tier 2 | 需求验证 | Requirements 满足检查 | 自动触发 | 评估参考（逐步满足，不阻塞） |
+| Tier 3 | 语义对齐验证 | Picture vs 实际产出语义判断 | Agent 主动决策 | **唯一硬门槛**（FAIL → amend 循环） |
 
-**进入 Tier 3 前置条件**：所有 Tier 1/2 条目已满足或已由人确认跳过。
+**进入语义对齐验证前置条件**：所有进度验证（Tier 1）和需求验证（Tier 2）条目已满足或已由人确认跳过。
 
 ---
 
@@ -213,7 +213,7 @@ with CognitiveContext(".mem0ress") as ctx:
     # Agent 执行思考...
 
 # __exit__ 自动触发：
-#   - Tier 0 约束检查
+#   - Tier 0 约束验证
 #   - Session 快照追加（含 data_plane 快照）
 ```
 
@@ -269,7 +269,7 @@ with CognitiveContext(".mem0ress") as ctx:
     │   └── 调用 get_data_plane() 记录代码版本
     │
     └── __exit__（After Turn）
-        ├── Tier 0 约束检查
+        ├── Tier 0 约束验证
         └── snapshot_session() → session.md 追加轮次快照
             └── 含 data_plane commit ID 快照
 ```
