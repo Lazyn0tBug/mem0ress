@@ -79,13 +79,13 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 |----|------|----------------|
 | `CREATED` | 已创建，所有 Todo 未开始 | IN_PROGRESS, ABANDONED |
 | `IN_PROGRESS` | 执行中，至少一个 Todo 已完成 | COMPLETED, ABANDONED |
-| `VERIFYING` | 检验瞬态，Judge Agent 正在执行 | IN_PROGRESS, ABANDONED |
+| `VERIFYING` | 检验瞬态，Verify Agent 正在执行 | IN_PROGRESS, ABANDONED |
 | `COMPLETED` | 终态：目标达成 | — |
 | `ABANDONED` | 终态：目标放弃 | — |
 
 **VERIFYING 的约束：**
 - VERIFYING 是瞬态，不允许持久停留
-- Judge Agent 调用结束后必须立即退出 VERIFYING
+- Verify Agent 调用结束后必须立即退出 VERIFYING
 - VERIFYING **不记录**在 session.md 的 status 字段中（session 只记录生命周期状态）
 - 宿主框架负责 VERIFYING 的超时保护（见 PROTOCOL.md §3.3）
 
@@ -144,27 +144,27 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 | `Evidence` | list[object] | ✅ | 结构化证据：type/ref/purpose，purpose 绑定 Picture Claim |
 | `Workspace Snapshot` | object | ✅ | 工作区快照：commit_id + note |
 
-**Evidence 的 purpose 字段意义：** purpose 描述"该证据证明了什么"，与 Picture 维度对应，供 Judge 建立 Picture Claim → Evidence 映射。
+**Evidence 的 purpose 字段意义：** purpose 描述"该证据证明了什么"，与 Picture 维度对应，供 Verify Agent 建立 Picture Claim → Evidence 映射。
 
 **Todos 写法约定：** session.md 的 Todos 字段记录**全量状态**（所有 Todo 的当前完成情况），不只记录本轮新完成的项。这样每个 Turn 块是独立可读的，不需要回溯历史才能知道当前进度。
 
 ---
 
-## 4. judge.md 字段
+## 4. verify.md 字段
 
 ### Frontmatter
 
 | 字段 | 类型 | 必填 |
 |------|------|------|
 | `task_id` | string | ✅ |
-| `type` | `"judge"` | ✅ |
+| `type` | `"verify"` | ✅ |
 
 ### Turn 块字段
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `Turn {N.M}` | string | ✅ | 与触发时的 session Turn 一致 |
-| `Timestamp` | timestamp | ✅ | Judge Agent 开始检验的时间 |
+| `Timestamp` | timestamp | ✅ | Verify Agent 开始检验的时间 |
 | `Verdict` | enum | ✅ | PASSED / FAILED |
 | `Tier 0` | table | ✅ | 每条 Constraint 一行 |
 | `Tier 1` | checklist | ✅ | Todo + 子任务检查 |
@@ -214,14 +214,13 @@ Tier 0/1/2 任一 FAIL 时，Tier 3 强制 SKIPPED。
 └── tasks/
     └── {task_id}/
         ├── task.md        # 读写方：主 Agent（创建）/ 主 Agent（更新 Todo）
-        ├── session.md     # 读写方：主 Agent（追加）/ Judge Agent（只读）
-        ├── gotchas.md     # 读写方：主 Agent（追加）/ Judge Agent（只读）
-        ├── judge.md       # 读写方：Judge Agent（追加）/ 主 Agent（只读）
-        ├── verify.md      # 读写方：主 Agent（追加）/ Judge Agent（只读）
+        ├── session.md     # 读写方：主 Agent（追加）/ Verify Agent（只读）
+        ├── gotchas.md     # 读写方：主 Agent（追加）/ Verify Agent（只读）
+        ├── verify.md      # 读写方：Verify Agent（追加）/ 主 Agent（只读）
         └── {subtask_id}/ # 子任务目录，结构同上
 ```
 
-**verify.md** 在 task.md 同级目录下，由主 Agent 追加写，Judge Agent 只读。
+**verify.md** 在 task.md 同级目录下，由 Verify Agent 追加写，主 Agent 只读。
 
 父子关系由目录树表达，task.md 内不重复列子任务。
 
