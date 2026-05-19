@@ -61,8 +61,8 @@ class TestTaskLifecycleIntegration:
             "auth_module",
             "用户安全登录",
             requirements=[
-                Requirement(id="req_01", description="响应 < 100ms", verify_cmd=None),
-                Requirement(id="req_02", description="支持OAuth", verify_cmd=None),
+                Requirement(id="req_01", description="响应 < 100ms"),
+                Requirement(id="req_02", description="支持OAuth"),
             ],
             constraints=["不可明文存储密码", "必须加密传输"],
         )

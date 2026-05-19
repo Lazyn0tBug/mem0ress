@@ -149,7 +149,7 @@ class TestHarnessRunnerWithMockData:
         assert "跳过" in tier2.message
 
     def test_tier2_descriptive_requirements_pass(self):
-        """Tier 2 (MVP stub) returns passed=True with requirements listing."""
+        """Tier 2 with requirements returns passed=True with requirements listing."""
         runner = HarnessRunner()
         manifest = TaskManifest(
             id="test_task",
@@ -157,8 +157,8 @@ class TestHarnessRunnerWithMockData:
             cognitive_triad=CognitiveTriad(
                 picture="测试任务",
                 requirements=[
-                    Requirement(id="req_01", description="测试覆盖率 > 80%", verify_cmd=None),
-                    Requirement(id="req_02", description="响应时间 < 100ms", verify_cmd=None),
+                    Requirement(id="req_01", description="测试覆盖率 > 80%"),
+                    Requirement(id="req_02", description="响应时间 < 100ms"),
                 ],
                 constraints=[],
             ),
@@ -170,19 +170,33 @@ class TestHarnessRunnerWithMockData:
 
         tier2 = results[1]
         assert tier2.tier == 2
-        assert tier2.passed is True
-        assert "2 项 requirements" in tier2.message
+        # With no verify_plane passed, unverified requirements fail Tier 2
+        assert tier2.passed is False
+        assert "尚未在 verify.md 中创建" in tier2.message
 
     def test_tier2_shell_command_success(self):
-        """Tier 2 (MVP stub) with verify_cmd — returns passed=True listing stub."""
+        """Tier 2 with verify.md entry — returns passed=True for verified entry."""
         runner = HarnessRunner()
+        from mem0ress.core.schema import VerifyEntry, VerifyPlane
+
+        verify_plane = VerifyPlane(
+            entries=[
+                VerifyEntry(
+                    id="req_01",
+                    category="requirement",
+                    check_type="command",
+                    state="completed",
+                    description="shell test",
+                )
+            ]
+        )
         manifest = TaskManifest(
             id="test_task",
             status=TaskStatus.COMPLETED,
             cognitive_triad=CognitiveTriad(
                 picture="测试任务",
                 requirements=[
-                    Requirement(id="req_01", description="shell test", verify_cmd="echo 'hello'"),
+                    Requirement(id="req_01", description="shell test"),
                 ],
                 constraints=[],
             ),
@@ -190,23 +204,35 @@ class TestHarnessRunnerWithMockData:
             todos=[TodoItem(text="done", done=True)],
         )
 
-        results = runner.verify_task(manifest)
+        results = runner.verify_task(manifest, verify_plane=verify_plane)
 
         tier2 = results[1]
         assert tier2.tier == 2
         assert tier2.passed is True
-        assert "stub" in tier2.message
 
     def test_tier2_shell_command_failure(self):
-        """Tier 2 (MVP stub) — verify_cmd not executed, returns passed=True listing stub."""
+        """Tier 2 — entry in verify.md but state=unconfirmed fails."""
         runner = HarnessRunner()
+        from mem0ress.core.schema import VerifyEntry, VerifyPlane
+
+        verify_plane = VerifyPlane(
+            entries=[
+                VerifyEntry(
+                    id="req_01",
+                    category="requirement",
+                    check_type="command",
+                    state="unconfirmed",
+                    description="failing cmd",
+                )
+            ]
+        )
         manifest = TaskManifest(
             id="test_task",
             status=TaskStatus.COMPLETED,
             cognitive_triad=CognitiveTriad(
                 picture="测试任务",
                 requirements=[
-                    Requirement(id="req_01", description="failing cmd", verify_cmd="exit 1"),
+                    Requirement(id="req_01", description="failing cmd"),
                 ],
                 constraints=[],
             ),
@@ -214,23 +240,36 @@ class TestHarnessRunnerWithMockData:
             todos=[TodoItem(text="done", done=True)],
         )
 
-        results = runner.verify_task(manifest)
+        results = runner.verify_task(manifest, verify_plane=verify_plane)
 
         tier2 = results[1]
         assert tier2.tier == 2
-        assert tier2.passed is True  # MVP stub: not executed, so not FAIL
+        assert tier2.passed is False
 
     def test_tier2_mixed_requirements(self):
-        """Tier 2 (MVP stub) lists all requirements with their stub status."""
+        """Tier 2 with one verified, one unverified."""
         runner = HarnessRunner()
+        from mem0ress.core.schema import VerifyEntry, VerifyPlane
+
+        verify_plane = VerifyPlane(
+            entries=[
+                VerifyEntry(
+                    id="req_01",
+                    category="requirement",
+                    check_type="checked",
+                    state="confirmed",
+                    description="shell test",
+                )
+            ]
+        )
         manifest = TaskManifest(
             id="test_task",
             status=TaskStatus.COMPLETED,
             cognitive_triad=CognitiveTriad(
                 picture="测试任务",
                 requirements=[
-                    Requirement(id="req_01", description="shell test", verify_cmd="echo 'test'"),
-                    Requirement(id="req_02", description="描述性需求", verify_cmd=None),
+                    Requirement(id="req_01", description="shell test"),
+                    Requirement(id="req_02", description="描述性需求"),
                 ],
                 constraints=[],
             ),
@@ -238,11 +277,12 @@ class TestHarnessRunnerWithMockData:
             todos=[TodoItem(text="done", done=True)],
         )
 
-        results = runner.verify_task(manifest)
+        results = runner.verify_task(manifest, verify_plane=verify_plane)
 
         tier2 = results[1]
         assert tier2.tier == 2
-        assert tier2.passed is True
+        assert tier2.passed is False
+        assert "req_02" in tier2.message
 
     def test_tier3_prepares_context_for_agent(self):
         """Tier 3 prepares judgment context for Agent to perform alignment."""
@@ -288,13 +328,26 @@ class TestHarnessRunnerWithMockData:
     def test_full_verification_all_pass(self):
         """Full verification passes when all tiers pass."""
         runner = HarnessRunner()
+        from mem0ress.core.schema import VerifyEntry, VerifyPlane
+
+        verify_plane = VerifyPlane(
+            entries=[
+                VerifyEntry(
+                    id="req_01",
+                    category="requirement",
+                    check_type="checked",
+                    state="completed",
+                    description="可量化指标",
+                )
+            ]
+        )
         manifest = TaskManifest(
             id="complete_task",
             status=TaskStatus.COMPLETED,
             cognitive_triad=CognitiveTriad(
                 picture="完全完成的任务",
                 requirements=[
-                    Requirement(id="req_01", description="可量化指标", verify_cmd=None),
+                    Requirement(id="req_01", description="可量化指标"),
                 ],
                 constraints=["不可逾越的红线"],
             ),
@@ -302,7 +355,7 @@ class TestHarnessRunnerWithMockData:
             todos=[TodoItem(text="全部完成", done=True)],
         )
 
-        results = runner.verify_task(manifest)
+        results = runner.verify_task(manifest, verify_plane=verify_plane)
 
         assert runner.is_complete(results) is True
         assert all(r.passed for r in results)
@@ -338,7 +391,7 @@ class TestHarnessRunnerWithMockData:
             cognitive_triad=CognitiveTriad(
                 picture="用户认证模块",
                 requirements=[
-                    Requirement(id="req_01", description="支持 OAuth", verify_cmd=None),
+                    Requirement(id="req_01", description="支持 OAuth"),
                 ],
                 constraints=[],
             ),

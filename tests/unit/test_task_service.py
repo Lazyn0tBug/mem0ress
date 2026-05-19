@@ -113,7 +113,7 @@ class TestTaskServiceImpl:
             "auth_module",
             "用户安全登录",
             requirements=[
-                Requirement(id="req_01", description="响应 < 100ms", verify_cmd=None),
+                Requirement(id="req_01", description="响应 < 100ms"),
             ],
             constraints=["不可明文存储密码"],
         )

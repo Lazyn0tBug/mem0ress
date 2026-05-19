@@ -116,7 +116,7 @@ gotcha_refs: []
             cognitive_triad=CognitiveTriad(
                 picture="用户顺畅登录",
                 requirements=[
-                    Requirement(id="req_01", description="响应 < 200ms", verify_cmd=None),
+                    Requirement(id="req_01", description="响应 < 200ms"),
                 ],
                 constraints=["不可明文存储密码"],
             ),
@@ -173,6 +173,6 @@ gotcha_refs: []
         # Verify strings were converted to Requirement objects
         assert manifest.cognitive_triad.requirements[0].id == "req_00"
         assert manifest.cognitive_triad.requirements[0].description == "响应 < 200ms"
-        assert manifest.cognitive_triad.requirements[0].verify_cmd is None
+        assert manifest.cognitive_triad.requirements[0].persistent is False
         assert manifest.cognitive_triad.requirements[1].id == "req_01"
         assert manifest.cognitive_triad.requirements[1].description == "支持 OAuth"

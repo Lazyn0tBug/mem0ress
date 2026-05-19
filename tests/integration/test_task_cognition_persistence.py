@@ -32,8 +32,8 @@ class TestTaskCognitionPersistence:
             "auth_module",
             picture="用户顺畅登录",
             requirements=[
-                Requirement(id="req_01", description="响应 < 100ms", verify_cmd=None),
-                Requirement(id="req_02", description="支持 OAuth2", verify_cmd=None),
+                Requirement(id="req_01", description="响应 < 100ms"),
+                Requirement(id="req_02", description="支持 OAuth2"),
             ],
             constraints=["不可明文存储密码", "必须加密传输"],
         )
@@ -45,7 +45,7 @@ class TestTaskCognitionPersistence:
             "api_gateway",
             picture="高性能 API 网关",
             requirements=[
-                Requirement(id="req_01", description="QPS > 10000", verify_cmd=None),
+                Requirement(id="req_01", description="QPS > 10000"),
             ],
             constraints=["必须使用 HTTP/2"],
         )
@@ -56,8 +56,8 @@ class TestTaskCognitionPersistence:
             "auth_module",
             picture="用户顺畅登录",
             requirements=[
-                Requirement(id="req_01", description="响应 < 100ms", verify_cmd=None),
-                Requirement(id="req_02", description="支持 OAuth2", verify_cmd=None),
+                Requirement(id="req_01", description="响应 < 100ms"),
+                Requirement(id="req_02", description="支持 OAuth2"),
             ],
             constraints=[
                 "不可明文存储密码",
@@ -72,8 +72,8 @@ class TestTaskCognitionPersistence:
             "database",
             picture="关系型数据库",
             requirements=[
-                Requirement(id="req_01", description="支持 ACID", verify_cmd=None),
-                Requirement(id="req_02", description="支持事务", verify_cmd=None),
+                Requirement(id="req_01", description="支持 ACID"),
+                Requirement(id="req_02", description="支持事务"),
             ],
             constraints=["必须使用 InnoDB"],
         )
@@ -108,9 +108,9 @@ class TestTaskCognitionPersistence:
             "api_gateway",
             picture="API 网关 v2",
             requirements=[
-                Requirement(id="req_01", description="支持 GraphQL", verify_cmd=None),
-                Requirement(id="req_02", description="支持 REST", verify_cmd=None),
-                Requirement(id="req_03", description="支持 gRPC", verify_cmd=None),
+                Requirement(id="req_01", description="支持 GraphQL"),
+                Requirement(id="req_02", description="支持 REST"),
+                Requirement(id="req_03", description="支持 gRPC"),
             ],
             constraints=["必须使用 HTTP/3"],
         )
@@ -155,7 +155,8 @@ class TestTaskCognitionPersistence:
         assert "编写 Auth 中间件" in tier1.message
 
         tier2 = results[1]
-        assert tier2.passed is True  # No requirements to run
+        assert tier2.passed is False  # verify.md not created, requirements unverified
+        assert "尚未在 verify.md 中创建" in tier2.message
 
         tier3 = results[2]
         assert tier3.passed is True  # Judge placeholder
@@ -180,7 +181,7 @@ class TestTaskCognitionPersistence:
             "task_a",
             picture="任务 A 的 picture",
             requirements=[
-                Requirement(id="req_01", description="A 的需求", verify_cmd=None),
+                Requirement(id="req_01", description="A 的需求"),
             ],
             constraints=["A 的约束"],
         )
@@ -190,7 +191,7 @@ class TestTaskCognitionPersistence:
             "task_b",
             picture="任务 B 的 picture",
             requirements=[
-                Requirement(id="req_01", description="B 的需求", verify_cmd=None),
+                Requirement(id="req_01", description="B 的需求"),
             ],
             constraints=["B 的约束"],
         )
@@ -200,8 +201,8 @@ class TestTaskCognitionPersistence:
             "task_a",
             picture="A 被大幅修改后的 picture",
             requirements=[
-                Requirement(id="req_01", description="A 的新需求1", verify_cmd=None),
-                Requirement(id="req_02", description="A 的新需求2", verify_cmd=None),
+                Requirement(id="req_01", description="A 的新需求1"),
+                Requirement(id="req_02", description="A 的新需求2"),
             ],
             constraints=["A 的新约束1", "A 的新约束2", "A 的新约束3"],
         )

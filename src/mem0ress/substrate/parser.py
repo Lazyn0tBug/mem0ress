@@ -1,7 +1,10 @@
 """SubstrateParser - YAML frontmatter and markdown parsing."""
 
+from __future__ import annotations
+
 import re
 from pathlib import Path
+from typing import Literal
 
 import yaml
 
@@ -11,6 +14,8 @@ from mem0ress.core.schema import (
     TaskManifest,
     TaskStatus,
     TodoItem,
+    VerifyEntry,
+    VerifyPlane,
 )
 
 FRONTMATTER_PATTERN = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
@@ -59,14 +64,13 @@ class SubstrateParser:
             if isinstance(req, str):
                 # Backward compat: plain string → wrap as Requirement
                 requirements.append(
-                    Requirement(id=f"req_{i:02d}", description=req, verify_cmd=None)
+                    Requirement(id=f"req_{i:02d}", description=req)
                 )
             elif isinstance(req, dict):
                 requirements.append(
                     Requirement(
                         id=req.get("id", f"req_{i:02d}"),
                         description=req.get("description", ""),
-                        verify_cmd=req.get("verify_cmd"),
                     )
                 )
             # else: skip invalid entries
@@ -121,3 +125,109 @@ class SubstrateParser:
                 is_done = todo_match.group(1).lower() == "x"
                 todos.append(TodoItem(text=todo_match.group(2).strip(), done=is_done))
         return todos
+
+    # ------------------------------------------------------------------
+    # verify.md parsing
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def parse_verify_md(file_path: Path) -> VerifyPlane:
+        """Parse verify.md into VerifyPlane.
+
+        Marker format: {type_prefix}{state_marker} {id} {description}
+        - Type prefix: [] (checked), () (command), {} (skip)
+        - State marker: . (confirmed), ✓ (completed), × (violated/constraint only)
+        """
+        if not file_path.exists():
+            return VerifyPlane(entries=[])
+
+        content = file_path.read_text(encoding="utf-8")
+        entries: list[VerifyEntry] = []
+
+        # Parse each line matching a verify entry marker
+        for line in content.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+
+            # Match: [] / () / {} with optional state marker
+            marker_match = re.match(
+                r"^([\[\(\{])\s*([\.✓×])?\s*([\]\)}])\s+(\w+)\s*(.*)$", line
+            )
+            if not marker_match:
+                continue
+
+            type_prefix = marker_match.group(1)  # [ ( {
+            state_marker = marker_match.group(2) or ""  # . ✓ × or empty
+            _ = marker_match.group(3)  # ] ) } — matched by regex, not used
+            entry_id = marker_match.group(4)  # req_01, cons_01
+            description = marker_match.group(5).strip()
+
+            # Determine check_type
+            if type_prefix == "[":
+                check_type: Literal["checked", "command", "skip"] = "checked"
+            elif type_prefix == "(":
+                check_type = "command"
+            else:
+                check_type = "skip"
+
+            # Determine category from ID prefix
+            if entry_id.startswith("cons_"):
+                category: Literal["requirement", "constraint"] = "constraint"
+            else:
+                category = "requirement"
+
+            # Determine state
+            if state_marker == ".":
+                state: Literal["unconfirmed", "confirmed", "completed", "violated"] = (
+                    "confirmed"
+                )
+            elif state_marker == "✓":
+                state = "completed"
+            elif state_marker == "×":
+                state = "violated"
+            else:
+                state = "unconfirmed"
+
+            entries.append(
+                VerifyEntry(
+                    id=entry_id,
+                    category=category,
+                    check_type=check_type,
+                    state=state,
+                    description=description,
+                )
+            )
+
+        return VerifyPlane(entries=entries)
+
+    @staticmethod
+    def serialize_verify_entries(plane: VerifyPlane) -> str:
+        """Serialize VerifyPlane entries to verify.md markdown format.
+
+        Format:
+        ## Requirements
+        [.] req_01 description
+        [✓] req_02 description
+
+        ## Constraints
+        (.) cons_01 description
+        """
+        # Helper to build marker string
+        def marker(entry: VerifyEntry) -> str:
+            prefix = {"checked": "[", "command": "(", "skip": "{"}[entry.check_type]
+            suffix = {"checked": "]", "command": ")", "skip": "}"}[entry.check_type]
+            state_map = {"unconfirmed": "", "confirmed": ".", "completed": "✓", "violated": "×"}
+            return f"{prefix}{state_map[entry.state]}{suffix}"
+
+        lines = ["## Requirements", ""]
+        for entry in plane.entries:
+            if entry.category == "requirement":
+                lines.append(f"{marker(entry)} {entry.id}  {entry.description}")
+
+        lines.extend(["", "## Constraints", ""])
+        for entry in plane.entries:
+            if entry.category == "constraint":
+                lines.append(f"{marker(entry)} {entry.id}  {entry.description}")
+
+        return "\n".join(lines)
