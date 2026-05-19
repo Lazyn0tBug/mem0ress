@@ -643,25 +643,42 @@ VERIFY.md 只存三类：
 * **create 时**：任务创建阶段，人提出验证需求，Agent 以 `[]` / `()` / `{}` 前缀写入 VERIFY.md，开始澄清
 * **生命周期中**：任何轮次结束后，人可提出新的验证需求或更新已有验证方法
 
-**VERIFY.md 条目标记规则：**
+**VERIFY.md 条目格式：**
 
 ```markdown
-## Requirements
+## Picture
 
-[.]  R-1  checked   新读者能理解 worldview     # 已确认，执行
-(.)  R-2  command   npm run build               # 已确认，执行
-()   R-3  command   lighthouse --quiet          # 待讨论，不执行
-[]   R-4  checked   待确认                       # 待讨论，不执行
+[.] T3-1
+   description: 架构分层清晰，认知所有权段落到位
+   conclusion: 已对齐
+
+[.] T3-2
+   description: worldview 无语义漂移
+   conclusion: 已对齐
 
 ## Constraints
 
-{.}  C-1  skip     性能优化在 v2 处理           # 已确认，执行
-{}   C-2  skip     待讨论                       # 待讨论，不执行
+[.] C-1
+   description: 禁止使用未定义的术语
+   verification_method: checked
+   conclusion: 通过
 
-## Picture
+(.) C-2
+   description: 必须有 rollback 方案
+   verification_method: command
+   conclusion: npm run rollback-test 通过
 
-[.]  T3-1  checked   架构分层清晰，认知所有权段落到位  # Tier 3 结论
-[.]  T3-2  checked   worldview 无语义漂移              # Tier 3 结论
+## Requirements
+
+[.] R-1
+   description: 新读者能独立理解 worldview
+   verification_method: checked
+   conclusion: 需要补充 §3 架构图
+
+(.) R-2
+   description: npm run build 必须成功
+   verification_method: command
+   conclusion: 通过
 ```
 
 **VERIFY.md 内容变更规则：** 验证过程中若发现某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态，不直接删除历史记录。
@@ -682,23 +699,39 @@ VERIFY.md 中每条验证条目由「类型前缀」和「有效性标记」共�
 **格式示例：**
 
 ```markdown
-## Requirements
+## Picture
 
-[.]  R-1  checked   新读者能理解 worldview
-(.)  R-2  command   npm run build
-()   R-3  command   lighthouse --quiet   # 待讨论
-[]   R-4  checked   待确认
+[.] T3-1
+   description: 架构分层清晰，认知所有权段落到位
+   conclusion: 已对齐
+
+[.] T3-2
+   description: worldview 无语义漂移
+   conclusion: 已对齐
 
 ## Constraints
 
-{.}  C-1  skip     性能优化在 v2 处理
-[.]  C-2  checked  术语必须与 spec 一致
-[×]  C-3  failed  发现了未声明的全局状态——suspended，等待解决
+[.] C-1
+   description: 禁止使用未定义的术语
+   verification_method: checked
+   conclusion: 通过
 
-## Picture
+(.) C-2
+   description: 必须有 rollback 方案
+   verification_method: command
+   conclusion: npm run rollback-test 通过
 
-[.]  T3-1  checked  架构分层清晰，认知所有权段落到位
-[.]  T3-2  checked  worldview 无语义漂移
+## Requirements
+
+[.] R-1
+   description: 新读者能独立理解 worldview
+   verification_method: checked
+   conclusion: 需要补充 §3 架构图
+
+(.) R-2
+   description: npm run build 必须成功
+   verification_method: command
+   conclusion: 通过
 ```
 
 **VERIFY.md 写入前提：** 人确认方法后写入，未经人确认的内容不允许写入 VERIFY.md。
