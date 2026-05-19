@@ -10,9 +10,9 @@ mem0ress 是一个面向 AI Agent 开发者的**认知对齐平面（Cognitive A
 
 | 文档 | 说明 |
 |------|------|
-| **[教程 (docs/TUTORIAL.md)](docs/TUTORIAL.md)** | 快速上手指南——安装、命令、文件协议、Skill 命令、Judge 验证 |
+| **[教程 (docs/TUTORIAL.md)](docs/TUTORIAL.md)** | 快速上手指南——安装、命令、文件协议、Skill 命令、Verify 验证 |
 | `docs/SPEC.md` | 接口语义规范 |
-| `src/mem0ress/design.md` | 实施方案 |
+| `src/` | 实施方案 |
 
 ---
 
@@ -39,12 +39,12 @@ mem0ress 是一个面向 AI Agent 开发者的**认知对齐平面（Cognitive A
 
 | 内部编号 | 名称 | 内容 | 执行者 | 性质 |
 |---------|------|------|--------|------|
-| Tier 0 | 约束验证 | Constraints 违反检查 | 自动触发 | 参考信号（loop 或忽略，不阻塞） |
-| Tier 1 | 进度验证 | Todo 完成 + 子任务关闭检查 | 自动触发 | 参考约束（loop 或忽略，不阻塞） |
+| Tier 0 | 进度验证 | Todo 完成 + 子任务关闭检查 | 自动触发 | 观察动作（不触发 Tier 3） |
+| Tier 1 | 约束验证 | Constraints 违反检查 | 自动触发 | 参考信号（loop 或忽略，不阻塞） |
 | Tier 2 | 需求验证 | Requirements 满足检查 | 自动触发 | 评估参考（逐步满足，不阻塞） |
 | Tier 3 | 语义对齐验证 | Picture vs 实际产出语义判断 | Agent 主动决策 | **唯一硬门槛**（FAIL → amend 循环） |
 
-**进入语义对齐验证前置条件**：所有进度验证（Tier 1）和需求验证（Tier 2）条目已满足或已由人确认跳过。
+**进入语义对齐验证前置条件**：Tier 1 无 violation + Tier 2 满足（见 SPEC.md §5.4.3）
 
 ---
 
@@ -53,7 +53,7 @@ mem0ress 是一个面向 AI Agent 开发者的**认知对齐平面（Cognitive A
 ```
 mem0ress/
 ├── src/mem0ress/            # 源代码
-│   ├── cli.py               # CLI 入口（mem0 init/create/status/list/update/judge/close/done/abandon/report）
+│   ├── cli.py               # CLI 入口（mem0 init/create/status/list/update/verify/close/done/abandon/report）
 │   ├── core/                # 核心类型
 │   │   ├── schema.py        # Pydantic 模型（TaskManifest、CognitiveTriad、TaskStatus）
 │   │   ├── constants.py     # 常量（DEFAULT_SUBSTRATE_ROOT = ".cap"）
@@ -66,7 +66,7 @@ mem0ress/
 │   │   ├── task_info.py     # 集中式任务注册表（.task_info）
 │   │   └── current_task.py  # 当前任务指针（legacy）
 │   ├── harness/             # 任务验证
-│   │   └── judge.py         # Tier 1/2/3 验证执行器
+│   │   └── judge.py         # Tier 1/2/3 验证执行器（HarnessRunner）
 │   └── substrate/           # 底层组件
 │       ├── fs.py            # 乐观锁文件系统（safe_write）
 │       ├── parser.py        # Markdown ↔ Pydantic 双向解析
@@ -77,19 +77,13 @@ mem0ress/
 ├── docs/                   # 文档
 │   ├── SPEC.md             # 接口语义规范
 │   ├── PROTOCOL.md         # 协议解释
-│   ├── FAQ.md              # 设计哲学
 │   ├── SCHEMA.md           # 数据模型说明
+│   ├── VERIFY.md           # 验证规范
+│   ├── FAQ.md              # 设计哲学
 │   ├── TUTORIAL.md         # 入门教程
-│   ├── TEMPLATES/          # 任务模板
-│   ├── BRAINSTORMS/        # 头脑风暴
-│   ├── ARCHIVE/            # 归档文档
-│   ├── CLAUDE/             # Claude 会话
-│   ├── DESIGN/             # 设计文档
-│   ├── GEMINI/             # Gemini 会话
-│   ├── GPT/                # GPT 会话
-│   ├── PLANS/              # 实施计划
-│   ├── REVIEW/             # 评审文档
-│   └── TUTORIALS/          # 教程
+│   ├── example/             # 案例
+│   ├── templates/          # 任务模板
+│   └── BRAINSTORMS/        # 头脑风暴
 └── pyproject.toml
 ```
 
@@ -104,7 +98,7 @@ mem0ress/
         ├── task.md               # 任务定义（Picture/Requirements/Constraints + Todos）
         ├── session.md            # 轮次快照（每轮追加，含 data_plane 快照）
         ├── gotchas.md           # 偏差记录（每条追加）
-        └── judge.md             # 检验报告（每轮追加，含时间戳）
+        └── verification.md      # 验证记录（每轮追加，含时间戳）
 ```
 
 ## 快速开始
