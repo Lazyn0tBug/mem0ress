@@ -150,41 +150,6 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 
 ---
 
-## 4. verification.md 字段
-
-### Frontmatter
-
-| 字段 | 类型 | 必填 |
-|------|------|------|
-| `task_id` | string | ✅ |
-| `type` | `"verify"` | ✅ |
-
-### Turn 块字段
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `Turn {N.M}` | string | ✅ | 与触发时的 session Turn 一致 |
-| `Timestamp` | timestamp | ✅ | Verify Agent 开始检验的时间 |
-| `Verdict` | enum | ✅ | PASSED / FAILED |
-| `Tier 0` | checklist | ✅ | Todo + 子任务检查 |
-| `Tier 1` | table | ✅ | 每条 Constraint 一行 |
-| `Tier 2` | table | ✅ | 每条 Requirement 一行 |
-| `Tier 3` | block | 条件 | 对话确认后写入 Picture section；见 §4.1 |
-| `Overall Verdict` | enum | ✅ | PASSED / FAILED |
-| `Summary` | string | ✅ | FAILED 时必须说明是哪个 Tier 失败 |
-
-### 4.1 Tier 3 触发与失败
-
-**Tier 3 无独立触发语义。** Tier 3 仅出现在验证路径末端，前提条件见 SPEC.md §5.4.3。
-
-**进入条件：** Tier 1 无 violation + Tier 2 满足 → 进入 Tier 3
-
-**Tier 3 失败行为：** FAIL → amend 循环（新增/修改 Requirement/Constraint → 重规划 → 继续）
-
-**Tier 1/2 任一 FAIL 时：** Tier 3 不执行（SKIPPED 或不进入 Tier 3）
-
----
-
 ## 5. gotchas.md 字段
 
 ### Frontmatter

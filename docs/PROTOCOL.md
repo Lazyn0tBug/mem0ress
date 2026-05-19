@@ -77,13 +77,6 @@
 
 **验证单路径模型：** 验证触发有三种方式（每 todo 完成 / 人主动 verify / 达到阈值），触发后统一执行完整验证路径，见 SPEC.md §5.4.3。
 
-**各 Tier 职责：**
-- Tier 1：Constraint 违规检查
-- Tier 2：deterministic 验证
-- Tier 3：前两层通过后自动触发，作为闭合条件
-
-**Tier 3 进入条件：** Tier 1 无 violation + Tier 2 满足 → 进入 Tier 3
-
 **语义对齐失败流程**：若语义对齐判定未对齐 → 触发 amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 继续执行 → 重新检验。
 
 语义对齐语义约束：证据不足时必须返回 **UNCERTAIN**，不得强行 PASS。
