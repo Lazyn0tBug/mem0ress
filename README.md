@@ -65,7 +65,7 @@ mem0ress/
 │   │   ├── protocol.py      # TaskServiceProtocol 接口定义
 │   │   ├── task_info.py     # 集中式任务注册表（.task_info）
 │   │   └── current_task.py  # 当前任务指针（legacy）
-│   ├── harness/             # 任务检验
+│   ├── harness/             # 任务验证
 │   │   └── judge.py         # Tier 1/2/3 验证执行器
 │   └── substrate/           # 底层组件
 │       ├── fs.py            # 乐观锁文件系统（safe_write）
@@ -233,7 +233,7 @@ snapshot_data_plane(
 )
 ```
 
-#### 任务检验（Harness Engine）
+#### 任务验证（Harness Engine）
 
 ```python
 from mem0ress.harness import HarnessRunner
