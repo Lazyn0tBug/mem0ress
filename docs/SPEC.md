@@ -121,8 +121,8 @@ graph TB
 - Task-local 状态平面（单任务认知边界）
 - 五个协议文档：`task.md` / `session.md` / `gotchas.md` / `judge.md` / `verify.md`（`completion_summary.md` 可选）
 - One-Agent-One-Task 责任模型
-- Judge Tier 0 / Tier 1 / Tier 2
-- Tier 3 结构化输出协议（Picture Claims / Evidence Mapping / Residual Gap / UNCERTAIN）
+- 四层任务检验（约束检查 / 进度检查 / 验收检查 / 语义对齐）
+- 语义对齐结构化输出协议（Picture Claims / Evidence Mapping / Residual Gap / UNCERTAIN）
 - 任务信息平面（状态平面 + 数据平面）
 - 父子任务两条通信通道
 
@@ -628,10 +628,10 @@ verify.md 记录验证方法，包含已确认和待讨论两类条目。
 **verify.md 职责边界：**
 
 verify.md 只存两类：
-- **Constraint** — 必须交互式对话确认，violation → `[×]` → SUSPEND
+- **Constraint** — 必须交互式对话确认，violation → `[×]`（参考信号，状态记录，不阻塞）
 - **Requirement（适合交互式对话的子集）** — 仅限适合对话验证的部分，非全集
 
-Tier 2 deterministic 验证（命令执行）不由 verify.md 条目承载，由 `[(.)]` marker 直接执行。Tier 3 semantic alignment 通过对话确认，不写入 verify.md。
+验收检查 deterministic 验证不由 verify.md 条目承载，由 `[(.)]` marker 直接执行。语义对齐通过对话确认，不写入 verify.md。
 
 **三方分工：**
 
@@ -732,7 +732,7 @@ verify.md 条目有三个状态：
 [] → [.] → [\✓]  (阶段性完成；下一轮次出现新的语义漂移时，可退回 [.] 重新验证)
 ```
 
-- `[\✓]` 标记时机：至少一个 todo 完成 + 至少一轮次结束 + Tier 2 验证通过
+- `[\✓]` 标记时机：至少一个 todo 完成 + 至少一轮次结束 + 验收检查通过
 - 退回触发：下一轮次发现新的语义漂移，由 Judge 或人主动提出
 
 **Constraint：**
@@ -740,11 +740,11 @@ verify.md 条目有三个状态：
 ```
 [] → [.] → [\✓]  (已解决)
           ↓
-       [×]  (violated — suspended，等待解决)
+       [×]  (violated — 参考信号，状态记录，解决后继续)
 ```
 
 - `[\✓]` = 约束已解决
-- `[×]` = 约束违规中（suspended，不 FAIL，解决后继续）
+- `[×]` = 约束违规中（参考信号，不阻塞，解决后继续）
 - 每轮次必须重新验证
 
 **`/cap amend` 命令：** 在任意时刻修正 verify.md 条目。仅允许未确认条目（`[]` / `()` / `{}`）；已确认条目（`[.]` / `(.)` / `{.}`）执行前可 amend，执行后不可；已完成条目（`[\✓]` / `(\✓)` / `{\✓}`）非持续性不可修改，提示「已完成」；持续性可退回 `[.]` 重新验证；Constraint 的 `[×]`（违规中）可 amend（解决后转为 `[\✓]`）。amend 记录追加到 session.md（可审计）。
@@ -753,24 +753,24 @@ verify.md 条目有三个状态：
 
 任务检验按顺序执行四层关卡。各层性质不同：
 
-* **约束检查（Tier 0）：** 执行过程中的参考信号。Constraint 违规不等同于任务失败——Agent 可选择 loop（修改后重试）或忽略。持续在执行过程中提供上下文，避免偏离目标太远。
-* **进度检查（Tier 1）：** 执行过程中的建议约束。Todo 未完成时，Agent 可选择 loop（修改后重试）、忽略、或暂时处理其他 Todo。逐步完成，不要求一次性全部满足。
-* **验收检查（Tier 2）：** 执行过程中的评估参考。Requirement 验证是逐步迭代满足的过程，动态进行，不要求在单次检验中全部通过。
-* **语义对齐检查（Tier 3）：** **唯一硬门槛。** Tier 3 是任务完成的最终判据。
+* **约束检查：** 执行过程中的参考信号。Constraint 违规不等同于任务失败——Agent 可选择 loop（修改后重试）或忽略。持续在执行过程中提供上下文，避免偏离目标太远。
+* **进度检查：** 执行过程中的建议约束。Todo 未完成时，Agent 可选择 loop（修改后重试）、忽略、或暂时处理其他 Todo。逐步完成，不要求一次性全部满足。
+* **验收检查：** 执行过程中的评估参考。Requirement 验证是逐步迭代满足的过程，动态进行，不要求在单次检验中全部通过。
+* **语义对齐检查：** **唯一硬门槛。** 语义对齐是任务完成的最终判据。
 
-**进入 Tier 3 的硬约束**：必须所有 Tier 1/2 条目已满足（或已由人确认跳过），否则不得进入 Tier 3。
+**进入语义对齐的硬约束**：必须所有进度检查和验收检查条目已满足（或已由人确认跳过），否则不得进入语义对齐。
 
-**Tier 3 失败流程**：若 Tier 3 判定语义未对齐 → 触发 amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 继续执行 → 重新进入检验流程。
+**语义对齐失败流程**：若语义对齐判定未对齐 → 触发 amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 继续执行 → 重新进入检验流程。
 
-> 示例：一个 `Picture` 是"用户无需输入密码即可登录"的 OAuth 任务。进度检查验证了所有 Todo 完成，验收检查验证了"支持 Google OAuth"和"支持 GitHub OAuth"这两个 Requirements 都满足。语义对齐额外检查了"实际登录流程中用户确实没有被要求输入密码"——这个检查无法通过代码结构验证，必须看实际行为，属于 Tier 3 的语义对齐范畴。
+> 示例：一个 `Picture` 是"用户无需输入密码即可登录"的 OAuth 任务。进度检查验证了所有 Todo 完成，验收检查验证了"支持 Google OAuth"和"支持 GitHub OAuth"这两个 Requirements 都满足。语义对齐额外检查了"实际登录流程中用户确实没有被要求输入密码"——这个检查无法通过代码结构验证，必须看实际行为，属于语义对齐的范畴。
 
 **决策执行规则：**
 
 检验完成后结果写入 `judge.md`，由主 Agent 从 `judge.md` 读取并决策下一步。
 
-Tier 3 PASS + 所有 Tier 1/2 已满足 → Agent 可标记任务完成
-Tier 3 FAIL → amend 循环（新增/修改 Requirement/Constraint → 重规划 → 继续）
-Tier 3 UNCERTAIN → 人判断是否可以完成，或触发 amend
+语义对齐 PASS + 所有进度检查和验收检查已满足 → Agent 可标记任务完成
+语义对齐 FAIL → amend 循环（新增/修改 Requirement/Constraint → 重规划 → 继续）
+语义对齐 UNCERTAIN → 人判断是否可以完成，或触发 amend
 
 ABANDONED 由 Agent 主动标记，与检验结果无关。
 
@@ -779,26 +779,28 @@ ABANDONED 由 Agent 主动标记，与检验结果无关。
 **四层检验执行规则：**
 
 ```
-Tier 0: 参考信号（loop 或忽略，不阻塞）
-Tier 1: 参考约束（loop 或忽略，不阻塞）
-Tier 2: 评估参考（逐步满足，不阻塞）
-Tier 3: 硬门槛（唯一完成判据）
+约束检查: 参考信号（loop 或忽略，不阻塞）
+进度检查: 参考约束（loop 或忽略，不阻塞）
+验收检查: 评估参考（逐步满足，不阻塞）
+语义对齐: 硬门槛（唯一完成判据）
 
-进入 Tier 3 前置条件：所有 Tier 1/2 条目已满足或已确认跳过
+进入语义对齐前置条件：所有进度检查和验收检查条目已满足或已确认跳过
 
-Tier 3 FAIL → amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 重新检验
+语义对齐 FAIL → amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 重新检验
 ```
 
 **检验执行方式表：**
 
-| 关卡 | 名称 | 执行方式 | 依赖文件 |
+| 检查层 | 名称 | 执行方式 | 依赖文件 |
 |------|------|---------|---------|
-| 约束检查（Tier 0） | Constraints 约束检查 | 纯逻辑：扫描 session.md + gotchas.md 中的违反记录 | task.md, session.md, gotchas.md |
-| 进度检查（Tier 1） | Todo & Subtask 完成检查 | 纯逻辑：读取 task.md Todo 状态 + 扫描子任务目录 | task.md |
-| 验收检查（Tier 2） | Requirements 验收检查 | 运行测试命令：执行可验证动作，记录命令输出 | task.md, session.md |
-| 语义对齐（Tier 3） | 语义对齐检查 | LLM 推断：Judge Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
+| 约束检查 | Constraints 约束检查 | 纯逻辑：扫描 session.md + gotchas.md 中的违反记录 | task.md, session.md, gotchas.md |
+| 进度检查 | Todo & Subtask 完成检查 | 纯逻辑：读取 task.md Todo 状态 + 扫描子任务目录 | task.md |
+| 验收检查 | Requirements 验收检查 | 运行测试命令：执行可验证动作，记录命令输出 | task.md, session.md |
+| 语义对齐 | 语义对齐检查 | LLM 推断：Judge Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
 
-**验收检查的关键约束：** Tier 2 deterministic 验证：`[(.)]` / `(\.)` / `{\.}` marker 为直接执行指令，由 Judge Agent 执行对应命令。Tier 3 semantic alignment：通过对话确认 Picture 与实际产出的语义偏差，不写入 verify.md。若验证过程中发现 verify.md 某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态。
+> **内部实现**：Judge Agent 内部将这四层实现为 Tier 0/1/2/3，编号不对外部暴露。
+
+**验收检查的关键约束：** 验收检查 deterministic 验证：`[(.)]` / `(\.)` / `{\.}` marker 为直接执行指令，由 Judge Agent 执行对应命令。语义对齐：通过对话确认 Picture 与实际产出的语义偏差，不写入 verify.md。若验证过程中发现 verify.md 某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态。
 
 **Judge Agent 输出约束：** Judge Agent 只报告事实，不给出修复建议，不判断"主 Agent 应该怎么做"，不修改 task.md / session.md / gotchas.md，不直接标记任务为 COMPLETED 或 ABANDONED。FAIL 结论写入 judge.md 后，Judge Agent 的职责结束，决策权回到主 Agent。
 

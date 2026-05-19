@@ -14,7 +14,7 @@
 | 参与方 | 职责 |
 |--------|------|
 | **主 Agent（Main Agent）** | 执行任务：创建任务、拆解 Todo、推进执行、写入 session 快照、触发 Judge、读取 Judge 结论、自主决策 |
-| **Judge Agent（Judge Agent）** | 检验任务：被动等待触发、执行四层检验（Tier 0/1/2/3）、写入 judge.md |
+| **Judge Agent（Judge Agent）** | 检验任务：被动等待触发、执行四层任务检验、写入 judge.md |
 | **宿主框架（Host Framework）** | 基础设施：管理文件系统布局、隔离上下文、注入 task_id、处理 VERIFYING 超时（默认 180s） |
 
 ---
@@ -65,20 +65,22 @@
 
 ---
 
-## 5. Judge Tier 语义
+## 5. 任务检验语义
 
-| Tier | 语义职责 | 性质 | 失败行为 |
+| 检查层 | 语义职责 | 性质 | 失败行为 |
 |------|---------|------|---------|
-| **Tier 0** | Constraint 约束检查 — 是否触碰红线 | 参考信号（loop 或忽略） | 状态记录，不阻塞 |
-| **Tier 1** | Todo 完成检查 — 是否完成计划项 | 参考约束（loop 或忽略） | 状态记录，不阻塞 |
-| **Tier 2** | verify.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） | 状态记录，不阻塞 |
-| **Tier 3** | 语义对齐 — Requirements 能否支撑 Picture | **唯一硬门槛** | FAIL → amend 循环 |
+| **约束检查** | Constraint 约束检查 — 是否触碰红线 | 参考信号（loop 或忽略） | 状态记录，不阻塞 |
+| **进度检查** | Todo 完成检查 — 是否完成计划项 | 参考约束（loop 或忽略） | 状态记录，不阻塞 |
+| **验收检查** | verify.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） | 状态记录，不阻塞 |
+| **语义对齐** | 语义对齐 — Requirements 能否支撑 Picture | **唯一硬门槛** | FAIL → amend 循环 |
 
-**进入 Tier 3 的前置条件**：必须所有 Tier 1/2 条目已满足（或已由人确认跳过）。
+> **内部实现**：Judge Agent 内部将这四层实现为 Tier 0（约束）/ Tier 1（进度）/ Tier 2（验收）/ Tier 3（语义对齐），编号不对外部暴露。
 
-**Tier 3 失败流程**：FAIL → 触发 amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 继续执行 → 重新检验。
+**进入语义对齐的前置条件**：必须所有进度检查和验收检查条目已满足（或已由人确认跳过）。
 
-Tier 3 语义约束：证据不足时必须返回 **UNCERTAIN**，不得强行 PASS。
+**语义对齐失败流程**：FAIL → 触发 amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 继续执行 → 重新检验。
+
+语义对齐语义约束：证据不足时必须返回 **UNCERTAIN**，不得强行 PASS。
 
 ---
 
@@ -201,7 +203,7 @@ Judge Agent 追加的验证表面。
 [] → [.] → [\✓]  (阶段性完成；下一轮次出现新的语义漂移时，可退回 [.] 重新验证)
 ```
 
-- `[\✓]` 标记时机：至少一个 todo 完成 + 至少一轮次结束 + Tier 2 验证通过
+- `[\✓]` 标记时机：至少一个 todo 完成 + 至少一轮次结束 + 验收检查通过
 - 退回触发：下一轮次发现新的语义漂移，由 Judge 或人主动提出
 
 **Constraint：**
