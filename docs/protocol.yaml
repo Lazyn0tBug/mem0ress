@@ -36,16 +36,20 @@ transitions:
 tiers:
   tier0:
     check: constraint_violations
-    on_fail: FAIL_IMMEDIATE
+    on_fail: RECORD_ONLY
+    description: 参考信号，状态记录，不阻塞
   tier1:
     check: todo_completion
-    on_fail: FAIL_IMMEDIATE
+    on_fail: RECORD_ONLY
+    description: 参考约束，状态记录，不阻塞
   tier2:
     check: requirement_validation
-    on_fail: FAIL_IMMEDIATE
+    on_fail: RECORD_ONLY
+    description: 评估参考，状态记录，逐步满足
   tier3:
     check: semantic_alignment
     on_fail: PASS_FAIL_UNCERTAIN
+    description: 唯一硬门槛，FAIL → amend 循环
     trigger_conditions:
       - picture_has_subjective_terms
       - constraint_picture_ambiguity

@@ -87,7 +87,7 @@ graph TB
     J --> C
     J --> T1
     J --> R
-    J -.->|按需触发| T3
+    J -->|硬门槛| T3
 
     classDef prc fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef task fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
