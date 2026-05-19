@@ -77,7 +77,7 @@ mem0 done
 mem0 done <task_id>
 ```
 
-要求 Verify 通过（Tier 0 Todo 完成 + Tier 1 约束无违规 + Tier 2 结构化检查 + Tier 3 语义对齐）。
+要求 Verify 通过（路径二：Tier 0 Todo 完成 + Tier 1 约束无违规 + Tier 2 结构化检查 + Tier 3 语义对齐）。
 
 ---
 
@@ -291,9 +291,9 @@ mem0 report [task_id]
 
 | Tier | 内容 | 说明 | 触发方式 |
 |------|------|------|---------|
-| Tier 0 | Todo 验证 | 检查 requirements 完成度（观察动作，每轮次执行） | 否（观察） |
-| Tier 1 | 约束验证 | 检查 constraints 是否被违反 | 是 |
-| Tier 2 | 自动验证 | 结构化检查 | 是 |
+| Tier 0 | Todo 验证 | 检查 requirements 完成度（观察动作，每轮次执行） | 路径一（自动含）+ 路径二（兜底） |
+| Tier 1 | 约束验证 | 检查 constraints 是否被违反 | 路径一 + 路径二 |
+| Tier 2 | 自动验证 | 结构化检查 | 路径一 + 路径二 |
 | Tier 3 | 语义对齐 | 唯一硬门槛，无独立触发语义 | 仅作路径末端 |
 
 **使用场景**：完成一个阶段后、提交前、遇到方向问题时。
@@ -425,8 +425,8 @@ requirements:
 | **session.md** | append-only 认知增量流 |
 | **gotchas.md** | 关键发现（模糊点、风险、阻塞） |
 | **verification.md** | Verify 验证记录 |
-| **Tier 0** | Todo 验证 |
 | **Tier 1** | 约束验证（必须通过） |
+| **Tier 0** | Todo 验证 |
 | **Tier 2** | 自动验证（可选） |
 
 ---

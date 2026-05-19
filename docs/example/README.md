@@ -51,10 +51,10 @@ status: <status>
 
 | Tier | 检查内容 | 触发方式 |
 |------|---------|---------|
-| Tier 0 | Constraints 违反 | 路径一（todo 完成）+ 路径二（人/阈值） |
-| Tier 1 | Todo & Subtask 完成（观察动作） | 路径一（自动含）+ 路径二（兜底） |
-| Tier 2 | Requirements 满足 | 路径一（todo 完成）+ 路径二（人/阈值） |
-| Tier 3 | 语义对齐（唯一硬门槛） | 仅作路径末端触发，无独立触发语义 |
+| Tier 0 | Todo & Subtask 完成（观察动作） | 否（观察） |
+| Tier 1 | Constraints 违反 | 是 |
+| Tier 2 | Requirements 满足 | 是 |
+| Tier 3 | 语义对齐（唯一硬门槛） | 仅作路径末端 |
 
 ### CLI 命令速查
 

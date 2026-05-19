@@ -95,7 +95,7 @@ CLI 是 Stable Capability Runtime 的第一种实现形态。
 | `mem0 create` | 创建任务（含 task_id 生成） | write |
 | `mem0 abandon` | 标记任务废弃 | write |
 | `mem0 update` | 追加认知增量到 session.md | write |
-| `mem0 verify` | 触发路径二验证（Tier 0 → Tier 1 → Tier 2 → Tier 3） | write |
+| `mem0 verify` | 触发验证（Tier 0 → Tier 1 → Tier 2 → Tier 3） | write |
 | `mem0 close` | verify 通过后标记 COMPLETED | write |
 | `mem0 done` | close 的别名 | write |
 | `mem0 report` | 显示最新 verify 报告 | query |
@@ -212,7 +212,7 @@ mem0 close <task_id>
 **内部流程**：
 
 1. 解析 task_id
-2. 调用 `HarnessRunner.verify_task()` 执行路径二：Tier 0 → Tier 1 → Tier 2 → Tier 3
+2. 调用 `HarnessRunner.verify_task()` 执行验证：Tier 0 → Tier 1 → Tier 2 → Tier 3
 3. 任何 Tier FAIL → 打印失败项，exit 1（Tier 3 FAIL 触发 amend 循环）
 4. 全部 PASS → `TaskServiceImpl.complete_task()` → status=COMPLETED
 5. 清理 `.current_task` 指针
@@ -228,7 +228,7 @@ mem0 close <task_id>
 追加 Turn snapshot 到 session.md，压缩记录，不含 chain-of-thought。
 
 **verify**：`mem0 verify [--root .mem0ress]`
-执行路径二：Tier 0 → Tier 1 → Tier 2 → Tier 3。输出 PASS/FAIL（无 ANSI markup）。
+执行验证：Tier 0 → Tier 1 → Tier 2 → Tier 3。输出 PASS/FAIL（无 ANSI markup）。
 
 **abandon**：`mem0 abandon <task_id>`
 标记 task.md status=ABANDONED。
@@ -376,23 +376,22 @@ activated_at: '2026-05-14T10:00:00+09:00'
 隔离保证:
   - Verify Agent 只接收 task_id + filesystem protocol
   - Verify Agent 不得接收 runtime memory / hidden state / full history
-/cap verify 触发路径二（人主动 / 阈值）：Tier 0 → Tier 1 → Tier 2 → Tier 3
-/cap verify 不允许指定某一层，必须完整执行路径二
+/cap verify 触发验证：Tier 0 → Tier 1 → Tier 2 → Tier 3
+/cap verify 不允许指定某一层，必须完整执行验证路径
 
-Tier 执行（双路径模型）：
-  - Tier 0: constraint violations（参考信号，不阻塞；可 loop 或忽略）→ 路径一 + 路径二
-  - Tier 1: todo completion（观察动作，每轮次执行）→ 路径一（自动含）/ 路径二（兜底）
-  - Tier 2: verify.md marker（逐步迭代，动态满足；不阻塞）→ 路径一 + 路径二
+Tier 执行（单路径模型）：
+  - Tier 0: todo completion（观察动作，每轮次执行）→ 否（观察）
+  - Tier 1: constraint violations（参考信号，不阻塞；可 loop 或忽略）→ 是
+  - Tier 2: verify.md marker（逐步迭代，动态满足；不阻塞）→ 是
   - Tier 3: semantic alignment（唯一硬门槛，无独立触发语义）→ 仅作路径末端
 
 输出:
-  Tier 0: 状态记录（loop 或忽略）
-  Tier 1: 状态快照（每轮次更新，不算 verify 操作）
+  Tier 0: 状态快照（每轮次更新，不算 verify 操作）
+  Tier 1: 状态记录（loop 或忽略）
   Tier 2: 状态记录（逐步满足）
   Tier 3: PASS / UNCERTAIN / FAIL
 
-进入 Tier 3 条件（路径一）: Tier 0 无 violation + Tier 2 满足 → 进入 Tier 3
-进入 Tier 3 条件（路径二）: Tier 0 无 violation + Tier 1 满足 + Tier 2 满足 → 进入 Tier 3
+进入 Tier 3 条件: Tier 1 无 violation + Tier 2 满足 → 进入 Tier 3
 
 Tier 3 FAIL → amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 重新检验
 

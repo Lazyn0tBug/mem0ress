@@ -68,23 +68,19 @@
 
 | Tier | 检查层 | 语义职责 | 性质 | 是否触发 Tier 3 |
 |------|--------|---------|------|--------------|
-| Tier 0 | 进度检查 | Todo 完成检查 — 是否完成计划项 | 观察动作（每轮次执行），不属于 verify 操作 | 否（观察） |
-| Tier 1 | 约束验证 | Constraint 约束检查 — 是否触碰红线 | 参考信号（loop 或忽略） | 是 |
-| Tier 2 | 需求验证 | VERIFY.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） | 是 |
+| Tier 0 | 约束验证 | Constraint 约束检查 — 是否触碰红线 | 参考信号（loop 或忽略） | 路径一 + 路径二 |
+| Tier 1 | 进度验证 | Todo 完成检查 — 是否完成计划项 | 观察动作（每轮次执行），不属于 verify 操作 | 路径二（兜底） |
+| Tier 2 | 需求验证 | VERIFY.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） | 路径一 + 路径二 |
 | Tier 3 | 语义对齐验证 | 语义对齐 — Requirements 能否支撑 Picture | **唯一硬门槛**，无独立触发语义 | 仅作路径末端 |
 
-**验证单路径模型：** 验证触发有三种方式（每 todo 完成 / 人主动 verify / 达到阈值），触发后统一执行同一路径：
+**双路径触发模型：**
+- **路径一（自然操作）：** 每 todo 完成时触发 Tier 0 → Tier 2 → Tier 3
+- **路径二（主动操作）：** 人主动 verify / 达到最大间隔阈值时触发 Tier 0 → Tier 1 → Tier 2 → Tier 3
+- **Tier 1 特殊定位：** 每轮次自动执行（观察动作），更新状态快照，不触发 Tier 3；仅在路径二中作为 verify 操作的一环执行
 
-```
-每 todo 完成 / 人主动 verify / 达到阈值 → Tier 0 → Tier 1 → Tier 2 → Tier 3
-```
-
-- **Tier 0 观察动作：** 每轮次自动执行，更新状态快照，不触发 Tier 3
-- Tier 1：Constraint 违规检查
-- Tier 2：deterministic 验证
-- Tier 3：前两层通过后自动触发，作为闭合条件
-
-**Tier 3 进入条件：** Tier 1 无 violation + Tier 2 满足 → 进入 Tier 3
+**Tier 3 进入条件：**
+- 路径一：Tier 0 无 violation + Tier 2 满足 → 进入 Tier 3
+- 路径二：Tier 0 无 violation + Tier 1 满足 + Tier 2 满足 → 进入 Tier 3
 
 **语义对齐失败流程**：若语义对齐判定未对齐 → 触发 amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 继续执行 → 重新检验。
 

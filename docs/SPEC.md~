@@ -544,7 +544,8 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务验证
   3. Session 写入：主 Agent 追加 session.md 快照；更新 task.md Todo 状态
   4. Tier 0 观察 + 验证触发判断：
      每轮次：Tier 0 自动执行（进度检查，更新状态快照，不触发 Tier 3）
-     验证触发：Tier 0 → Tier 1 → Tier 2 → Tier 3
+     若有 todo 完成：自动触发路径一（Tier 1 → Tier 2 → Tier 3）
+     若人主动 verify 或达到阈值：触发路径二（Tier 1 → Tier 0 → Tier 2 → Tier 3）
   5. 决策：主 Agent 自主决策下一步
 轮次结束
 ```
@@ -561,15 +562,25 @@ Task 的执行循环围绕三个核心动作展开：认知构建、任务验证
 
 #### 5.1.3 验证触发条件
 
-验证触发方式有三种（触发后统一执行同一路径）：
+验证有两种触发路径（详见 §5.4.3）：
+
+**路径一：自然操作（每 todo 完成时触发）**
 
 ```
-每 todo 完成 / 人主动 verify / 达到阈值 → Tier 0 → Tier 1 → Tier 2 → Tier 3
+每 todo 完成 → Tier 1 → Tier 2 → Tier 3
 ```
 
-- 每有一个 todo 从 `[]` 变为 `[\✓]`，自动触发验证
-- 人主动提出 verify 时，触发验证
-- 达到最大间隔阈值时，强制触发验证
+- 每有一个 todo 从 `[]` 变为 `[\✓]`，自动触发路径一
+- Tier 3 作为闭合条件自动出现在末端
+
+**路径二：主动操作（人触发 / 阈值触发）**
+
+```
+人主动 verify / 达到最大间隔阈值 → Tier 1 → Tier 0 → Tier 2 → Tier 3
+```
+
+- 人主动提出 verify 时，触发路径二，Tier 1/1/2 全部执行
+- 达到最大间隔阈值时，同样触发路径二
 - Tier 3 作为闭合条件自动出现在末端
 
 **Tier 0 的观察动作：** 每轮次结束时，系统自动执行 Tier 0（进度检查）并更新状态快照。这是观察动作，不属于 verify 操作，不触发 Tier 3。
@@ -775,20 +786,31 @@ Picture 结论：
 
 amend 记录追加到 session.md（可审计）。
 
-#### 5.4.3 验证单路径模型
+#### 5.4.3 验证触发模型
 
-验证触发方式有三种（每 todo 完成 / 人主动 verify / 达到阈值），触发后统一执行同一路径：
+**双操作语义：** 验证触发只有两种操作语义，Tier 3 无独立触发。
+
+**路径一：自然操作（每 todo 完成时触发）**
 
 ```
-每 todo 完成 / 人主动 verify / 达到阈值 → Tier 0 → Tier 1 → Tier 2 → Tier 3
+每 todo 完成 → Tier 1 → Tier 2 → Tier 3
 ```
 
-- Tier 0：进度检查（观察动作，不属于 verify，不触发 Tier 3）
 - Tier 1：Constraint 违规检查
 - Tier 2：deterministic 验证（命令式验证方法）
 - Tier 3：前两层通过后自动触发，作为闭合条件
 
-**Tier 0 的观察动作：** 每轮次结束时，系统自动执行 Tier 0（进度检查）并更新状态快照。这是观察动作，不属于 verify 操作，不触发 Tier 3。
+**路径二：主动操作（人触发 / 阈值触发）**
+
+```
+人主动 verify / 达到最大间隔阈值 → Tier 1 → Tier 0 → Tier 2 → Tier 3
+```
+
+- Tier 1/1/2 全部执行，不允许指定某一层
+- Tier 3 作为闭合条件出现在末端
+- 阈值由系统配置（如"每 N 轮必须主动 verify 一次"）
+
+**Tier 0 的特殊定位：** 每轮次结束时，系统自动执行 Tier 0（进度检查），但这是**观察动作**，不属于 verify 操作，不触发 Tier 3。
 
 ```
 每轮次：Tier 0（观察）→ 更新状态快照（不触发 Tier 3）
@@ -796,22 +818,28 @@ amend 记录追加到 session.md（可审计）。
 
 Tier 0 的作用是让状态平面保持最新，使人和 Agent 随时能看到 todo 进度。它不是 verify 的组成部分。
 
-**Tier 3 无独立触发语义：** Tier 3 只能出现在路径的末端，不能单独触发。
+**Tier 3 无独立触发语义：** Tier 3 只能出现在上述两条路径的末端，不能单独触发。
+
+```
+❌ Tier 3 单独触发
+✅ Tier 1 → Tier 2 → Tier 3（路径一）
+✅ Tier 1/1/2 → Tier 3（路径二）
+```
 
 **四层检验各层性质：**
 
 | Tier | 名称 | 性质 | 是否算 verify |
 |------|------|------|--------------|
-| Tier 0 | 进度检查 | 观察动作，每轮次执行，更新状态快照 | 否（观察） |
-| Tier 1 | 约束验证 | 参考信号，Constraint 违规不等同于任务失败，Agent 可 loop 或忽略 | 是 |
-| Tier 2 | 需求验证 | deterministic 验证，可 replay，逐步满足，不阻塞 | 是 |
-| Tier 3 | 语义对齐验证 | **唯一硬门槛**，无独立触发语义，作为闭合条件出现 | 是 |
+| Tier 1 | 约束验证 | 参考信号，Constraint 违规不等同于任务失败，Agent 可 loop 或忽略 | 路径一 + 路径二 |
+| Tier 0 | 进度检查 | 观察动作，每轮次执行，更新状态快照 | 路径一（自动含） + 路径二（兜底） |
+| Tier 2 | 需求验证 | deterministic 验证，可 replay，逐步满足，不阻塞 | 路径一 + 路径二 |
+| Tier 3 | 语义对齐验证 | **唯一硬门槛**，无独立触发语义，作为闭合条件出现 | 仅作为路径末端 |
 
 **决策执行规则：**
 
 检验完成后结果写入 `VERIFY.md`，由主 Agent 从 `VERIFY.md` 读取并决策下一步。
 
-- Tier 3 PASS + Tier 1 + Tier 2 满足 → Agent 可标记任务完成
+- Tier 3 PASS + Tier 0 + Tier 2 满足 → Agent 可标记任务完成
 - Tier 3 FAIL → amend 循环（新增/修改 Requirement/Constraint → 重规划 → 继续）
 - Tier 3 UNCERTAIN → 人判断是否可以完成，或触发 amend
 
@@ -836,25 +864,31 @@ ABANDONED 由 Agent 主动标记，与检验结果无关。
 
 ```yaml
 verify:
-  max_interval_rounds: 10  # 每 N 轮未主动 verify 则强制触发验证
+  max_interval_rounds: 10  # 每 N 轮未主动 verify 则强制触发路径二
 ```
 
 ```mermaid
-%% label：验证单路径模型
+%% label：验证触发模型
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#fce4ec', 'primaryTextColor': '#880e4f', 'primaryBorderColor': '#c62828', 'lineColor': '#90a4ae' } } }%%
 stateDiagram-v2
     [*] --> IN_PROGRESS
     IN_PROGRESS --> Tier0: 每轮次（观察，不触发 Tier 3）
     Tier0 --> IN_PROGRESS: 更新状态快照
 
-    IN_PROGRESS --> Verify: 每 todo 完成 / 人主动 verify / 达到阈值
-    Verify --> Tier1
+    IN_PROGRESS --> Path1: 每 todo 完成
+    Path1 --> Tier1
     Tier1 --> Tier2: 无 violation 或已记录
     Tier2 --> Tier3: Tier 1/2 通过
     Tier3 --> PASS: 语义对齐
     Tier3 --> FAIL: 语义未对齐
     FAIL --> IN_PROGRESS: amend → 重规划
     PASS --> COMPLETED
+
+    IN_PROGRESS --> Path2: 人主动 verify / 达到阈值
+    Path2 --> Tier1
+    Tier1 --> Tier0
+    Tier0 --> Tier2
+    Tier2 --> Tier3
 
     COMPLETED --> [*]
 ```

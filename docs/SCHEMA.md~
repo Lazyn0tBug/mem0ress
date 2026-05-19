@@ -175,21 +175,18 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 
 ### 4.1 Tier 3 触发与失败
 
-**Tier 3 无独立触发语义。** Tier 3 仅出现在验证路径的末端：
+**Tier 3 无独立触发语义。** Tier 3 仅出现在双路径模型的路径末端：
 
-```
-每 todo 完成 / 人主动 verify / 达到阈值 → Tier 0 → Tier 1 → Tier 2 → Tier 3
-```
+- **路径一（自然操作）：** 每 todo 完成 → Tier 1 → Tier 2 → Tier 3
+- **路径二（主动操作）：** 人主动 verify / 达到阈值 → Tier 1 → Tier 0 → Tier 2 → Tier 3
 
-- Tier 0：进度检查（观察动作，不触发 Tier 3）
-- Tier 1：Constraint 违规检查
-- Tier 2：deterministic 验证
-
-**进入条件：** Tier 1 无 violation + Tier 2 满足 → 进入 Tier 3
+**进入条件：**
+- 路径一：Tier 1 无 violation + Tier 2 满足 → 进入 Tier 3
+- 路径二：Tier 0 满足 + Tier 1 无 violation + Tier 2 满足 → 进入 Tier 3
 
 **Tier 3 失败行为：** FAIL → amend 循环（新增/修改 Requirement/Constraint → 重规划 → 继续）
 
-**Tier 1/2 任一 FAIL 时：** Tier 3 不执行（SKIPPED 或不进入 Tier 3）
+**Tier 1/1/2 任一 FAIL 时：** Tier 3 不执行（SKIPPED 或不进入 Tier 3）
 
 ---
 
