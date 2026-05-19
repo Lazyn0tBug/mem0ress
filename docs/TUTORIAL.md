@@ -1,6 +1,6 @@
 # mem0ress 教程
 
-mem0ress 是面向 AI Agent 的认知对齐平面（Cognitive Alignment Plane）协议实现。它通过文件系统协议和 Judge 验证机制，帮助 Agent 在长程任务中保持认知稳定、 Survive 上下文压缩和中断恢复。
+mem0ress 是面向 AI Agent 的认知对齐平面（Cognitive Alignment Plane）协议实现。它通过文件系统协议和 Verify 验证机制，帮助 Agent 在长程任务中保持认知稳定、 Survive 上下文压缩和中断恢复。
 
 ---
 
@@ -30,7 +30,7 @@ Skill 是 agent runtime 的协议接口，不需要 pip 安装。Agent runtime �
 /cap status     # 查看状态平面
 /cap snapshot   # 追加认知增量
 /cap gotcha     # 记录关键发现
-/cap verify     # 请求 Judge 验证
+/cap verify     # 请求 Verify 验证
 /cap decide     # 读取判决，决定下一步
 /cap close      # 语义关闭验证
 ```
@@ -56,7 +56,7 @@ mem0 create --picture "完成一份白皮书"
 - `task.md` — 任务定义（picture、requirements、constraints）
 - `session.md` — 认知增量流（append-only）
 - `gotchas.md` — 关键发现（模糊点、风险、假设）
-- `judge.md` — Judge 验证记录
+- `verify.md` — Verify 验证记录
 
 ### 1.3 工作循环
 
@@ -65,8 +65,8 @@ mem0 create --picture "完成一份白皮书"
 write/edit          → 执行工作
 /cap snapshot       → 追加认知增量
 /cap gotcha         → 记录关键发现
-/cap verify         → 请求 Judge 验证
-/cap decide         → 根据 Judge 判决决定下一步
+/cap verify         → 请求 Verify 验证
+/cap decide         → 根据 Verify 判决决定下一步
 ```
 
 ### 1.4 完成任务
@@ -77,7 +77,7 @@ mem0 done
 mem0 done <task_id>
 ```
 
-要求 Judge 通过（Tier 0 约束无违规 + Tier 1 Todo 完成 + Tier 2 可选自动验证）。
+要求 Verify 通过（Tier 0 约束无违规 + Tier 1 Todo 完成 + Tier 2 可选自动验证）。
 
 ---
 
@@ -92,7 +92,7 @@ mem0 done <task_id>
 │       ├── task.md       # 任务定义（语义权威）
 │       ├── session.md    # 认知增量（append-only）
 │       ├── gotchas.md    # 关键发现
-│       ├── judge.md      # Judge 验证记录
+│       ├── verify.md      # Verify 验证记录
 │       └── data/         # 执行产物（可选）
 │           ├── outputs/
 │           ├── evidence/
@@ -151,9 +151,9 @@ append-only 的增量流。只记录有意义的认知变化：
 - 需要与业务方确认目标受众定位
 ```
 
-### 2.5 judge.md — Judge 验证记录
+### 2.5 verify.md — Verify 验证记录
 
-Judge Agent 的验证结果：
+Verify Agent 的验证结果：
 
 ```markdown
 ## Tier 0 — 约束验证
@@ -213,7 +213,7 @@ mem0 update [--content TEXT]
 mem0 done [task_id]
 ```
 
-触发完整 Judge 验证。必须通过才能完成。
+触发完整 Verify 验证。必须通过才能完成。
 
 ### 3.6 废弃任务
 
@@ -223,13 +223,13 @@ mem0 abandon [task_id]
 
 标记任务为废弃状态，并记录废弃原因。
 
-### 3.7 查看 Judge 报告
+### 3.7 查看 Verify 报告
 
 ```bash
 mem0 report [task_id]
 ```
 
-显示最近一次 Judge 验证的完整报告。
+显示最近一次 Verify 验证的完整报告。
 
 ---
 
@@ -239,14 +239,14 @@ mem0 report [task_id]
 
 ### 4.1 /cap recover
 
-恢复任务认知。加载 `task.md`、`session.md`、最近增量、gotchas、Judge 状态。
+恢复任务认知。加载 `task.md`、`session.md`、最近增量、gotchas、Verify 状态。
 
 **返回**：
 - 当前 picture
 - 活跃的 requirements 和 todos
 - 未解决的 gotchas
 - 最近有意义的工作增量
-- 最新 Judge 判决
+- 最新 Verify 判决
 
 **使用场景**：上下文压缩后、中断后回到任务、切换任务前。
 
@@ -254,7 +254,7 @@ mem0 report [task_id]
 
 渲染当前状态平面。包含认知表面和数据平面。
 
-- **认知表面**：picture、todos、活跃 requirements、gotchas、最新 Judge 判决
+- **认知表面**：picture、todos、活跃 requirements、gotchas、最新 Verify 判决
 - **数据平面**：outputs、evidence、artifacts
 
 **使用场景**：快速了解任务全貌、给用户展示进度。
@@ -283,9 +283,9 @@ mem0 report [task_id]
 
 ### 4.5 /cap verify
 
-请求 Judge Agent 验证。
+请求 Verify Agent 验证。
 
-**Judge 隔离原则**：Judge 只接收 `task_id + 文件系统协议`，不接收运行时内存或隐藏状态。
+**Verify 隔离原则**：Verify 只接收 `task_id + 文件系统协议`，不接收运行时内存或隐藏状态。
 
 **验证层级**：
 
@@ -299,7 +299,7 @@ mem0 report [task_id]
 
 ### 4.6 /cap decide
 
-读取 Judge 判决，决定下一步。
+读取 Verify 判决，决定下一步。
 
 **决策权永远在 Agent**：Skill 只提供信息，不做决策。
 
@@ -312,7 +312,7 @@ mem0 report [task_id]
 
 ---
 
-## §5 Judge 验证
+## §5 Verify 验证
 
 ### 5.1 Tier 0 — 约束验证（必须通过）
 
@@ -345,7 +345,7 @@ requirements:
 
 验证失败时：
 
-1. 查看 `judge.md` 中的失败原因
+1. 查看 `verify.md` 中的失败原因
 2. 使用 `/cap gotcha` 记录发现的模糊点
 3. 修复问题
 4. 再次执行 `/cap verify`
@@ -375,13 +375,13 @@ requirements:
    → "第二章核心论点：AI 提升效率 30%"
 
 6. /cap verify
-   → Judge 检查 constraints（10 页限制、数据来源标注）
+   → Verify 检查 constraints（10 页限制、数据来源标注）
 
 7. /cap decide
    → 如果 PASS，继续；如果 FAIL，修复
 
 8. mem0 done
-   → 完整 Judge 验证 + 持久化关闭
+   → 完整 Verify 验证 + 持久化关闭
 ```
 
 ### 场景 B：软件功能开发
@@ -400,7 +400,7 @@ requirements:
    → "完成单元测试：覆盖率 85%"
 
 5. /cap verify
-   → Judge 检查 constraints（无硬编码密钥、必须处理 refresh token 过期）
+   → Verify 检查 constraints（无硬编码密钥、必须处理 refresh token 过期）
 
 6. 发现边界条件未处理
    /cap gotcha
@@ -422,7 +422,7 @@ requirements:
 | **constraints** | 不可逾越的红线 |
 | **session.md** | append-only 认知增量流 |
 | **gotchas.md** | 关键发现（模糊点、风险、阻塞） |
-| **judge.md** | Judge 验证记录 |
+| **verify.md** | Verify 验证记录 |
 | **Tier 0** | 约束验证（必须通过） |
 | **Tier 1** | Todo 验证 |
 | **Tier 2** | 自动验证（可选） |
@@ -435,7 +435,7 @@ requirements:
 可以，但不建议。session.md 应该是 `/cap snapshot` 自动追加的。手动编辑会破坏增量流的语义一致性。
 
 **Q：验证失败后可以强行完成任务吗？**
-不可以。`mem0 done` 要求 Judge 通过。强制完成会破坏协议完整性。
+不可以。`mem0 done` 要求 Verify 通过。强制完成会破坏协议完整性。
 
 **Q：gotchas 会被自动处理吗？**
 不会。gotchas 是给 Agent 和人类看的记录，不触发自动行为。Agent 应该在 `/cap recover` 时看到活跃的 gotchas，并主动处理。

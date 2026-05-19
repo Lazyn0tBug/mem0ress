@@ -48,7 +48,7 @@ CAP 的认知构建逻辑是：**会话钩子（Session Hook）→ 当前轮次�
 
 ### 同构性
 
-所有认知单元（Task）拥有相同结构：Picture + Requirements + Constraints + Todos + Session + Gotchas + Judge。这带来：
+所有认知单元（Task）拥有相同结构：Picture + Requirements + Constraints + Todos + Session + Gotchas + Verify。这带来：
 - **可验证性**：每个 Task 都有明确的完成标准
 - **可分解性**：复杂目标自然拆解为层次化子任务
 - **无歧义解析**：Agent 不需要为不同任务类型编写不同的理解逻辑
@@ -124,14 +124,14 @@ CAP 定义了清晰的认知边界：
 - **Cognitive Ownership（认知所有权）** 按层级划分
   - Picture 定义者拥有最终语义解释权（通常是人类或委托的 AI）
   - Agent 负责维护当前会话中的认知连续性
-  - Judge Agent 独立执行验证，不从属于主 Agent 的判断
+  - Verify Agent 独立执行验证，不从属于主 Agent 的判断
 
 这意味着：
 - Runtime 不会"理解"你在做什么，它只是忠实地记录你做了什么
-- Judge Agent 的判决不受主 Agent 影响，它只读文件系统协议
+- Verify Agent 的判决不受主 Agent 影响，它只读文件系统协议
 - 当认知发生歧义时，谁拥有 Picture 谁就是最终仲裁者
 
-**清晰的认知所有权划分，使 Agent 和 Runtime 各司其职——语义归 Agent，执行归 Runtime，验证归 Judge Agent。**
+**清晰的认知所有权划分，使 Agent 和 Runtime 各司其职——语义归 Agent，执行归 Runtime，验证归 Verify Agent。**
 
 ---
 

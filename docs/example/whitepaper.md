@@ -41,7 +41,7 @@ completed_at: 2026-01-18T17:30:00Z
          Cognitive Model / Runtime Model / Protocol Design / Failure Recovery / Future Work）
          verify_cmd: python scripts/check_headings.py docs/whitepaper.md
 - [x] R-2: 术语一致（定义并全篇一致使用： Cognitive Ownership / Semantic Intent /
-         Runtime / Judge / Cognitive Artifact / PRC）
+         Runtime / Verify / Cognitive Artifact / PRC）
          verify_cmd: python scripts/check_glossary.py docs/whitepaper.md
 - [x] R-3: 至少包含 3 个架构图（系统层级图 / 生命周期图 / Agent-Runtime 边界图）
          verify_cmd: python scripts/check_diagrams.py docs/whitepaper.md
@@ -77,7 +77,7 @@ completed_at: 2026-01-18T17:30:00Z
 ### Phase 2 — Architecture Design
 - [ ] T-5: 设计 runtime / cognition separation
 - [ ] T-6: 设计 protocol layering
-- [ ] T-7: 设计 Judge lifecycle
+- [ ] T-7: 设计 Verify lifecycle
 - [ ] T-8: 设计 cognitive artifact model
 
 ### Phase 3 — Whitepaper Writing
@@ -97,7 +97,7 @@ completed_at: 2026-01-18T17:30:00Z
 
 ---
 
-## Judge 重点
+## Verify 重点
 
 ### Tier 0 — Constraints 约束检查
 
@@ -127,7 +127,7 @@ completed_at: 2026-01-18T17:30:00Z
 
 **Trigger:** R-6 标记为 `manual`，必须触发 Tier 3。
 
-**Judge Prompt:**
+**Verify Prompt:**
 
 ```
 【目标图景】

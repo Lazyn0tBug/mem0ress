@@ -14,10 +14,10 @@
 Day 1 08:00  mem0 create → task.md 创建（CREATED）
 Day 1 09:15  /cap snapshot → session.md Turn 1.1（基础框架）
 Day 1 11:42  /cap snapshot → session.md Turn 1.2（provider 实现完成）
-Day 1 13:05  /cap verify → Judge Turn 2.1 → FAILED（R-1 p99=487ms 超标）
+Day 1 13:05  /cap verify → Verify Turn 2.1 → FAILED（R-1 p99=487ms 超标）
 Day 1 13:10  gotchas.md → G-1 追加（性能优化教训）
 Day 1 14:30  /cap snapshot → session.md Turn 1.3（连接池 + 缓存）
-Day 1 15:10  /cap verify → Judge Turn 2.2 → PASSED
+Day 1 15:10  /cap verify → Verify Turn 2.2 → PASSED
 Day 1 15:12  mem0 done → COMPLETED
 ```
 
@@ -131,7 +131,7 @@ completed_at: 2025-01-15T15:12:00Z
 
 ### Action Summary
 实现了 Google 和 GitHub 两个 OAuth provider，完成了 session 管理和错误处理。
-所有 Todo 已完成（T-6 暂标为完成，待 Judge 检验后确认性能达标）。
+所有 Todo 已完成（T-6 暂标为完成，待 Verify 检验后确认性能达标）。
 
 ### Todos
 - [x] T-1: 搭建 OAuth 基础框架
@@ -166,7 +166,7 @@ completed_at: 2025-01-15T15:12:00Z
 **Status:** IN_PROGRESS
 
 ### Action Summary
-针对 Judge Turn 2.1 的 FAILED 结论（R-1 响应时间不达标，p99=487ms）进行专项优化：
+针对 Verify Turn 2.1 的 FAILED 结论（R-1 响应时间不达标，p99=487ms）进行专项优化：
 引入了 provider 连接池、增加了 token 缓存层。
 
 ### Todos
@@ -195,12 +195,12 @@ completed_at: 2025-01-15T15:12:00Z
 
 ---
 
-## judge.md（完整检验记录）
+## verify.md（完整检验记录）
 
-### Judge Turn 2.1 — 首次检验（FAILED）
+### Verify Turn 2.1 — 首次检验（FAILED）
 
 ```markdown
-## Judge Turn 2.1
+## Verify Turn 2.1
 **Timestamp:** 2025-01-15T13:05:00Z
 **Verdict:** FAILED
 
@@ -253,10 +253,10 @@ completed_at: 2025-01-15T15:12:00Z
 主 Agent 需修正性能问题后重新触发检验。
 ```
 
-### Judge Turn 2.2 — 复检（PASSED）
+### Verify Turn 2.2 — 复检（PASSED）
 
 ```markdown
-## Judge Turn 2.2
+## Verify Turn 2.2
 **Timestamp:** 2025-01-15T15:10:00Z
 **Verdict:** PASSED
 
@@ -300,7 +300,7 @@ completed_at: 2025-01-15T15:12:00Z
 
 **Trigger:** 触发。Picture 包含"感知不到登录动作"这一主观体验描述，需语义对齐。
 
-**Judge Prompt:**
+**Verify Prompt:**
 
 ```
 【目标图景】
@@ -338,7 +338,7 @@ completed_at: 2025-01-15T15:12:00Z
 ## gotchas.md
 
 ```markdown
-## Gotcha G-1 — Judge Turn 2.1 FAILED：性能未达标
+## Gotcha G-1 — Verify Turn 2.1 FAILED：性能未达标
 **Timestamp:** 2025-01-15T13:10:00Z
 **Turn:** 2.1
 
@@ -347,7 +347,7 @@ completed_at: 2025-01-15T15:12:00Z
 直接标记为完成触发检验。
 
 ### 实际发生了什么
-Judge Turn 2.1 运行 `pytest tests/perf/test_auth_latency.py`，结果 p99=487ms，
+Verify Turn 2.1 运行 `pytest tests/perf/test_auth_latency.py`，结果 p99=487ms，
 超出 R-1 阈值（300ms）62%。根因是每次认证都对 OAuth provider 建立新的 HTTP 连接，
 连接握手耗时占总延迟约 58%。
 
@@ -356,7 +356,7 @@ Judge Turn 2.1 运行 `pytest tests/perf/test_auth_latency.py`，结果 p99=487m
 
 ### 教训
 包含外部网络请求的接口，在标记 Todo 完成前应先本地压测，
-不应等到 Judge 检验才发现。
+不应等到 Verify 检验才发现。
 ```
 
 ---
@@ -370,7 +370,7 @@ Judge Turn 2.1 运行 `pytest tests/perf/test_auth_latency.py`，结果 p99=487m
         ├── task.md       # status: COMPLETED，所有 Todo [x]
         ├── session.md    # 3 个 Turn 快照（1.1 / 1.2 / 1.3）
         ├── gotchas.md    # 1 条 Gotcha（G-1）
-        └── judge.md      # 2 次检验（Turn 2.1 FAILED / Turn 2.2 PASSED）
+        └── verify.md      # 2 次检验（Turn 2.1 FAILED / Turn 2.2 PASSED）
 ```
 
 ---
@@ -379,23 +379,23 @@ Judge Turn 2.1 运行 `pytest tests/perf/test_auth_latency.py`，结果 p99=487m
 
 ### 1. Tier 2 verify_cmd 执行
 
-R-1 的 `verify_cmd: pytest tests/perf/test_auth_latency.py` 是 Judge Tier 2 的执行依据。
+R-1 的 `verify_cmd: pytest tests/perf/test_auth_latency.py` 是 Verify Tier 2 的执行依据。
 第一次检验时此命令输出 `FAILED: p99=487ms`，触发 Tier 2 快速失败。
 修正后同命令输出 `PASSED: p99=187ms`，Tier 2 通过。
 
 ### 2. 快速失败原则
 
-Judge 在 Tier 2 第一项（R-1）失败后，跳过 R-2/R-3/R-4 的验证执行。
+Verify 在 Tier 2 第一项（R-1）失败后，跳过 R-2/R-3/R-4 的验证执行。
 理由：后续 Requirement 的验证在前置失败结论已知的情况下不可信。
 这避免了无效的检验资源消耗。
 
 ### 3. Tier 3 条件触发
 
 Tier 3（语义对齐）不是自动触发，而是在 Tier 2 全部通过后，
-由 Judge Agent 判断 Picture 是否包含需要语义验证的主观体验描述时触发。
+由 Verify Agent 判断 Picture 是否包含需要语义验证的主观体验描述时触发。
 本案例中 Picture 包含"感知不到登录动作"，因此触发 Tier 3。
 
 ### 4. Gotcha 追加时机
 
-G-1 在 Judge FAILED 结论出具后立即追加，不等到任务结束。
+G-1 在 Verify FAILED 结论出具后立即追加，不等到任务结束。
 偏差发现后立即记录，避免跨轮次遗忘。

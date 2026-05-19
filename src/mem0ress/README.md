@@ -21,11 +21,11 @@ mem0 <command>
 | `mem0 create` | 创建任务，自动生成 6 位 task_id |
 | `mem0 list` | 列出活跃任务，支持交互式选择当前任务 |
 | `mem0 update -c "内容"` | 追加 turn 快照到 session.md |
-| `mem0 judge` | 执行 T0/T1/T2 验证，结果写入 judge.md |
-| `mem0 close` | 先 judge，全 PASS 才标记 COMPLETED（不可绕过）|
+| `mem0 verify` | 执行 T0/T1/T2 验证，结果写入 verify.md |
+| `mem0 close` | 先 verify，全 PASS 才标记 COMPLETED（不可绕过）|
 | `mem0 done` | `close` 的别名 |
 | `mem0 status` | 展示当前状态平面（树形视图）|
-| `mem0 report` | 展示最新 judge 验证报告 |
+| `mem0 report` | 展示最新 verify 验证报告 |
 | `mem0 abandon` | 标记任务为 ABANDONED |
 
 除 `init` / `status` / `list` 外，所有命令均从 `.task_info` 读取当前任务，`task_id` 参数可选。
@@ -50,9 +50,9 @@ mem0 list
 mem0 update -c "完成了用户登录流程，修复了 session 超时问题"
 
 # 5. 验证任务是否就绪
-mem0 judge
+mem0 verify
 
-# 6. 关闭任务（必须 judge PASS 才成功）
+# 6. 关闭任务（必须 verify PASS 才成功）
 mem0 close
 
 # 7. 查看状态
@@ -70,7 +70,7 @@ mem0 status
         ├── task.md     # PRC 定义（picture / requirements / constraints）+ todos
         ├── session.md  # turn 快照（每次 update 追加）
         ├── gotchas.md  # 偏差记录（预留）
-        └── judge.md    # 验证报告（每次 judge 追加）
+        └── verify.md    # 验证报告（每次 verify 追加）
 ```
 
 ---

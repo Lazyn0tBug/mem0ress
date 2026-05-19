@@ -47,14 +47,14 @@ status: <status>
 - [ ] T-1: <机械步>
 ```
 
-### Judge 层级职责
+### Verify 层级职责
 
 | Tier | 检查内容 | 执行方式 |
 |------|---------|---------|
 | Tier 0 | Constraints 违反 | 扫描 session.md / gotchas.md |
 | Tier 1 | Todo & Subtask 完成 | 读取 task.md |
 | Tier 2 | Requirements 满足 | 运行 `verify_cmd` |
-| Tier 3 | 语义对齐（条件触发） | Judge Agent 推断 |
+| Tier 3 | 语义对齐（条件触发） | Verify Agent 推断 |
 
 ### CLI 命令速查
 
@@ -63,9 +63,9 @@ mem0 init                              # 初始化 .cap/
 mem0 create --picture "..."             # 创建任务（task_id 自动生成）
 mem0 status                            # 查看所有任务
 mem0 update --content "..."            # 追加 session 快照
-mem0 done [task_id]                    # 触发 Judge，COMPLETED
+mem0 done [task_id]                    # 触发 Verify，COMPLETED
 mem0 abandon [task_id]                  # 废弃任务
-mem0 report [task_id]                   # 查看 Judge 报告
+mem0 report [task_id]                   # 查看 Verify 报告
 ```
 
 ### Skill 命令
@@ -76,7 +76,7 @@ mem0 report [task_id]                   # 查看 Judge 报告
 /cap status     # 查看状态平面
 /cap snapshot   # 追加认知增量
 /cap gotcha     # 记录关键发现
-/cap verify     # 请求 Judge 验证
+/cap verify     # 请求 Verify 验证
 /cap decide     # 读取判决，决定下一步
 /cap close      # 语义关闭验证
 ```
@@ -93,7 +93,7 @@ mem0 report [task_id]                   # 查看 Judge 报告
 - 完整的 Turn 时序（Turn 1.1 → 1.2 → 2.1 FAILED → 1.3 修正 → 2.2 PASSED）
 - Tier 2 `verify_cmd` 执行 pytest
 - gotchas.md 记录性能优化的教训
-- 展示"失败 → 修正 → 通过"的完整 Judge 交互
+- 展示"失败 → 修正 → 通过"的完整 Verify 交互
 
 ---
 
@@ -131,5 +131,5 @@ mem0 report [task_id]                   # 查看 Judge 报告
 | Tier 3 权重 | 极高 | 中 |
 | Tier 2 权重 | 中 | 极高 |
 | Failure 风险 | semantic incoherence | implementation inconsistency |
-| Judge 重点 | worldview consistency | user-facing coherence |
+| Verify 重点 | worldview consistency | user-facing coherence |
 | Requirements 验证 | glossary scan、word count | pytest、Lighthouse、CI |

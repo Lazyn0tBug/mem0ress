@@ -36,7 +36,7 @@ completed_at: 2026-02-15T17:00:00Z
 ## Requirements
 
 - [x] R-1: 首页必须完整表达核心概念（Cognitive Persistence / Runtime Separation /
-         Persistent Artifacts / Judge Verification）
+         Persistent Artifacts / Verify Verification）
          verify_cmd: python scripts/check_homepage_concepts.py --path dist/index.html
 - [x] R-2: 移动端适配（320px ~ 1440px）
          verify_cmd: playwright test tests/e2e/responsive.spec.ts
@@ -100,7 +100,7 @@ completed_at: 2026-02-15T17:00:00Z
 
 ---
 
-## Judge 重点
+## Verify 重点
 
 ### Tier 0 — Constraints 约束检查
 
@@ -131,7 +131,7 @@ completed_at: 2026-02-15T17:00:00Z
 
 **Trigger:** 可选 — 当 Tier 1/2 全部通过后，由 Agent 判断是否需要。
 
-**Judge Prompt:**
+**Verify Prompt:**
 
 ```
 【目标图景】
