@@ -169,13 +169,13 @@ N 从 1 开始，在对应文件内单调递增，不允许复用。
 | `Tier 0` | table | ✅ | 每条 Constraint 一行 |
 | `Tier 1` | checklist | ✅ | Todo + 子任务检查 |
 | `Tier 2` | table | ✅ | 每条 Requirement 一行 |
-| `Tier 3` | block | 条件 | 对话确认，不写入 verify.md；见 §4.1 |
+| `Tier 3` | block | 条件 | 对话确认后写入 Picture section；见 §4.1 |
 | `Overall Verdict` | enum | ✅ | PASSED / FAILED |
 | `Summary` | string | ✅ | FAILED 时必须说明是哪个 Tier 失败 |
 
 ### 4.1 Tier 3 触发条件
 
-Tier 3 通过对话确认 Picture 与实际产出的语义对齐，不写入 verify.md。仅在以下条件之一成立时执行，其余情况标记为 SKIPPED：
+Tier 3 通过对话确认 Picture 与实际产出的语义对齐，结论写入 VERIFY.md 的 Picture section。仅在以下条件之一成立时执行，其余情况标记为 SKIPPED：
 
 1. Picture 包含主观判断词汇（"无感知"、"流畅"、"友好"等）
 2. Constraints 与 Picture 之间存在语义歧义，需要语义裁定
@@ -292,11 +292,12 @@ verify.md 存储 **持续性 Requirement、非持续性 Requirement、Constraint
 
 ### 条目类型
 
-|| id 前缀 | 含义 |
-||---------|------|
-|| `R-N` | 非持续性 Requirement 验证项 |
-|| `P-N` | 持续性 Requirement 验证项 |
-|| `C-N` | Constraint 验证项 |
+| id 前缀 | 含义 |
+|---------|------|
+| `R-N` | 非持续性 Requirement 验证项 |
+| `P-N` | 持续性 Requirement 验证项 |
+| `C-N` | Constraint 验证项 |
+| `T3-N` | Picture 语义对齐验证项 |
 
 ### 示例
 
@@ -312,14 +313,19 @@ type: verify
 
 ## Persistent Requirements（持续性）
 
-[.] R-5 checked 术语一致性（持续验证）
-[\✓] R-6 checked 架构分层清晰（阶段性完成）
+[.] P-1 checked 术语一致性（持续验证）
+[\✓] P-2 checked 架构分层清晰（阶段性完成）
 
 ## Constraints
 
 [.] C-1 checked 不使用 inline CSS
 {.} C-2 skip 性能优化在 v2 处理
 [\✓] C-3 checked 约束已解决
+
+## Picture（语义对齐）
+
+[.] T3-1 checked 用户能独立理解核心认知模型
+[.] T3-2 checked worldview 结构无自相矛盾
 ```
 
 ---
