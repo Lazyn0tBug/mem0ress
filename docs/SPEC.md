@@ -772,82 +772,110 @@ Picture 结论：
 
 amend 记录追加到 session.md（可审计）。
 
-#### 5.4.3 四层检验关卡
+#### 5.4.3 验证触发模型
 
-任务验证按顺序执行四层关卡。各层性质不同：
+**双操作语义：** 验证触发只有两种操作语义，Tier 3 无独立触发。
 
-* **约束验证（Tier 0）：** 执行过程中的参考信号。Constraint 违规不等同于任务失败——Agent 可选择 loop（修改后重试）或忽略。持续在执行过程中提供上下文，避免偏离目标太远。
-* **进度验证（Tier 1）：** 执行过程中的建议约束。Todo 未完成时，Agent 可选择 loop（修改后重试）、忽略、或暂时处理其他 Todo。逐步完成，不要求一次性全部满足。
-* **需求验证（Tier 2）：** 执行过程中的评估参考。Requirement 验证是逐步迭代满足的过程，动态进行，不要求在单次检验中全部通过。
-* **语义对齐验证（Tier 3）：** **唯一硬门槛。** 语义对齐是任务完成的最终判据。
+**路径一：自然操作（每 todo 完成时触发）**
 
-**进入语义对齐的前置条件**：必须所有进度验证（Tier 1）和需求验证（Tier 2）条目已满足（或已由人确认跳过），否则不得进入语义对齐验证（Tier 3）。
+```
+每 todo 完成 → Tier 0 → Tier 2 → Tier 3
+```
 
-**语义对齐失败流程**：若语义对齐判定未对齐 → 触发 amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 继续执行 → 重新进入检验流程。
+- Tier 0：Constraint 违规检查
+- Tier 2：deterministic 验证（命令式验证方法）
+- Tier 3：前两层通过后自动触发，作为闭合条件
 
-> 示例：一个 `Picture` 是"用户无需输入密码即可登录"的 OAuth 任务。进度验证（Tier 1）验证了所有 Todo 完成，需求验证（Tier 2）验证了"支持 Google OAuth"和"支持 GitHub OAuth"这两个 Requirements 都满足。语义对齐验证（Tier 3）额外检查了"实际登录流程中用户确实没有被要求输入密码"——这个检查无法通过代码结构验证，必须看实际行为，属于语义对齐的范畴。
+**路径二：主动操作（人触发 / 阈值触发）**
+
+```
+人主动 verify / 达到最大间隔阈值 → Tier 0 → Tier 1 → Tier 2 → Tier 3
+```
+
+- Tier 0/1/2 全部执行，不允许指定某一层
+- Tier 3 作为闭合条件出现在末端
+- 阈值由系统配置（如"每 N 轮必须主动 verify 一次"）
+
+**Tier 1 的特殊定位：** 每轮次结束时，系统自动执行 Tier 1（进度检查），但这是**观察动作**，不属于 verify 操作，不触发 Tier 3。
+
+```
+每轮次：Tier 1（观察）→ 更新状态快照（不触发 Tier 3）
+```
+
+Tier 1 的作用是让状态平面保持最新，使人和 Agent 随时能看到 todo 进度。它不是 verify 的组成部分。
+
+**Tier 3 无独立触发语义：** Tier 3 只能出现在上述两条路径的末端，不能单独触发。
+
+```
+❌ Tier 3 单独触发
+✅ Tier 0 → Tier 2 → Tier 3（路径一）
+✅ Tier 0/1/2 → Tier 3（路径二）
+```
+
+**四层检验各层性质：**
+
+| Tier | 名称 | 性质 | 是否算 verify |
+|------|------|------|--------------|
+| Tier 0 | 约束验证 | 参考信号，Constraint 违规不等同于任务失败，Agent 可 loop 或忽略 | 路径一 + 路径二 |
+| Tier 1 | 进度验证 | 观察动作，每轮次执行，更新状态快照 | 路径一（自动含） + 路径二（兜底） |
+| Tier 2 | 需求验证 | deterministic 验证，可 replay，逐步满足，不阻塞 | 路径一 + 路径二 |
+| Tier 3 | 语义对齐验证 | **唯一硬门槛**，无独立触发语义，作为闭合条件出现 | 仅作为路径末端 |
 
 **决策执行规则：**
 
 检验完成后结果写入 `VERIFY.md`，由主 Agent 从 `VERIFY.md` 读取并决策下一步。
 
-语义对齐验证（Tier 3）PASS + 所有进度验证（Tier 1）和需求验证（Tier 2）已满足 → Agent 可标记任务完成
-语义对齐验证（Tier 3）FAIL → amend 循环（新增/修改 Requirement/Constraint → 重规划 → 继续）
-语义对齐验证（Tier 3）UNCERTAIN → 人判断是否可以完成，或触发 amend
+- Tier 3 PASS + Tier 1 + Tier 2 满足 → Agent 可标记任务完成
+- Tier 3 FAIL → amend 循环（新增/修改 Requirement/Constraint → 重规划 → 继续）
+- Tier 3 UNCERTAIN → 人判断是否可以完成，或触发 amend
 
 ABANDONED 由 Agent 主动标记，与检验结果无关。
 
 **Verify Agent 上下文构成：** Verify Agent 被调用时，宿主框架注入的上下文仅包含 `task_id`（用于定位文件）和 Verify Agent 系统提示（固定，不含主 Agent 执行历史）。Verify Agent 从文件系统读取检验依据，不接收主 Agent 传递的任何运行时信息。
-
-**四层检验执行规则：**
-
-```
-约束验证（Tier 0）: 参考信号（loop 或忽略，不阻塞）
-进度验证（Tier 1）: 参考约束（loop 或忽略，不阻塞）
-需求验证（Tier 2）: 评估参考（逐步满足，不阻塞）
-语义对齐验证（Tier 3）: 硬门槛（唯一完成判据）
-
-进入语义对齐前置条件：所有进度验证（Tier 1）和需求验证（Tier 2）条目已满足或已确认跳过
-
-语义对齐验证（Tier 3）FAIL → amend 循环 → 新增/修改 Requirement 或 Constraint → 重规划 Todo → 重新检验
-```
 
 **检验执行方式表：**
 
 | Tier | 检查层 | 语义职责 | 执行方式 | 依赖文件 |
 |------|--------|---------|---------|---------|
 | Tier 0 | 约束验证 | Constraints 约束检查 | 纯逻辑：扫描 session.md + gotchas.md 中的违反记录 | task.md, session.md, gotchas.md |
-| Tier 1 | 进度验证 | Todo & Subtask 完成检查 | 纯逻辑：读取 task.md Todo 状态 + 扫描子任务目录 | task.md |
+| Tier 1 | 进度验证 | Todo & Subtask 完成检查（观察，不算 verify） | 纯逻辑：读取 task.md Todo 状态 + 扫描子任务目录 | task.md |
 | Tier 2 | 需求验证 | Requirements 验收检查 | 运行测试命令：执行可验证动作，记录命令输出 | task.md, session.md |
-| Tier 3 | 语义对齐验证 | 语义对齐检查 | LLM 推断：Verify Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
+| Tier 3 | 语义对齐验证 | 语义对齐检查（无独立触发语义） | LLM 推断：Verify Agent 读取 Picture + 实际产出进行语义比对 | task.md, session.md |
 
-**需求验证的关键约束：** 需求验证 deterministic 验证：`[(.)]` / `(\\.)` / `{\\.}` marker 为直接执行指令，由 Verify Agent 执行对应命令。语义对齐验证（Tier 3）：通过对话确认 Picture 与实际产出的语义偏差，不写入 VERIFY.md。若验证过程中发现 VERIFY.md 某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态。
+**需求验证的关键约束：** `[(.)]` / `(\.)` / `{\.}` marker 为直接执行指令，由 Verify Agent 执行对应命令。Tier 3：通过对话确认 Picture 与实际产出的语义偏差，结论写入 Picture section。若验证过程中发现 VERIFY.md 某项已不适用，将该项标记从 `[.]` / `(.)` / `{.}` 改回 `[]` / `()` / `{}`，重新进入讨论状态。
 
 **Verify Agent 输出约束：** Verify Agent 只报告事实，不给出修复建议，不判断"主 Agent 应该怎么做"，不修改 task.md / session.md / gotchas.md，不直接标记任务为 COMPLETED 或 ABANDONED。FAIL 结论写入 VERIFY.md 后，Verify Agent 的职责结束，决策权回到主 Agent。
 
+**阈值配置示例：**
+
+```yaml
+verify:
+  max_interval_rounds: 10  # 每 N 轮未主动 verify 则强制触发路径二
+```
+
 ```mermaid
-%% label：验证状态流转
+%% label：验证触发模型
 %%{ init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#fce4ec', 'primaryTextColor': '#880e4f', 'primaryBorderColor': '#c62828', 'lineColor': '#90a4ae' } } }%%
 stateDiagram-v2
-    [*] --> CREATED
-    CREATED --> IN_PROGRESS: 任意 Todo 完成
-    IN_PROGRESS --> VERIFYING: 轮次结束 / 主动触发
+    [*] --> IN_PROGRESS
+    IN_PROGRESS --> Tier1: 每轮次（观察，不触发 Tier 3）
+    Tier1 --> IN_PROGRESS: 更新状态快照
 
-    state VERIFYING {
-        [*] --> Tier0
-        Tier0 --> Tier1: 无 violation
-        Tier0 --> Tier1: 有 violation（记录，继续）
-        Tier1 --> Tier2: Tier 1 满足或跳过
-        Tier2 --> Tier3: Tier 2 满足或跳过
-        Tier3 --> PASS: 语义对齐
-        Tier3 --> FAIL: 语义未对齐
-        FAIL --> IN_PROGRESS: amend → 重规划
-        PASS --> [*]
-    }
+    IN_PROGRESS --> Path1: 每 todo 完成
+    Path1 --> Tier0
+    Tier0 --> Tier2: 无 violation 或已记录
+    Tier2 --> Tier3: Tier 0/2 通过
+    Tier3 --> PASS: 语义对齐
+    Tier3 --> FAIL: 语义未对齐
+    FAIL --> IN_PROGRESS: amend → 重规划
+    PASS --> COMPLETED
 
-    VERIFYING --> COMPLETED: Tier 3 PASS
-    VERIFYING --> ABANDONED: 主动废弃
-    ABANDONED --> [*]
+    IN_PROGRESS --> Path2: 人主动 verify / 达到阈值
+    Path2 --> Tier0
+    Tier0 --> Tier1
+    Tier1 --> Tier2
+    Tier2 --> Tier3
+
     COMPLETED --> [*]
 ```
 
