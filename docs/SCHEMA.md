@@ -216,6 +216,8 @@ Tier 0/1/2 任一 FAIL 时，Tier 3 强制 SKIPPED。
         └── {subtask_id}/ # 子任务目录，结构同上
 ```
 
+**verify.md** 在 task.md 同级目录下，由主 Agent 追加写，Judge Agent 只读。
+
 父子关系由目录树表达，task.md 内不重复列子任务。
 
 ---
@@ -294,11 +296,15 @@ type: verify
 ## Requirements
 
 [.] R-1 command 编译通过
-[.] R-2 command 单元测试全部通过
+(.) R-2 command 单元测试全部通过
+[\✓] R-3 checked 术语与 spec 一致（阶段性完成）
+[] R-4 checked 待讨论
 
 ## Constraints
 
 [.] C-1 checked 不使用 inline CSS
+{.} C-2 skip 性能优化在 v2 处理
+[\✓] C-3 checked 约束已解决
 ```
 
 ---

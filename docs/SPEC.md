@@ -424,11 +424,13 @@ graph TD
     SESS["session.md"]
     GOT["gotchas.md"]
     JDG["judge.md"]
+    VRF["verify.md"]
 
     ROOT --> TMPL
     ROOT --> SESS
     ROOT --> GOT
     ROOT --> JDG
+    ROOT --> VRF
 
     SESS -.->|进度快照序列| SP["状态平面"]
     GOT -.->|偏差记录指针| SP

@@ -253,7 +253,7 @@ mem0 close <task_id>
 ### 2.6 目录结构
 
 ```
-.mem0ress/
+.cap/
 ├── .current_task              # 当前激活任务指针
 └── tasks/
     └── {task_id}/
