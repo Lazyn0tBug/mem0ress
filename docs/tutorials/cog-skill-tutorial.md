@@ -13,7 +13,7 @@ Requirements (可验证条件)
     +
 Constraints (不可逾越的红线)
     ↓
-Judge verification
+Verify verification
     ↓
 Task close
 ```
@@ -59,7 +59,7 @@ Ambiguity, drift risk, unstable assumptions, blockers.
 /cap verify
 ```
 
-Judge Agent runs Tier 0/1/2 verification.
+Verify Agent runs Tier 0/1/2 verification.
 
 ### 5. Close the task
 
@@ -68,10 +68,10 @@ Judge Agent runs Tier 0/1/2 verification.
 ```
 
 1. Agent checks: Does current state semantically match Picture?
-2. Judge verifies: Tier 0/1/2 → PASS/FAIL
+2. Verify verifies: Tier 0/1/2 → PASS/FAIL
 3. Agent decides: Ready → `mem0 close`; Not ready → continue work
 
-**No bypass**: Judge verification is always required.
+**No bypass**: Verify verification is always required.
 
 ## Three Cognitive Modes
 
@@ -79,7 +79,7 @@ Judge Agent runs Tier 0/1/2 verification.
 |------|---------|-------------|
 | Clarification Mode | Picture unclear | Refine semantic success definition |
 | Analysis Mode | Constraints conflict | Resolve contradictions |
-| Judge Mode | Requirements need validation | Invoke isolated verification |
+| Verify Mode | Requirements need validation | Invoke isolated verification |
 
 ## File Protocol
 
@@ -153,8 +153,8 @@ mem0ress is NOT:
 
 | Rule | Meaning |
 |------|---------|
-| No bypass | Judge verification required for close |
-| Judge isolation | Judge receives NO runtime memory |
+| No bypass | Verify verification required for close |
+| Verify isolation | Verify receives NO runtime memory |
 | Agent authority | Decision to close is always Agent's |
 | Semantic purity | session.md is compressed deltas, not transcripts |
 
@@ -191,7 +191,7 @@ Agent: /cap gotcha
 [Continue work]
 
 Agent: /cap verify
-  → Judge returns: Tier 0 PASS, Tier 1 PASS, Tier 2 PASS
+  → Verify returns: Tier 0 PASS, Tier 1 PASS, Tier 2 PASS
 
 Agent: /cap close
   → Semantic alignment check: yes
