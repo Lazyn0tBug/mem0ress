@@ -70,7 +70,6 @@ files:
   task: task.md
   session: session.md
   gotchas: gotchas.md
-  judge: judge.md
   verify: verify.md
 
 

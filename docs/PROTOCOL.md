@@ -13,21 +13,20 @@
 
 | 参与方 | 职责 |
 |--------|------|
-| **主 Agent（Main Agent）** | 执行任务：创建任务、拆解 Todo、推进执行、写入 session 快照、触发 Judge、读取 Judge 结论、自主决策 |
-| **Judge Agent（Judge Agent）** | 检验任务：被动等待触发、执行四层任务验证、写入 judge.md |
+| **主 Agent（Main Agent）** | 执行任务：创建任务、拆解 Todo、推进执行、写入 session 快照、触发 Verify Agent、读取 Verify 结论、自主决策 |
+| **Verify Agent** | 检验任务：被动等待触发、执行四层任务验证、写入 verify.md |
 | **宿主框架（Host Framework）** | 基础设施：管理文件系统布局、隔离上下文、注入 task_id、处理 VERIFYING 超时（默认 180s） |
 
 ---
 
 ## 2. 文件读写权限
 
-| 文件 | 主 Agent | Judge Agent |
+| 文件 | 主 Agent | Verify Agent |
 |------|---------|------------|
 | task.md | 读 + 写（覆盖写） | 只读 |
 | session.md | 追加写 | 只读 |
 | gotchas.md | 追加写 | 只读 |
-| judge.md | 只读 | 追加写 |
-| verify.md | 追加写 | 只读 |
+| verify.md | 追加写 | 追加写 |
 
 ---
 
@@ -49,7 +48,7 @@
 |------|------|
 | CREATED | 任务已声明，Picture 尚未开始执行 |
 | IN_PROGRESS | 任务正在执行，认知演化中 |
-| VERIFYING | 瞬态，Judge 检验中（不可停留） |
+| VERIFYING | 瞬态，Verify Agent 检验中（不可停留） |
 | COMPLETED | 达到 Picture 描述的语义成功状态 |
 | ABANDONED | 任务终止（未达 Picture） |
 
@@ -58,9 +57,9 @@
 | From | To | 触发 |
 |------|----|------|
 | CREATED | IN_PROGRESS | 任意 todo 标记完成 |
-| IN_PROGRESS | VERIFYING | Agent 请求 Judge 验证 |
-| VERIFYING | COMPLETED | Judge 返回 PASS |
-| VERIFYING | IN_PROGRESS | Judge 返回 FAIL |
+| IN_PROGRESS | VERIFYING | Agent 请求 Verify 验证 |
+| VERIFYING | COMPLETED | Verify Agent 返回 PASS |
+| VERIFYING | IN_PROGRESS | Verify Agent 返回 FAIL |
 | CREATED / IN_PROGRESS | ABANDONED | 任务终止 |
 
 ---
@@ -74,7 +73,7 @@
 | Tier 2 | 需求验证 | verify.md marker 执行 — requirements 条件是否满足 | 评估参考（逐步满足） | FAIL → loop 或忽略 |
 | Tier 3 | 语义对齐验证 | 语义对齐 — Requirements 能否支撑 Picture | **唯一硬门槛** | FAIL → amend 循环 |
 
-> **内部实现**：Judge Agent 内部执行 Tier 0（约束验证）/ Tier 1（进度验证）/ Tier 2（需求验证）/ Tier 3（语义对齐验证）。
+> **内部实现**：Verify Agent 内部执行 Tier 0（约束验证）/ Tier 1（进度验证）/ Tier 2（需求验证）/ Tier 3（语义对齐验证）。
 
 **进入语义对齐的前置条件**：必须所有进度验证（Tier 1）和需求验证（Tier 2）条目已满足（或已由人确认跳过），否则不得进入语义对齐验证（Tier 3）。
 
@@ -84,25 +83,25 @@
 
 ---
 
-## 6. Judge Agent 调用约定
+## 6. Verify Agent 调用约定
 
 - 上下文仅含：`task_id` + 系统提示（不含主 Agent 执行历史）
 - 从文件系统读取依据，不接收运行时信息
-- 只追加写 judge.md，不修改其他文件
+- 写入 verify.md，不修改其他文件
 
 ---
 
 ## 7. VERIFYING 超时
 
 - 默认：180 秒
-- 超时处理：强制结束 Judge、写入 `Verdict: TIMEOUT`、恢复为 IN_PROGRESS
+- 超时处理：强制结束 Verify Agent、写入 `Verdict: TIMEOUT`、恢复为 IN_PROGRESS
 
 ---
 
 ## 8. 主 Agent 决策速查
 
-| Judge 结论 | 可选决策 |
-|-----------|---------|
+| Verify 结论 | 可选决策 |
+|------------|---------|
 | PASSED | complete_task / 继续执行 |
 | FAILED | 修正重试 / 拆解子任务 / abandon_task |
 | TIMEOUT | 重试 / abandon_task |
@@ -127,12 +126,11 @@
 | task.md | 主 Agent | cognitive_triad 创建后不可修改 |
 | session.md | 主 Agent | 追加，不覆盖历史 |
 | gotchas.md | 主 Agent | 追加，不删除历史 |
-| judge.md | Judge Agent | 追加，不修改历史 |
-| verify.md | 主 Agent | 追加；`[.] / (.) / {.}` 条目可作为执行依据，`[] / () / {}` 仅作记录；已完成条目（`[\✓]` / `(\✓)` / `{\✓}`）不可 amend |
+| verify.md | 主 Agent / Verify Agent | 追加；`[.] / (.) / {.}` 条目可作为执行依据，`[] / () / {}` 仅作记录；已完成条目（`[\✓]` / `(\✓)` / `{\✓}`）不可 amend |
 
 **写入权限语义**：
 - **主 Agent** 对 task.md 只有一次写入权（创建时），之后不可修改认知三要素
-- **Judge Agent** 对 judge.md 追加，不读取 runtime 内存状态（隔离验证）
+- **Verify Agent** 对 verify.md 追加，不读取 runtime 内存状态（隔离验证）
 
 ---
 
@@ -167,13 +165,9 @@
 - 追加，不删除历史
 - 解决记录可追加，不覆盖原发现
 
-### judge.md — 检验报告
-
-Judge Agent 追加的验证表面。
-
 ### verify.md — 验证定义
 
-主 Agent 追加写的验证条目集合。包含所有 Requirement 和 Constraint 的验证方式定义。
+主 Agent 和 Verify Agent 追加写的验证条目集合。包含所有 Requirement 和 Constraint 的验证方式定义，以及 Verify Agent 的检验结论记录。
 
 **状态转移规则：**
 
@@ -204,7 +198,7 @@ Judge Agent 追加的验证表面。
 ```
 
 - `[\✓]` 标记时机：至少一个 todo 完成 + 至少一轮次结束 + 验收检查通过
-- 退回触发：下一轮次发现新的语义漂移，由 Judge 或人主动提出
+- 退回触发：下一轮次发现新的语义漂移，由 Verify Agent 或人主动提出
 
 **Constraint：**
 
